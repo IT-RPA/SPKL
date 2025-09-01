@@ -36,9 +36,9 @@
                                     <td>{{ $department->active_employees_count }}</td>
                                     <td>{{ $department->flowJobs->count() }}</td>
                                     <td>
-                                        <span class="badge {{ $department->is_active ? 'text-dark' : 'text-danger' }}">
-                                            {{ $department->is_active ? 'Aktif' : 'Nonaktif' }}
-                                        </span>
+    <span class="badge {{ $department->is_active ? 'bg-success' : 'bg-danger' }}">
+        {{ $department->is_active ? 'Aktif' : 'Nonaktif' }}
+    </span>
                                     </td> 
                                     <td>
                                         <button type="button" class="btn btn-sm btn-warning edit-btn" 
@@ -119,36 +119,88 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // DataTable initialization
+    // Variable untuk tracking apakah ini mode edit atau tambah
+    let isEditMode = false;
+
+    // DataTable initialization dengan bahasa Indonesia tanpa CORS
     $('#departmentTable').DataTable({
         responsive: true,
         language: {
-            url: '//cdn.datatables.net/plug-ins/1.10.24/i18n/Indonesian.json'
+            "sEmptyTable": "Tidak ada data yang tersedia pada tabel ini",
+            "sInfo": "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
+            "sInfoEmpty": "Menampilkan 0 sampai 0 dari 0 entri",
+            "sInfoFiltered": "(disaring dari _MAX_ entri keseluruhan)",
+            "sInfoPostFix": "",
+            "sInfoThousands": ".",
+            "sLengthMenu": "Tampilkan _MENU_ entri",
+            "sLoadingRecords": "Sedang memuat...",
+            "sProcessing": "Sedang memproses...",
+            "sSearch": "Cari:",
+            "sZeroRecords": "Tidak ditemukan data yang sesuai",
+            "oPaginate": {
+                "sFirst": "Pertama",
+                "sLast": "Terakhir",
+                "sNext": "Selanjutnya",
+                "sPrevious": "Sebelumnya"
+            },
+            "oAria": {
+                "sSortAscending": ": aktifkan untuk mengurutkan kolom naik",
+                "sSortDescending": ": aktifkan untuk mengurutkan kolom turun"
+            }
         }
     });
 
-    // Reset modal when shown
+    // Reset modal hanya ketika bukan mode edit
     $('#departmentModal').on('show.bs.modal', function() {
+        if (!isEditMode) {
+            resetForm();
+        }
+        // Reset flag setelah modal ditampilkan
+        isEditMode = false;
+    });
+
+    // Fungsi untuk reset form
+    function resetForm() {
         $('#departmentForm')[0].reset();
         $('#department_id').val('');
         $('#departmentModalLabel').text('Tambah Departemen');
         $('.form-control').removeClass('is-invalid');
+        $('.invalid-feedback').text('');
+        $('#is_active').prop('checked', true); // Set default checked
+    }
+
+    // Button tambah departemen - set flag untuk mode tambah
+    $('button[data-bs-target="#departmentModal"]').on('click', function() {
+        isEditMode = false;
     });
 
-    // Edit button click
-    $(document).on('click', '.edit-btn', function() {
+    // Edit button click - set flag untuk mode edit
+    $(document).on('click', '.edit-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Set flag bahwa ini mode edit
+        isEditMode = true;
+        
         const id = $(this).data('id');
         const name = $(this).data('name');
         const code = $(this).data('code');
         const description = $(this).data('description');
         const isActive = $(this).data('is_active');
 
+        // Clear validasi error terlebih dahulu
+        $('.form-control').removeClass('is-invalid');
+        $('.invalid-feedback').text('');
+        
+        // Isi data untuk edit
         $('#department_id').val(id);
         $('#name').val(name);
         $('#code').val(code);
-        $('#description').val(description);
-        $('#is_active').prop('checked', isActive);
+        $('#description').val(description || '');
+        $('#is_active').prop('checked', Boolean(Number(isActive)));
         $('#departmentModalLabel').text('Edit Departemen');
+        
+        // Tampilkan modal
         $('#departmentModal').modal('show');
     });
 
@@ -159,12 +211,15 @@ $(document).ready(function() {
         const id = $('#department_id').val();
         const isEdit = id !== '';
         const url = isEdit ? `/departments/${id}` : '/departments';
-        const method = isEdit ? 'PUT' : 'POST';
         
         const formData = new FormData(this);
         if (isEdit) {
             formData.append('_method', 'PUT');
         }
+
+        // Reset error states
+        $('.form-control').removeClass('is-invalid');
+        $('.invalid-feedback').text('');
 
         $.ajax({
             url: url,
@@ -175,7 +230,6 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     $('#departmentModal').modal('hide');
-                    location.reload();
                     
                     // Show success message
                     Swal.fire({
@@ -184,18 +238,24 @@ $(document).ready(function() {
                         text: response.message,
                         timer: 2000,
                         showConfirmButton: false
+                    }).then(() => {
+                        location.reload();
                     });
                 }
             },
             error: function(xhr) {
                 if (xhr.status === 422) {
                     const errors = xhr.responseJSON.errors;
-                    $('.form-control').removeClass('is-invalid');
-                    $('.invalid-feedback').text('');
                     
                     Object.keys(errors).forEach(function(key) {
                         $(`#${key}`).addClass('is-invalid');
                         $(`#${key}`).siblings('.invalid-feedback').text(errors[key][0]);
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Terjadi kesalahan sistem. Silakan coba lagi.'
                     });
                 }
             }
@@ -203,7 +263,10 @@ $(document).ready(function() {
     });
 
     // Delete button click
-    $(document).on('click', '.delete-btn', function() {
+    $(document).on('click', '.delete-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
         const id = $(this).data('id');
         const name = $(this).data('name');
 
@@ -226,14 +289,14 @@ $(document).ready(function() {
                     },
                     success: function(response) {
                         if (response.success) {
-                            location.reload();
-                            
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Terhapus!',
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
                             });
                         }
                     },
@@ -242,7 +305,7 @@ $(document).ready(function() {
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal!',
-                            text: response.message || 'Terjadi kesalahan saat menghapus data.'
+                            text: response?.message || 'Terjadi kesalahan saat menghapus data.'
                         });
                     }
                 });

@@ -156,161 +156,218 @@
 
 @push('scripts')
 <script>
-    $(document).ready(function() {
-        // DataTable initialization
-        var table = $('#flowJobTable').DataTable({
-            responsive: true,
-            language: {
-                url: '//cdn.datatables.net/plug-ins/1.10.24/i18n/Indonesian.json'
+$(document).ready(function() {
+    // Variable untuk tracking apakah ini mode edit atau tambah
+    let isEditMode = false;
+
+    // DataTable initialization dengan bahasa Indonesia tanpa CORS
+    var table = $('#flowJobTable').DataTable({
+        responsive: true,
+        language: {
+            "sEmptyTable": "Tidak ada data yang tersedia pada tabel ini",
+            "sInfo": "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
+            "sInfoEmpty": "Menampilkan 0 sampai 0 dari 0 entri",
+            "sInfoFiltered": "(disaring dari _MAX_ entri keseluruhan)",
+            "sInfoPostFix": "",
+            "sInfoThousands": ".",
+            "sLengthMenu": "Tampilkan _MENU_ entri",
+            "sLoadingRecords": "Sedang memuat...",
+            "sProcessing": "Sedang memproses...",
+            "sSearch": "Cari:",
+            "sZeroRecords": "Tidak ditemukan data yang sesuai",
+            "oPaginate": {
+                "sFirst": "Pertama",
+                "sLast": "Terakhir",
+                "sNext": "Selanjutnya",
+                "sPrevious": "Sebelumnya"
             },
-            order: [
-                [1, 'asc'],
-                [2, 'asc']
-            ] // Sort by department then step_order
-        });
-
-        // Department filter
-        $('#departmentFilter').on('change', function() {
-            var selectedDepartment = this.value;
-            if (selectedDepartment === '') {
-                table.column(1).search('').draw();
-            } else {
-                table.column(1).search(selectedDepartment).draw();
+            "oAria": {
+                "sSortAscending": ": aktifkan untuk mengurutkan kolom naik",
+                "sSortDescending": ": aktifkan untuk mengurutkan kolom turun"
             }
-        });
+        },
+        order: [
+            [1, 'asc'],
+            [2, 'asc']
+        ] // Sort by department then step_order
+    });
 
-        // Reset modal when shown
-        $('#flowJobModal').on('show.bs.modal', function() {
-            $('#flowJobForm')[0].reset();
-            $('#flow_job_id').val('');
-            $('#flowJobModalLabel').text('Tambah Flow Job');
-            $('.form-control').removeClass('is-invalid');
-        });
+    // Department filter
+    $('#departmentFilter').on('change', function() {
+        var selectedDepartment = this.value;
+        if (selectedDepartment === '') {
+            table.column(1).search('').draw();
+        } else {
+            table.column(1).search(selectedDepartment).draw();
+        }
+    });
 
-        // Edit button click
-        $(document).on('click', '.edit-btn', function() {
-            const id = $(this).data('id');
-            const departmentId = $(this).data('department_id');
-            const jobLevelId = $(this).data('job_level_id');
-            const stepOrder = $(this).data('step_order');
-            const stepName = $(this).data('step_name');
-            const isActive = $(this).data('is_active');
+    // Reset modal hanya ketika bukan mode edit
+    $('#flowJobModal').on('show.bs.modal', function() {
+        if (!isEditMode) {
+            resetForm();
+        }
+        // Reset flag setelah modal ditampilkan
+        isEditMode = false;
+    });
 
-            $('#flow_job_id').val(id);
-            $('#department_id').val(departmentId);
-            $('#job_level_id').val(jobLevelId);
-            $('#step_order').val(stepOrder);
-            $('#step_name').val(stepName);
-            $('#is_active').prop('checked', isActive);
-            $('#flowJobModalLabel').text('Edit Flow Job');
-            $('#flowJobModal').modal('show');
-        });
+    // Fungsi untuk reset form
+    function resetForm() {
+        $('#flowJobForm')[0].reset();
+        $('#flow_job_id').val('');
+        $('#flowJobModalLabel').text('Tambah Flow Job');
+        $('.form-control').removeClass('is-invalid');
+        $('.invalid-feedback').text('');
+        $('#is_active').prop('checked', true); // Set default checked
+    }
 
-        // Form submission
-        $('#flowJobForm').on('submit', function(e) {
-            e.preventDefault();
+    // Button tambah flow job - set flag untuk mode tambah
+    $('button[data-bs-target="#flowJobModal"]').on('click', function() {
+        isEditMode = false;
+    });
 
-            const id = $('#flow_job_id').val();
-            const isEdit = id !== '';
-            const url = isEdit ? `/flow-jobs/${id}` : '/flow-jobs';
-            const method = isEdit ? 'PUT' : 'POST';
+    // Edit button click - set flag untuk mode edit
+    $(document).on('click', '.edit-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Set flag bahwa ini mode edit
+        isEditMode = true;
+        
+        const id = $(this).data('id');
+        const departmentId = $(this).data('department_id');
+        const jobLevelId = $(this).data('job_level_id');
+        const stepOrder = $(this).data('step_order');
+        const stepName = $(this).data('step_name');
+        const isActive = $(this).data('is_active');
 
-            const formData = new FormData(this);
-            if (isEdit) {
-                formData.append('_method', 'PUT');
-            }
+        // Clear validasi error terlebih dahulu
+        $('.form-control').removeClass('is-invalid');
+        $('.invalid-feedback').text('');
+        
+        // Isi data untuk edit
+        $('#flow_job_id').val(id);
+        $('#department_id').val(departmentId);
+        $('#job_level_id').val(jobLevelId);
+        $('#step_order').val(stepOrder);
+        $('#step_name').val(stepName);
+        $('#is_active').prop('checked', Boolean(Number(isActive)));
+        $('#flowJobModalLabel').text('Edit Flow Job');
+        
+        // Tampilkan modal
+        $('#flowJobModal').modal('show');
+    });
 
-            $.ajax({
-                url: url,
-                method: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    if (response.success) {
-                        $('#flowJobModal').modal('hide');
+    // Form submission
+    $('#flowJobForm').on('submit', function(e) {
+        e.preventDefault();
+
+        const id = $('#flow_job_id').val();
+        const isEdit = id !== '';
+        const url = isEdit ? `/flow-jobs/${id}` : '/flow-jobs';
+
+        const formData = new FormData(this);
+        if (isEdit) {
+            formData.append('_method', 'PUT');
+        }
+
+        // Reset error states
+        $('.form-control').removeClass('is-invalid');
+        $('.invalid-feedback').text('');
+
+        $.ajax({
+            url: url,
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    $('#flowJobModal').modal('hide');
+                    
+                    // Show success message
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
                         location.reload();
+                    });
+                }
+            },
+            error: function(xhr) {
+                if (xhr.status === 422) {
+                    const errors = xhr.responseJSON.errors;
 
-                        // Show success message
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil!',
-                            text: response.message,
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                    }
-                },
-                error: function(xhr) {
-                    if (xhr.status === 422) {
-                        const errors = xhr.responseJSON.errors;
-                        $('.form-control').removeClass('is-invalid');
-                        $('.invalid-feedback').text('');
+                    Object.keys(errors).forEach(function(key) {
+                        $(`#${key}`).addClass('is-invalid');
+                        $(`#${key}`).siblings('.invalid-feedback').text(errors[key][0]);
+                    });
+                } else {
+                    const response = xhr.responseJSON;
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: response?.message || 'Terjadi kesalahan saat menyimpan data.'
+                    });
+                }
+            }
+        });
+    });
 
-                        Object.keys(errors).forEach(function(key) {
-                            $(`#${key}`).addClass('is-invalid');
-                            $(`#${key}`).siblings('.invalid-feedback').text(errors[key][0]);
-                        });
-                    } else {
+    // Delete button click
+    $(document).on('click', '.delete-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const id = $(this).data('id');
+        const department = $(this).data('department');
+        const step = $(this).data('step');
+
+        Swal.fire({
+            title: 'Apakah Anda yakin?',
+            text: `Flow Job "${step}" di departemen "${department}" akan dihapus permanen!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/flow-jobs/${id}`,
+                    method: 'DELETE',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Terhapus!',
+                                text: response.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
+                            });
+                        }
+                    },
+                    error: function(xhr) {
                         const response = xhr.responseJSON;
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal!',
-                            text: response.message || 'Terjadi kesalahan saat menyimpan data.'
+                            text: response?.message || 'Terjadi kesalahan saat menghapus data.'
                         });
                     }
-                }
-            });
-        });
-
-        // Delete button click
-        $(document).on('click', '.delete-btn', function() {
-            const id = $(this).data('id');
-            const department = $(this).data('department');
-            const step = $(this).data('step');
-
-            Swal.fire({
-                title: 'Apakah Anda yakin?',
-                text: `Flow Job "${step}" di departemen "${department}" akan dihapus permanen!`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Ya, Hapus!',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        url: `/flow-jobs/${id}`,
-                        method: 'DELETE',
-                        data: {
-                            _token: $('meta[name="csrf-token"]').attr('content')
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                location.reload();
-
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Terhapus!',
-                                    text: response.message,
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                });
-                            }
-                        },
-                        error: function(xhr) {
-                            const response = xhr.responseJSON;
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Gagal!',
-                                text: response.message || 'Terjadi kesalahan saat menghapus data.'
-                            });
-                        }
-                    });
-                }
-            });
+                });
+            }
         });
     });
+});
 </script>
 @endpush

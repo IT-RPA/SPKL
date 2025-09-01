@@ -24,8 +24,7 @@ class FlowJobController extends Controller
             'department_id' => 'required|exists:departments,id',
             'job_level_id' => 'required|exists:job_levels,id',
             'step_order' => 'required|integer|min:1',
-            'step_name' => 'required|string|max:255',
-            'is_active' => 'boolean'
+            'step_name' => 'required|string|max:255'
         ]);
 
         // Check if step_order already exists for this department
@@ -37,10 +36,14 @@ class FlowJobController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Urutan step sudah ada untuk departemen ini!'
-            ]);
+            ], 400);
         }
 
-        FlowJob::create($request->all());
+        $data = $request->all();
+        // Handle checkbox - jika tidak dicentang, set ke false (0)
+        $data['is_active'] = $request->has('is_active') ? 1 : 0;
+
+        FlowJob::create($data);
 
         return response()->json([
             'success' => true,
@@ -54,8 +57,7 @@ class FlowJobController extends Controller
             'department_id' => 'required|exists:departments,id',
             'job_level_id' => 'required|exists:job_levels,id',
             'step_order' => 'required|integer|min:1',
-            'step_name' => 'required|string|max:255',
-            'is_active' => 'boolean'
+            'step_name' => 'required|string|max:255'
         ]);
 
         // Check if step_order already exists for this department (except current record)
@@ -68,23 +70,34 @@ class FlowJobController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Urutan step sudah ada untuk departemen ini!'
-            ]);
+            ], 400);
         }
 
-        $flowJob->update($request->all());
+        $data = $request->all();
+        // Handle checkbox - jika tidak dicentang, set ke false (0)
+        $data['is_active'] = $request->has('is_active') ? 1 : 0;
+
+        $flowJob->update($data);
 
         return response()->json([
             'success' => true,
-            'message' => 'Flow Job berhasil diupdate!'
+            'message' => 'Data Flow Job berhasil diupdate!'
         ]);
     }
 
     public function destroy(FlowJob $flowJob)
     {
-        $flowJob->delete();
-        return response()->json([
-            'success' => true,
-            'message' => 'Flow Job berhasil dihapus!'
-        ]);
+        try {
+            $flowJob->delete();
+            return response()->json([
+                'success' => true,
+                'message' => 'Flow Job berhasil dihapus!'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus Flow Job. Data mungkin sedang digunakan.'
+            ], 400);
+        }
     }
 }

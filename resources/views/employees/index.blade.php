@@ -38,9 +38,9 @@
                                     <td>{{ $employee->department->name }}</td>
                                     <td>{{ $employee->jobLevel->name }}</td>
                                     <td>
-                                        <span class="badge {{ $employee->is_active ? 'text-dark' : 'text-danger' }}">
-                                            {{  $employee->is_active ? 'Aktif' : 'Nonaktif' }}
-                                        </span>
+ <span class="badge {{ $employee->is_active ? 'bg-success' : 'bg-danger' }}">
+        {{ $employee->is_active ? 'Aktif' : 'Nonaktif' }}
+    </span>
                                     </td>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-warning edit-btn" 
@@ -163,24 +163,69 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // DataTable initialization
+    // Variable untuk tracking apakah ini mode edit atau tambah
+    let isEditMode = false;
+
+    // DataTable initialization dengan bahasa Indonesia tanpa CORS
     $('#employeeTable').DataTable({
         responsive: true,
         language: {
-            url: '//cdn.datatables.net/plug-ins/1.10.24/i18n/Indonesian.json'
+            "sEmptyTable": "Tidak ada data yang tersedia pada tabel ini",
+            "sInfo": "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
+            "sInfoEmpty": "Menampilkan 0 sampai 0 dari 0 entri",
+            "sInfoFiltered": "(disaring dari _MAX_ entri keseluruhan)",
+            "sInfoPostFix": "",
+            "sInfoThousands": ".",
+            "sLengthMenu": "Tampilkan _MENU_ entri",
+            "sLoadingRecords": "Sedang memuat...",
+            "sProcessing": "Sedang memproses...",
+            "sSearch": "Cari:",
+            "sZeroRecords": "Tidak ditemukan data yang sesuai",
+            "oPaginate": {
+                "sFirst": "Pertama",
+                "sLast": "Terakhir",
+                "sNext": "Selanjutnya",
+                "sPrevious": "Sebelumnya"
+            },
+            "oAria": {
+                "sSortAscending": ": aktifkan untuk mengurutkan kolom naik",
+                "sSortDescending": ": aktifkan untuk mengurutkan kolom turun"
+            }
         }
     });
 
-    // Reset modal when shown
+    // Reset modal hanya ketika bukan mode edit
     $('#employeeModal').on('show.bs.modal', function() {
+        if (!isEditMode) {
+            resetForm();
+        }
+        // Reset flag setelah modal ditampilkan
+        isEditMode = false;
+    });
+
+    // Fungsi untuk reset form
+    function resetForm() {
         $('#employeeForm')[0].reset();
         $('#employee_id_hidden').val('');
         $('#employeeModalLabel').text('Tambah Karyawan');
         $('.form-control').removeClass('is-invalid');
+        $('.invalid-feedback').text('');
+        $('#is_active').prop('checked', true); // Set default checked
+    }
+
+    // Button tambah karyawan - set flag untuk mode tambah
+    $('button[data-bs-target="#employeeModal"]').on('click', function() {
+        isEditMode = false;
     });
 
-    // Edit button click
-    $(document).on('click', '.edit-btn', function() {
+    // Edit button click - set flag untuk mode edit
+    $(document).on('click', '.edit-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Set flag bahwa ini mode edit
+        isEditMode = true;
+        
         const id = $(this).data('id');
         const employeeId = $(this).data('employee_id');
         const name = $(this).data('name');
@@ -189,14 +234,21 @@ $(document).ready(function() {
         const jobLevelId = $(this).data('job_level_id');
         const isActive = $(this).data('is_active');
 
+        // Clear validasi error terlebih dahulu
+        $('.form-control').removeClass('is-invalid');
+        $('.invalid-feedback').text('');
+        
+        // Isi data untuk edit
         $('#employee_id_hidden').val(id);
         $('#employee_id').val(employeeId);
         $('#name').val(name);
         $('#email').val(email);
         $('#department_id').val(departmentId);
         $('#job_level_id').val(jobLevelId);
-        $('#is_active').prop('checked', isActive);
+        $('#is_active').prop('checked', Boolean(Number(isActive)));
         $('#employeeModalLabel').text('Edit Karyawan');
+        
+        // Tampilkan modal
         $('#employeeModal').modal('show');
     });
 
@@ -207,12 +259,15 @@ $(document).ready(function() {
         const id = $('#employee_id_hidden').val();
         const isEdit = id !== '';
         const url = isEdit ? `/employees/${id}` : '/employees';
-        const method = isEdit ? 'PUT' : 'POST';
         
         const formData = new FormData(this);
         if (isEdit) {
             formData.append('_method', 'PUT');
         }
+
+        // Reset error states
+        $('.form-control').removeClass('is-invalid');
+        $('.invalid-feedback').text('');
 
         $.ajax({
             url: url,
@@ -223,7 +278,6 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     $('#employeeModal').modal('hide');
-                    location.reload();
                     
                     // Show success message
                     Swal.fire({
@@ -232,18 +286,24 @@ $(document).ready(function() {
                         text: response.message,
                         timer: 2000,
                         showConfirmButton: false
+                    }).then(() => {
+                        location.reload();
                     });
                 }
             },
             error: function(xhr) {
                 if (xhr.status === 422) {
                     const errors = xhr.responseJSON.errors;
-                    $('.form-control').removeClass('is-invalid');
-                    $('.invalid-feedback').text('');
                     
                     Object.keys(errors).forEach(function(key) {
                         $(`#${key}`).addClass('is-invalid');
                         $(`#${key}`).siblings('.invalid-feedback').text(errors[key][0]);
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Terjadi kesalahan sistem. Silakan coba lagi.'
                     });
                 }
             }
@@ -251,7 +311,10 @@ $(document).ready(function() {
     });
 
     // Delete button click
-    $(document).on('click', '.delete-btn', function() {
+    $(document).on('click', '.delete-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
         const id = $(this).data('id');
         const name = $(this).data('name');
 
@@ -274,14 +337,14 @@ $(document).ready(function() {
                     },
                     success: function(response) {
                         if (response.success) {
-                            location.reload();
-                            
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Terhapus!',
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
                             });
                         }
                     },
@@ -290,7 +353,7 @@ $(document).ready(function() {
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal!',
-                            text: response.message || 'Terjadi kesalahan saat menghapus data.'
+                            text: response?.message || 'Terjadi kesalahan saat menghapus data.'
                         });
                     }
                 });

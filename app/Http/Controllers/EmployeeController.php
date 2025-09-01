@@ -25,11 +25,14 @@ class EmployeeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:employees,email',
             'department_id' => 'required|exists:departments,id',
-            'job_level_id' => 'required|exists:job_levels,id',
-            'is_active' => 'boolean'
+            'job_level_id' => 'required|exists:job_levels,id'
         ]);
 
-        Employee::create($request->all());
+        $data = $request->all();
+        // Handle checkbox - jika tidak dicentang, set ke false (0)
+        $data['is_active'] = $request->has('is_active') ? 1 : 0;
+
+        Employee::create($data);
 
         return response()->json([
             'success' => true,
@@ -44,24 +47,34 @@ class EmployeeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:employees,email,' . $employee->id,
             'department_id' => 'required|exists:departments,id',
-            'job_level_id' => 'required|exists:job_levels,id',
-            'is_active' => 'boolean'
+            'job_level_id' => 'required|exists:job_levels,id'
         ]);
 
-        $employee->update($request->all());
+        $data = $request->all();
+        // Handle checkbox - jika tidak dicentang, set ke false (0)
+        $data['is_active'] = $request->has('is_active') ? 1 : 0;
+
+        $employee->update($data);
 
         return response()->json([
             'success' => true,
-            'message' => 'Karyawan berhasil diupdate!'
+            'message' => 'Data karyawan berhasil diupdate!'
         ]);
     }
 
     public function destroy(Employee $employee)
     {
-        $employee->delete();
-        return response()->json([
-            'success' => true,
-            'message' => 'Karyawan berhasil dihapus!'
-        ]);
+        try {
+            $employee->delete();
+            return response()->json([
+                'success' => true,
+                'message' => 'Karyawan berhasil dihapus!'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus karyawan. Data mungkin sedang digunakan.'
+            ], 400);
+        }
     }
 }
