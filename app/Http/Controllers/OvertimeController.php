@@ -24,65 +24,122 @@ class OvertimeController extends Controller
         return view('overtime.index', compact('requests'));
     }
 
-    public function create()
-    {
-        $employees = Employee::with(['department', 'jobLevel'])
+public function create()
+{
+    $currentUser = Auth::user();
+    
+    // ✅ PERBAIKAN: Cari employee berdasarkan user yang login
+    $currentEmployee = Employee::with(['department', 'jobLevel'])
+        ->where('email', $currentUser->email)
+        ->where('is_active', true)
+        ->first();
+    
+    // Jika tidak ditemukan berdasarkan email, coba berdasarkan nama
+    if (!$currentEmployee) {
+        $currentEmployee = Employee::with(['department', 'jobLevel'])
+            ->where('name', 'LIKE', '%' . $currentUser->name . '%')
             ->where('is_active', true)
-            ->get();
-        $departments = Department::where('is_active', true)->get();
-        
-        return view('overtime.create', compact('employees', 'departments'));
+            ->first();
+    }
+    
+    if (!$currentEmployee) {
+        return redirect()->route('overtime.index')
+            ->with('error', 'Data karyawan tidak ditemukan untuk akun Anda. Hubungi admin untuk mapping data karyawan.');
     }
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'employee_id' => 'required|exists:employees,id', // Pengaju berdasarkan employee yang dipilih
-            'date' => 'required|date',
-            'department_id' => 'required|exists:departments,id',
-            'details' => 'required|array|min:1',
-            'details.*.employee_id' => 'required|exists:employees,id',
-            'details.*.start_time' => 'required',
-            'details.*.end_time' => 'required',
-            'details.*.work_priority' => 'required',
-            'details.*.work_process' => 'required',
+    // ✅ PERBAIKAN: Hanya tampilkan departemen milik user yang login
+    $departments = Department::where('id', $currentEmployee->department_id)
+        ->where('is_active', true)
+        ->get();
+    
+    // ✅ PERBAIKAN: Untuk dropdown detail, ambil semua karyawan di departemen yang sama
+    $employees = Employee::with(['department', 'jobLevel'])
+        ->where('department_id', $currentEmployee->department_id)
+        ->where('is_active', true)
+        ->get();
+    
+    // ✅ PERBAIKAN: Untuk dropdown pengaju, hanya user yang login saja
+    $eligibleRequesters = Employee::with(['department', 'jobLevel'])
+        ->where('id', $currentEmployee->id) // ✅ HANYA DIRI SENDIRI
+        ->where('is_active', true)
+        ->get();
+    
+    $currentEmployeeData = $currentEmployee;
+    
+    return view('overtime.create', compact('employees', 'departments', 'currentEmployeeData', 'eligibleRequesters'));
+}
+  public function store(Request $request)
+{
+    $currentUser = Auth::user();
+    
+    // ✅ PERBAIKAN: Validasi bahwa employee_id yang dipilih adalah milik user yang login
+    $selectedEmployee = Employee::with(['jobLevel', 'department'])
+        ->find($request->employee_id);
+    
+    if (!$selectedEmployee) {
+        return redirect()->route('overtime.create')
+            ->with('error', 'Data karyawan tidak ditemukan.');
+    }
+    
+    // ✅ PERBAIKAN: Validasi bahwa employee yang dipilih sesuai dengan user login
+    $currentEmployee = Employee::where('email', $currentUser->email)
+        ->orWhere('name', 'LIKE', '%' . $currentUser->name . '%')
+        ->where('is_active', true)
+        ->first();
+    
+    if (!$currentEmployee || $selectedEmployee->id != $currentEmployee->id) {
+        return redirect()->route('overtime.create')
+            ->with('error', 'Anda hanya dapat mengajukan lembur untuk diri sendiri.');
+    }
+
+    $request->validate([
+        'employee_id' => 'required|exists:employees,id',
+        'date' => 'required|date',
+        'department_id' => 'required|exists:departments,id',
+        'details' => 'required|array|min:1',
+        'details.*.employee_id' => 'required|exists:employees,id',
+        'details.*.start_time' => 'required',
+        'details.*.end_time' => 'required',
+        'details.*.work_priority' => 'required',
+        'details.*.work_process' => 'required',
+    ]);
+
+    // ✅ Validasi tambahan: pastikan department_id sesuai dengan employee
+    if ($selectedEmployee->department_id != $request->department_id) {
+        return redirect()->route('overtime.create')
+            ->with('error', 'Departemen tidak sesuai dengan data karyawan.');
+    }
+
+    DB::transaction(function () use ($request, $selectedEmployee) {
+        $overtimeRequest = OvertimeRequest::create([
+            'request_number' => OvertimeRequest::generateRequestNumber(),
+            'requester_id' => Auth::id(),
+            'requester_employee_id' => $selectedEmployee->id,
+            'requester_level' => $selectedEmployee->jobLevel->code,
+            'date' => $request->date,
+            'department_id' => $request->department_id,
         ]);
 
-        DB::transaction(function () use ($request) {
-            // Get requester employee data
-            $requesterEmployee = Employee::with('jobLevel')->find($request->employee_id);
-            
-            $overtimeRequest = OvertimeRequest::create([
-                'request_number' => OvertimeRequest::generateRequestNumber(),
-                'requester_id' => Auth::id(),
-                'requester_employee_id' => $requesterEmployee->id,
-                'requester_level' => $requesterEmployee->jobLevel->code,
-                'date' => $request->date,
-                'department_id' => $request->department_id,
+        foreach ($request->details as $detail) {
+            OvertimeDetail::create([
+                'overtime_request_id' => $overtimeRequest->id,
+                'employee_id' => $detail['employee_id'],
+                'start_time' => $detail['start_time'],
+                'end_time' => $detail['end_time'],
+                'work_priority' => $detail['work_priority'],
+                'work_process' => $detail['work_process'],
+                'qty_plan' => $detail['qty_plan'] ?? null,
+                'qty_actual' => null,
+                'notes' => $detail['notes'] ?? null,
             ]);
+        }
 
-            foreach ($request->details as $detail) {
-                OvertimeDetail::create([
-                    'overtime_request_id' => $overtimeRequest->id,
-                    'employee_id' => $detail['employee_id'],
-                    'start_time' => $detail['start_time'],
-                    'end_time' => $detail['end_time'],
-                    'work_priority' => $detail['work_priority'],
-                    'work_process' => $detail['work_process'],
-                    'qty_plan' => $detail['qty_plan'] ?? null,
-                    'qty_actual' => null,
-                    'notes' => $detail['notes'] ?? null,
-                ]);
-            }
+        $this->createApprovalRecords($overtimeRequest, $selectedEmployee);
+        $overtimeRequest->updateStatusAndColor();
+    });
 
-            // Create approval records based on flow job
-            $this->createApprovalRecords($overtimeRequest, $requesterEmployee);
-            $overtimeRequest->updateStatusAndColor();
-        });
-
-        return redirect()->route('overtime.index')->with('success', 'Pengajuan lembur berhasil dibuat');
-    }
-
+    return redirect()->route('overtime.index')->with('success', 'Pengajuan lembur berhasil dibuat');
+}
     public function show(OvertimeRequest $overtime)
 {
     // ✅ PERBAIKAN: FORCE FRESH DATA dari database (bypass cache)

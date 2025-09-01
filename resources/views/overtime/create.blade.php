@@ -40,25 +40,33 @@
             </div>
 
             <div class="row mb-4">
-                <div class="col-md-6">
-                    <label for="employee_id" class="form-label">Pengaju (Karyawan)</label>
-                    <select class="form-select @error('employee_id') is-invalid @enderror" 
-                            name="employee_id" id="employee_id" required>
-                        <option value="">Pilih Karyawan Pengaju</option>
-                    </select>
-                    @error('employee_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                    <small class="text-muted">Pilih karyawan yang mengajukan lembur ini</small>
-                    
-                    {{-- Alert untuk flow job validation --}}
-                    <div id="flowJobAlert" class="alert alert-warning mt-2" style="display: none;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Perhatian!</strong> Karyawan yang dipilih tidak memiliki wewenang untuk mengajukan lembur di departemen ini.
-                        <br><small>Silakan pilih karyawan lain atau hubungi admin untuk mengatur flow approval.</small>
-                    </div>
-                </div>
-            </div>
+               {{-- Ganti bagian dropdown employee_id dengan kode ini --}}
+<div class="col-md-6">
+    <label for="employee_id" class="form-label">Pengaju (Karyawan)</label>
+    <select class="form-select @error('employee_id') is-invalid @enderror" 
+            name="employee_id" id="employee_id" required>
+        <option value="">Pilih Karyawan Pengaju</option>
+        @if(isset($eligibleRequesters))
+            @foreach($eligibleRequesters as $requester)
+                <option value="{{ $requester->id }}" 
+                        {{ (old('employee_id') == $requester->id || (isset($currentEmployeeData) && $currentEmployeeData->id == $requester->id)) ? 'selected' : '' }}>
+                    {{ $requester->name }} - {{ $requester->employee_id }} ({{ $requester->jobLevel->name ?? 'N/A' }})
+                </option>
+            @endforeach
+        @endif
+    </select>
+    @error('employee_id')
+        <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+    <small class="text-muted">Hanya dapat memilih diri sendiri sebagai pengaju</small>
+    
+    {{-- Alert untuk flow job validation --}}
+    <div id="flowJobAlert" class="alert alert-warning mt-2" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Perhatian!</strong> Karyawan yang dipilih tidak memiliki wewenang untuk mengajukan lembur di departemen ini.
+        <br><small>Silakan pilih karyawan lain atau hubungi admin untuk mengatur flow approval.</small>
+    </div>
+</div>
 
             {{-- Detail Section --}}
             <h5>Detail Lembur</h5>
@@ -251,13 +259,10 @@ function checkFlowJobEligibility(employeeId, departmentId) {
 function updateEmployeeOptions(departmentId) {
     const filteredEmployees = allEmployees.filter(emp => emp.department_id == departmentId);
     
-    // Update pengaju dropdown
-    $('#employee_id').empty().append('<option value="">Pilih Karyawan Pengaju</option>');
-    filteredEmployees.forEach(emp => {
-        $('#employee_id').append(`<option value="${emp.id}">${emp.name} - ${emp.employee_id} (${emp.job_level.name})</option>`);
-    });
-
-    // Update all detail employee dropdowns
+    // ✅ JANGAN UPDATE PENGAJU DROPDOWN - BIARKAN TETAP SESUAI YANG DARI CONTROLLER
+    // Pengaju dropdown tidak perlu diupdate karena sudah fix dari controller
+    
+    // ✅ HANYA UPDATE DETAIL EMPLOYEE DROPDOWNS
     $('.employee-select').each(function() {
         const currentValue = $(this).val();
         $(this).empty().append('<option value="">Pilih Karyawan</option>');
@@ -293,7 +298,7 @@ function addDetail() {
         width: '100%'
     });
 
-    // Update options if department is already selected
+    // ✅ PERBAIKAN: Update options untuk detail dropdown saja
     const departmentId = $('#department_id').val();
     if (departmentId) {
         const filteredEmployees = allEmployees.filter(emp => emp.department_id == departmentId);
