@@ -10,11 +10,12 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    public function index()
-    {
-        $users = User::with(['role', 'department'])->paginate(10);
-        return view('users.index', compact('users'));
-    }
+   public function index()
+{
+    // Hapus paginate, ambil semua data dengan relasi
+    $users = User::with(['role', 'department'])->get();
+    return view('users.index', compact('users'));
+}
 
     public function create()
     {
