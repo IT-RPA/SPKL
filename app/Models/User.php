@@ -13,7 +13,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'employee_id', 'name', 'email', 'password', 'role_id', 
-        'department_id', 'level', 'is_active'
+        'department_id', 'job_level_id', 'is_active'  // ✅ Ganti 'level' dengan 'job_level_id'
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -31,12 +31,18 @@ class User extends Authenticatable
 
     public function employee()
     {
-        return $this->hasOne(Employee::class);
+        return $this->hasOne(Employee::class, 'email', 'email'); // ✅ Link by email
     }
 
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    // ✅ NEW: Relasi ke JobLevel
+    public function jobLevel()
+    {
+        return $this->belongsTo(JobLevel::class);
     }
 
     public function overtimeRequests()
@@ -52,6 +58,20 @@ class User extends Authenticatable
     public function approvals()
     {
         return $this->hasMany(OvertimeApproval::class, 'approver_id');
+    }
+
+    // ✅ NEW: Helper method untuk cek level berdasarkan JobLevel
+    public function isLevel($levelCode)
+    {
+        return $this->jobLevel && $this->jobLevel->code === $levelCode;
+    }
+
+    // ✅ NEW: Helper method untuk mendapatkan Employee yang terkait
+    public function getEmployeeAttribute()
+    {
+        return Employee::where('email', $this->email)
+            ->orWhere('employee_id', $this->employee_id)
+            ->first();
     }
 
     public function hasPermission($permission)

@@ -92,7 +92,8 @@ class OvertimeRequest extends Model
             // ✅ PERBAIKAN: Gunakan status yang sesuai dengan enum di migration
             $statusMap = [
                 'Approval Section Head' => 'approved_sect',
-                'Approval Department Head' => 'approved_dept', 
+                'Approval Department Head' => 'approved_dept',
+                'Approval Sub Division Head' => 'approved_subdiv',
                 'Approval Division Head' => 'approved_div',
                 'Approval HRD' => 'approved_hrd',
             ];

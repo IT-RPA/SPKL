@@ -99,17 +99,17 @@
                 
                 <div class="col-md-4">
                     <div class="mb-3">
-                        <label for="level" class="form-label">Level</label>
-                        <select class="form-select @error('level') is-invalid @enderror" 
-                                id="level" name="level" required>
-                            <option value="">Pilih Level</option>
-                            <option value="foreman" {{ old('level', $user->level) == 'foreman' ? 'selected' : '' }}>Foreman</option>
-                            <option value="sect_head" {{ old('level', $user->level) == 'sect_head' ? 'selected' : '' }}>Section Head</option>
-                            <option value="dept_head" {{ old('level', $user->level) == 'dept_head' ? 'selected' : '' }}>Department Head</option>
-                            <option value="div_head" {{ old('level', $user->level) == 'div_head' ? 'selected' : '' }}>Division Head</option>
-                            <option value="hrd" {{ old('level', $user->level) == 'hrd' ? 'selected' : '' }}>HRD</option>
+                        <label for="job_level_id" class="form-label">Job Level</label>
+                        <select class="form-select @error('job_level_id') is-invalid @enderror" 
+                                id="job_level_id" name="job_level_id" required>
+                            <option value="">Pilih Job Level</option>
+                            @foreach($jobLevels as $jobLevel)
+                                <option value="{{ $jobLevel->id }}" {{ old('job_level_id', $user->job_level_id) == $jobLevel->id ? 'selected' : '' }}>
+                                    {{ $jobLevel->name }} ({{ $jobLevel->code }})
+                                </option>
+                            @endforeach
                         </select>
-                        @error('level')
+                        @error('job_level_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>

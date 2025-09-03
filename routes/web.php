@@ -52,6 +52,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('approvals')->name('approvals.')->group(function () {
         Route::get('/sect-head', [ApprovalController::class, 'sectHeadIndex'])->name('sect-head');
         Route::get('/dept-head', [ApprovalController::class, 'deptHeadIndex'])->name('dept-head');
+        route::get('/sub-div-head', [ApprovalController::class, 'subDivHeadIndex'])->name('sub-div-head');
         Route::get('/div-head', [ApprovalController::class, 'divHeadIndex'])->name('div-head');
         Route::get('/hrd', [ApprovalController::class, 'hrdIndex'])->name('hrd');
         

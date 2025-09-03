@@ -204,66 +204,143 @@ public function create()
         return redirect()->route('overtime.show', $overtime)->with('success', 'Qty Actual berhasil diupdate');
     }
 
-  private function createApprovalRecords(OvertimeRequest $request, $requesterEmployee)
+private function createApprovalRecords(OvertimeRequest $request, $requesterEmployee)
 {
+    \Log::info("=== CREATE APPROVAL RECORDS DEBUG ===");
+    \Log::info("Request ID: {$request->id}, Department: {$request->department_id}");
+    \Log::info("Requester: {$requesterEmployee->name}, Job Level ID: {$requesterEmployee->job_level_id}");
+    
     // Get flow job untuk departemen yang mengajukan
-    $flowJobs = FlowJob::where('department_id', $request->department_id)
+    $flowJobs = FlowJob::with('jobLevel')->where('department_id', $request->department_id)
         ->where('is_active', true)
         ->orderBy('step_order')
         ->get();
+
+    \Log::info("Found " . $flowJobs->count() . " flow jobs for department {$request->department_id}");
+    foreach ($flowJobs as $fj) {
+        \Log::info("Flow Job: {$fj->step_name}, Job Level: {$fj->jobLevel->name} ({$fj->jobLevel->code}), Step Order: {$fj->step_order}");
+    }
 
     // Cari posisi requester dalam flow
     $requesterFlowJob = $flowJobs->where('job_level_id', $requesterEmployee->job_level_id)->first();
     
     if (!$requesterFlowJob) {
+        \Log::error("Flow job tidak ditemukan untuk level jabatan pengaju: Job Level ID {$requesterEmployee->job_level_id}");
         throw new \Exception('Flow job tidak ditemukan untuk level jabatan pengaju');
     }
 
+    \Log::info("Requester Flow Job: {$requesterFlowJob->step_name}, Step Order: {$requesterFlowJob->step_order}");
+
     // Buat approval untuk step selanjutnya
     $nextFlowJobs = $flowJobs->where('step_order', '>', $requesterFlowJob->step_order);
+    
+    \Log::info("Found " . $nextFlowJobs->count() . " next flow jobs");
 
     foreach ($nextFlowJobs as $flowJob) {
         $approver = null;
 
-        // ✅ PERBAIKAN KHUSUS: Untuk Division Head, tidak terbatas departemen tertentu
-        if ($flowJob->jobLevel->code === 'DIV' || $flowJob->step_name === 'Approval Division Head') {
-            // Cari Division Head yang tersedia (bisa dari departemen manapun)
-            $approver = Employee::where('job_level_id', $flowJob->job_level_id)
-                ->where('is_active', true)
-                ->first(); // Ambil Division Head pertama yang aktif
+        \Log::info("Processing flow job: {$flowJob->step_name}, Job Level: {$flowJob->jobLevel->code}");
+
+        // ✅ PERBAIKAN: Logika pencarian approver yang lebih komprehensif
+        switch ($flowJob->jobLevel->code) {
+            case 'DIV':
+                \Log::info("Searching for Division Head approver...");
+                $approver = Employee::with('jobLevel')
+                    ->where('job_level_id', $flowJob->job_level_id)
+                    ->where('is_active', true)
+                    ->first();
+                break;
                 
-            \Log::info("Looking for Division Head approver: " . ($approver ? $approver->name : 'Not found'));
-            
-        } elseif ($flowJob->jobLevel->code === 'HRD' || $flowJob->step_name === 'Approval HRD') {
-            // HRD juga bisa dari department mana saja
-            $approver = Employee::where('job_level_id', $flowJob->job_level_id)
-                ->where('is_active', true)
-                ->first();
+            case 'SUBDIV':
+                \Log::info("Searching for Sub Division Head approver...");
+                $approver = Employee::with('jobLevel')
+                    ->where('job_level_id', $flowJob->job_level_id)
+                    ->where('is_active', true)
+                    ->first();
+                    
+                // ✅ TAMBAHAN: Log semua employee dengan level SUBDIV untuk debug
+                $allSubDiv = Employee::with('jobLevel')
+                    ->where('job_level_id', $flowJob->job_level_id)
+                    ->get();
+                \Log::info("All SUBDIV employees: " . $allSubDiv->pluck('name')->implode(', '));
+                break;
                 
-        } else {
-            // Untuk level lain (Section Head, Department Head), cari di department yang sama
-            $approver = Employee::where('department_id', $request->department_id)
-                ->where('job_level_id', $flowJob->job_level_id)
-                ->where('is_active', true)
-                ->first();
+            case 'HRD':
+                \Log::info("Searching for HRD approver...");
+                $approver = Employee::with('jobLevel')
+                    ->where('job_level_id', $flowJob->job_level_id)
+                    ->where('is_active', true)
+                    ->first();
+                break;
+                
+            case 'DEPT':
+                \Log::info("Searching for Department Head approver in department {$request->department_id}...");
+                $approver = Employee::with('jobLevel')
+                    ->where('department_id', $request->department_id)
+                    ->where('job_level_id', $flowJob->job_level_id)
+                    ->where('is_active', true)
+                    ->first();
+                break;
+                
+            case 'SECT':
+                \Log::info("Searching for Section Head approver in department {$request->department_id}...");
+                $approver = Employee::with('jobLevel')
+                    ->where('department_id', $request->department_id)
+                    ->where('job_level_id', $flowJob->job_level_id)
+                    ->where('is_active', true)
+                    ->first();
+                break;
+                
+            default:
+                // ✅ PERBAIKAN: Untuk job level lain, cari di department yang sama
+                \Log::info("Searching for {$flowJob->jobLevel->code} approver in department {$request->department_id}...");
+                $approver = Employee::with('jobLevel')
+                    ->where('department_id', $request->department_id)
+                    ->where('job_level_id', $flowJob->job_level_id)
+                    ->where('is_active', true)
+                    ->first();
+                    
+                // ✅ JIKA TIDAK DITEMUKAN, COBA CARI GLOBAL
+                if (!$approver) {
+                    \Log::info("Not found in department, searching globally for {$flowJob->jobLevel->code}...");
+                    $approver = Employee::with('jobLevel')
+                        ->where('job_level_id', $flowJob->job_level_id)
+                        ->where('is_active', true)
+                        ->first();
+                }
+                break;
         }
 
+        \Log::info("Approver search result: " . ($approver ? "{$approver->name} (ID: {$approver->id})" : 'NOT FOUND'));
+
         if ($approver) {
-            OvertimeApproval::create([
-                'overtime_request_id' => $request->id,
-                'approver_employee_id' => $approver->id,
-                'approver_level' => $flowJob->jobLevel->code,
-                'step_order' => $flowJob->step_order,
-                'step_name' => $flowJob->step_name,
-                'status' => 'pending',
-            ]);
-            
-            \Log::info("Created approval for {$flowJob->step_name} - Approver: {$approver->name}");
-            
+            try {
+                $approvalRecord = OvertimeApproval::create([
+                    'overtime_request_id' => $request->id,
+                    'approver_employee_id' => $approver->id,
+                    'approver_level' => $flowJob->jobLevel->code,
+                    'step_order' => $flowJob->step_order,
+                    'step_name' => $flowJob->step_name,
+                    'status' => 'pending',
+                ]);
+                
+                \Log::info("✅ SUCCESS: Created approval ID {$approvalRecord->id} for {$flowJob->step_name} - Approver: {$approver->name}");
+                
+            } catch (\Exception $e) {
+                \Log::error("❌ FAILED to create approval for {$flowJob->step_name}: " . $e->getMessage());
+            }
         } else {
-            \Log::warning("Approver tidak ditemukan untuk step: {$flowJob->step_name}, Job Level: {$flowJob->jobLevel->code}");
+            \Log::error("❌ CRITICAL: Approver tidak ditemukan untuk step: {$flowJob->step_name}, Job Level: {$flowJob->jobLevel->code}");
+            
+            // ✅ TAMBAHAN: Debug lebih detail
+            $allEmployeesAtLevel = Employee::with('jobLevel')
+                ->where('job_level_id', $flowJob->job_level_id)
+                ->get();
+            \Log::error("All employees at job level {$flowJob->jobLevel->code}: " . $allEmployeesAtLevel->pluck('name')->implode(', '));
         }
     }
+    
+    \Log::info("=== END CREATE APPROVAL RECORDS DEBUG ===");
 }
 
     // Function untuk get employees berdasarkan department via AJAX

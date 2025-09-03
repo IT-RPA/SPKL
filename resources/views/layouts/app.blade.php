@@ -203,8 +203,7 @@
                             </a>
                         </li>
                         
-                        <!-- Approval Menu -->
-                       <!-- Approval Menu -->
+<!-- Approval Menu -->
 <div class="menu-header">Approval</div>
 @php
     // Get current employee data berdasarkan email yang login
@@ -237,6 +236,12 @@
             $availableApprovals['dept-head'] = 'Approval Department Head';
             $showApprovalMenu = true;
         }
+
+        // ✅ PERBAIKAN: Step name yang benar untuk Sub Division Head
+        if ($approvalsByStep->has('Approval Sub Divisi')) {
+            $availableApprovals['sub-div-head'] = 'Approval Sub Division Head';
+            $showApprovalMenu = true;
+        }
         
         if ($approvalsByStep->has('Approval Division Head')) {
             $availableApprovals['div-head'] = 'Approval Division Head';
@@ -262,6 +267,9 @@
                     break;
                 case 'DEPT':
                     $availableApprovals['dept-head'] = 'Approval Department Head';
+                    break;
+                case 'SUBDIV':
+                    $availableApprovals['sub-div-head'] = 'Approval Sub Division Head';
                     break;
                 case 'DIV':
                     $availableApprovals['div-head'] = 'Approval Division Head';
@@ -300,6 +308,17 @@
                 @php $deptPending = $pendingApprovals->where('step_name', 'Approval Department Head')->count(); @endphp
                 @if($deptPending > 0)
                     <span class="badge bg-danger ms-1">{{ $deptPending }}</span>
+                @endif
+            </a></li>
+        @endif
+
+        {{-- ✅ PERBAIKAN: Route yang benar untuk Sub Division Head --}}
+        @if(isset($availableApprovals['sub-div-head']))
+            <li><a class="dropdown-item" href="{{ route('approvals.sub-div-head') }}">
+                <i class="fas fa-user-cog"></i> {{ $availableApprovals['sub-div-head'] }}
+                @php $subdivPending = $pendingApprovals->where('step_name', 'Approval Sub Divisi')->count(); @endphp
+                @if($subdivPending > 0)
+                    <span class="badge bg-danger ms-1">{{ $subdivPending }}</span>
                 @endif
             </a></li>
         @endif

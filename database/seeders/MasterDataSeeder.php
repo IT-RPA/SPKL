@@ -7,12 +7,27 @@ use App\Models\JobLevel;
 use App\Models\Employee;
 use App\Models\FlowJob;
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
 class MasterDataSeeder extends Seeder
 {
     public function run()
     {
+        // =======================
+        // Roles (tambah jika belum ada)
+        // =======================
+        $roles = [
+            ['name' => 'admin', 'display_name' => 'Administrator'],
+            ['name' => 'user', 'display_name' => 'User'],
+            ['name' => 'approver', 'display_name' => 'Approver'],
+        ];
+        foreach ($roles as $role) {
+            Role::firstOrCreate(['name' => $role['name']], $role);
+        }
+        
+        $userRole = Role::where('name', 'user')->first();
+
         // =======================
         // Departments
         // =======================
@@ -57,41 +72,46 @@ class MasterDataSeeder extends Seeder
         $staff       = JobLevel::where('code', 'STAFF')->first();
 
         // =======================
-        // Users + Employees
-        // ✅ PERBAIKAN: Hanya 1 Division Head untuk menangani semua departemen
+        // ✅ Users + Employees dengan proper relations
         // =======================
         $userData = [
             // Produksi
-            ['id' => 'PROD001', 'name' => 'John Doe',     'email' => 'john.doe@company.com',   'dept' => $prodDept->id, 'level' => $foreman->id],
-            ['id' => 'PROD002', 'name' => 'Jane Smith',   'email' => 'jane.smith@company.com', 'dept' => $prodDept->id, 'level' => $sectHead->id],
-            ['id' => 'PROD003', 'name' => 'Mike Johnson', 'email' => 'mike.johnson@company.com','dept' => $prodDept->id, 'level' => $deptHead->id],
+            ['id' => 'PROD001', 'name' => 'John Doe',     'email' => 'john.doe@company.com',     'dept' => $prodDept->id, 'level' => $foreman->id],
+            ['id' => 'PROD002', 'name' => 'Jane Smith',   'email' => 'jane.smith@company.com',   'dept' => $prodDept->id, 'level' => $sectHead->id],
+            ['id' => 'PROD003', 'name' => 'Mike Johnson', 'email' => 'mike.johnson@company.com', 'dept' => $prodDept->id, 'level' => $deptHead->id],
 
             // IT
             ['id' => 'IT001', 'name' => 'David Brown', 'email' => 'david.brown@company.com', 'dept' => $itDept->id, 'level' => $foreman->id],
 
-            // ✅ SATU DIVISION HEAD untuk semua departemen (ditempatkan di departemen utama/HRD)
-            ['id' => 'DIV001', 'name' => 'Sarah Wilson', 'email' => 'sarah.wilson@company.com','dept' => $hrdDept->id, 'level' => $divHead->id],
+            // ✅ SATU DIVISION HEAD untuk semua departemen 
+            ['id' => 'DIV999', 'name' => 'Sarah Wilson', 'email' => 'sarah.wilson@company.com', 'dept' => $hrdDept->id, 'level' => $divHead->id],
 
             // HRD
-            ['id' => 'HRD002','name' => 'Robert Miller','email' => 'robert.miller@company.com','dept' => $hrdDept->id, 'level' => $hrdManagerL->id],
+            ['id' => 'HRD002', 'name' => 'Robert Miller', 'email' => 'robert.miller@company.com', 'dept' => $hrdDept->id, 'level' => $hrdManagerL->id],
 
             // Finance
-            ['id' => 'FIN002','name' => 'Emily Taylor','email' => 'emily.taylor@company.com','dept' => $finDept->id, 'level' => $deptHead->id],
+            ['id' => 'FIN002', 'name' => 'Emily Taylor', 'email' => 'emily.taylor@company.com', 'dept' => $finDept->id, 'level' => $deptHead->id],
 
             // Staff
-            ['id' => 'PROD005','name' => 'Tom Staff1','email' => 'tom.staff1@company.com','dept' => $prodDept->id, 'level' => $staff->id],
-            ['id' => 'IT003','name' => 'Amy Staff2','email' => 'amy.staff2@company.com','dept' => $itDept->id, 'level' => $staff->id],
+            ['id' => 'PROD005', 'name' => 'Tom Staff1', 'email' => 'tom.staff1@company.com', 'dept' => $prodDept->id, 'level' => $staff->id],
+            ['id' => 'IT003', 'name' => 'Amy Staff2', 'email' => 'amy.staff2@company.com', 'dept' => $itDept->id, 'level' => $staff->id],
         ];
 
         foreach ($userData as $data) {
+            // ✅ Buat User dengan relasi proper ke JobLevel
             User::create([
-                'employee_id' => $data['id'],
-                'name'        => $data['name'],
-                'email'       => $data['email'],
-                'password'    => Hash::make('password123'),
+                'employee_id'   => $data['id'],
+                'name'          => $data['name'],
+                'email'         => $data['email'],
+                'password'      => Hash::make('password123'),
+                'role_id'       => $userRole->id,
+                'department_id' => $data['dept'],
+                'job_level_id'  => $data['level'],  // ✅ Proper relation
+                'is_active'     => true,
                 'email_verified_at' => now(),
             ]);
 
+            // ✅ Buat Employee yang sinkron
             Employee::create([
                 'employee_id'   => $data['id'],
                 'name'          => $data['name'],
@@ -104,18 +124,16 @@ class MasterDataSeeder extends Seeder
 
         // =======================
         // Ambil employee buat flow approver
-        // ✅ PERBAIKAN: Satu Division Head untuk semua
         // =======================
         $prodSectHead = Employee::where('employee_id', 'PROD002')->first(); // Jane
         $prodDeptHead = Employee::where('employee_id', 'PROD003')->first(); // Mike
         $itForeman    = Employee::where('employee_id', 'IT001')->first();   // David
-        $divisionHead = Employee::where('employee_id', 'DIV001')->first();  // Sarah - SATU untuk semua dept
+        $divisionHead = Employee::where('employee_id', 'DIV999')->first();  // Sarah - SATU untuk semua dept
         $hrdManager   = Employee::where('employee_id', 'HRD002')->first();  // Robert
         $finDeptHead  = Employee::where('employee_id', 'FIN002')->first();  // Emily
 
         // =======================
-        // Flow Jobs
-        // ✅ PERBAIKAN: Semua departemen menggunakan Division Head yang sama
+        // Flow Jobs - semua departemen menggunakan Division Head yang sama
         // =======================
         $flowJobs = [
             // Produksi Flow
@@ -125,17 +143,17 @@ class MasterDataSeeder extends Seeder
             ['dept' => $prodDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 4, 'name' => 'Approval Division Head'],
             ['dept' => $prodDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,  'order' => 5, 'name' => 'Approval HRD'],
 
-            // IT Flow (menggunakan Division Head yang sama)
+            // IT Flow
             ['dept' => $itDept->id, 'level' => $foreman->id,     'approver' => null,            'order' => 1, 'name' => 'Pengajuan'],
             ['dept' => $itDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id,'order' => 2, 'name' => 'Approval Division Head'],
             ['dept' => $itDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,  'order' => 3, 'name' => 'Approval HRD'],
 
-            // Finance Flow (menggunakan Division Head yang sama)
+            // Finance Flow
             ['dept' => $finDept->id, 'level' => $deptHead->id,    'approver' => $finDeptHead->id, 'order' => 1, 'name' => 'Pengajuan'],
             ['dept' => $finDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id,'order' => 2, 'name' => 'Approval Division Head'],
             ['dept' => $finDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,  'order' => 3, 'name' => 'Approval HRD'],
             
-            // HRD Flow (jika ada yang mengajukan dari HRD sendiri)
+            // HRD Flow
             ['dept' => $hrdDept->id, 'level' => $hrdManagerL->id, 'approver' => null,            'order' => 1, 'name' => 'Pengajuan'],
             ['dept' => $hrdDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id,'order' => 2, 'name' => 'Approval Division Head'],
         ];
