@@ -204,55 +204,67 @@ public function create()
         return redirect()->route('overtime.show', $overtime)->with('success', 'Qty Actual berhasil diupdate');
     }
 
-   private function createApprovalRecords(OvertimeRequest $request, $requesterEmployee)
-    {
-        // Get flow job untuk departemen yang mengajukan
-        $flowJobs = FlowJob::where('department_id', $request->department_id)
-            ->where('is_active', true)
-            ->orderBy('step_order')
-            ->get();
+  private function createApprovalRecords(OvertimeRequest $request, $requesterEmployee)
+{
+    // Get flow job untuk departemen yang mengajukan
+    $flowJobs = FlowJob::where('department_id', $request->department_id)
+        ->where('is_active', true)
+        ->orderBy('step_order')
+        ->get();
 
-        // Cari posisi requester dalam flow
-        $requesterFlowJob = $flowJobs->where('job_level_id', $requesterEmployee->job_level_id)->first();
-        
-        if (!$requesterFlowJob) {
-            throw new \Exception('Flow job tidak ditemukan untuk level jabatan pengaju');
+    // Cari posisi requester dalam flow
+    $requesterFlowJob = $flowJobs->where('job_level_id', $requesterEmployee->job_level_id)->first();
+    
+    if (!$requesterFlowJob) {
+        throw new \Exception('Flow job tidak ditemukan untuk level jabatan pengaju');
+    }
+
+    // Buat approval untuk step selanjutnya
+    $nextFlowJobs = $flowJobs->where('step_order', '>', $requesterFlowJob->step_order);
+
+    foreach ($nextFlowJobs as $flowJob) {
+        $approver = null;
+
+        // ✅ PERBAIKAN KHUSUS: Untuk Division Head, tidak terbatas departemen tertentu
+        if ($flowJob->jobLevel->code === 'DIV' || $flowJob->step_name === 'Approval Division Head') {
+            // Cari Division Head yang tersedia (bisa dari departemen manapun)
+            $approver = Employee::where('job_level_id', $flowJob->job_level_id)
+                ->where('is_active', true)
+                ->first(); // Ambil Division Head pertama yang aktif
+                
+            \Log::info("Looking for Division Head approver: " . ($approver ? $approver->name : 'Not found'));
+            
+        } elseif ($flowJob->jobLevel->code === 'HRD' || $flowJob->step_name === 'Approval HRD') {
+            // HRD juga bisa dari department mana saja
+            $approver = Employee::where('job_level_id', $flowJob->job_level_id)
+                ->where('is_active', true)
+                ->first();
+                
+        } else {
+            // Untuk level lain (Section Head, Department Head), cari di department yang sama
+            $approver = Employee::where('department_id', $request->department_id)
+                ->where('job_level_id', $flowJob->job_level_id)
+                ->where('is_active', true)
+                ->first();
         }
 
-        // Buat approval untuk step selanjutnya
-        $nextFlowJobs = $flowJobs->where('step_order', '>', $requesterFlowJob->step_order);
-
-        foreach ($nextFlowJobs as $flowJob) {
-            $approver = null;
-
-            // ✅ PERBAIKAN: Khusus untuk HRD, cari di department HRD
-            if ($flowJob->jobLevel->code === 'HRD' || $flowJob->step_name === 'Approval HRD') {
-                $approver = Employee::where('job_level_id', $flowJob->job_level_id)
-                    ->where('is_active', true)
-                    ->first(); // HRD bisa dari department mana saja
-            } else {
-                // Untuk level lain, cari di department yang sama
-                $approver = Employee::where('department_id', $request->department_id)
-                    ->where('job_level_id', $flowJob->job_level_id)
-                    ->where('is_active', true)
-                    ->first();
-            }
-
-            if ($approver) {
-                OvertimeApproval::create([
-                    'overtime_request_id' => $request->id,
-                    'approver_employee_id' => $approver->id,
-                    'approver_level' => $flowJob->jobLevel->code,
-                    'step_order' => $flowJob->step_order,
-                    'step_name' => $flowJob->step_name,
-                    'status' => 'pending',
-                ]);
-            } else {
-                // ✅ LOG jika approver tidak ditemukan
-                \Log::warning("Approver tidak ditemukan untuk step: {$flowJob->step_name}, Job Level: {$flowJob->jobLevel->code}");
-            }
+        if ($approver) {
+            OvertimeApproval::create([
+                'overtime_request_id' => $request->id,
+                'approver_employee_id' => $approver->id,
+                'approver_level' => $flowJob->jobLevel->code,
+                'step_order' => $flowJob->step_order,
+                'step_name' => $flowJob->step_name,
+                'status' => 'pending',
+            ]);
+            
+            \Log::info("Created approval for {$flowJob->step_name} - Approver: {$approver->name}");
+            
+        } else {
+            \Log::warning("Approver tidak ditemukan untuk step: {$flowJob->step_name}, Job Level: {$flowJob->jobLevel->code}");
         }
     }
+}
 
     // Function untuk get employees berdasarkan department via AJAX
     public function getEmployeesByDepartment(Request $request)
