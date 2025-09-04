@@ -324,6 +324,7 @@ class ApprovalController extends Controller
                     'work_priority' => $detail->work_priority,
                     'work_process' => $detail->work_process,
                     'qty_plan' => $detail->qty_plan,
+                    'qty_actual' => $detail->qty_actual,
                     'notes' => $detail->notes,
                 ];
             }),

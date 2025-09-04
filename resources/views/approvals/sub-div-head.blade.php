@@ -566,6 +566,7 @@ function generateDetailContent(data) {
                         <th>Prioritas</th>
                         <th>Proses</th>
                         <th>Qty Plan</th>
+                        <th>Qty Act</th>
                         <th>Keterangan</th>
                     </tr>
                 </thead>
@@ -579,6 +580,7 @@ function generateDetailContent(data) {
                                 <td>${detail.work_priority}</td>
                                 <td>${detail.work_process}</td>
                                 <td>${detail.qty_plan || '-'}</td>
+                                <td>${detail.qty_actual || '-'}</td>
                                 <td>${detail.notes || '-'}</td>
                             </tr>
                         `).join('') :
