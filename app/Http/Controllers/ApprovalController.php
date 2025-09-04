@@ -35,6 +35,30 @@ class ApprovalController extends Controller
         return view('approvals.sect-head', compact('approvals'));
     }
 
+   public function subdeptHeadIndex()
+{
+    $currentEmployee = Employee::where('email', Auth::user()->email)->first();
+    
+    if (!$currentEmployee) {
+        return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
+    }
+
+    // ✅ PERBAIKAN: Gunakan SUBDEPT untuk Sub Department Head
+    $approvals = OvertimeApproval::with([
+        'overtimeRequest.requesterEmployee.jobLevel', 
+        'overtimeRequest.department', 
+        'overtimeRequest.approvals.approverEmployee.jobLevel',
+        'overtimeRequest.details.employee',
+        'approverEmployee.jobLevel'
+    ])
+    ->where('approver_employee_id', $currentEmployee->id)
+    ->where('approver_level', 'SUBDEPT') // ✅ PASTIKAN INI SESUAI DENGAN CODE DI job_levels
+    ->orderBy('created_at', 'desc')
+    ->paginate(10);
+
+    return view('approvals.sub-dept-head', compact('approvals'));
+}
+
     // ✅ PERBAIKAN: Method untuk Department Head
     public function deptHeadIndex()
     {

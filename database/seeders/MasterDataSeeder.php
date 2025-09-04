@@ -45,12 +45,14 @@ class MasterDataSeeder extends Seeder
         // Job Levels
         // =======================
         $jobLevels = [
-            ['name' => 'Foreman',        'code' => 'FORE',  'level_order' => 5, 'description' => 'Supervisor tingkat paling bawah'],
-            ['name' => 'Section Head',   'code' => 'SECT',  'level_order' => 4, 'description' => 'Kepala Seksi'],
-            ['name' => 'Department Head','code' => 'DEPT',  'level_order' => 3, 'description' => 'Kepala Departemen'],
+            ['name' => 'Foreman',        'code' => 'FORE',  'level_order' => 7, 'description' => 'Supervisor tingkat paling bawah'],
+            ['name' => 'Section Head',   'code' => 'SECT',  'level_order' => 6, 'description' => 'Kepala Seksi'],
+            ['name' => 'Sub Department Head','code' => 'SUBDEPT', 'level_order' => 5, 'description' => 'Kepala Sub Departemen'],
+            ['name' => 'Department Head','code' => 'DEPT',  'level_order' => 4, 'description' => 'Kepala Departemen'],
+            ['name' => 'Sub Division Head',  'code' => 'SUBDIV',   'level_order' => 3, 'description' => 'Kepala Sub Divisi'],
             ['name' => 'Division Head',  'code' => 'DIV',   'level_order' => 2, 'description' => 'Kepala Divisi'],
             ['name' => 'HRD Manager',    'code' => 'HRD',   'level_order' => 1, 'description' => 'Manager HRD'],
-            ['name' => 'Staff',          'code' => 'STAFF', 'level_order' => 6, 'description' => 'Staff/Operator'],
+            ['name' => 'Staff',          'code' => 'STAFF', 'level_order' => 8, 'description' => 'Staff/Operator'],
         ];
         foreach ($jobLevels as $level) {
             JobLevel::create($level);
@@ -66,7 +68,9 @@ class MasterDataSeeder extends Seeder
 
         $foreman     = JobLevel::where('code', 'FORE')->first();
         $sectHead    = JobLevel::where('code', 'SECT')->first();
+        $subDeptHead = JobLevel::where('code', 'SUBDEPT')->first();
         $deptHead    = JobLevel::where('code', 'DEPT')->first();
+        $subdivHead = JobLevel::where('code', 'SUBDIV')->first();
         $divHead     = JobLevel::where('code', 'DIV')->first();
         $hrdManagerL = JobLevel::where('code', 'HRD')->first();
         $staff       = JobLevel::where('code', 'STAFF')->first();
@@ -139,14 +143,17 @@ class MasterDataSeeder extends Seeder
             // Produksi Flow
             ['dept' => $prodDept->id, 'level' => $foreman->id,     'approver' => null,            'order' => 1, 'name' => 'Pengajuan'],
             ['dept' => $prodDept->id, 'level' => $sectHead->id,    'approver' => $prodSectHead->id,'order' => 2, 'name' => 'Approval Section Head'],
-            ['dept' => $prodDept->id, 'level' => $deptHead->id,    'approver' => $prodDeptHead->id,'order' => 3, 'name' => 'Approval Department Head'],
-            ['dept' => $prodDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 4, 'name' => 'Approval Division Head'],
-            ['dept' => $prodDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,  'order' => 5, 'name' => 'Approval HRD'],
+            ['dept' => $prodDept->id, 'level' => $subDeptHead->id, 'approver' => null,             'order' => 3, 'name' => 'Approval Sub Department Head'],
+            ['dept' => $prodDept->id, 'level' => $deptHead->id,    'approver' => $prodDeptHead->id,'order' => 4, 'name' => 'Approval Department Head'],
+            ['dept' => $prodDept->id, 'level' => $subdivHead->id,  'approver' => null,            'order' => 5, 'name' => 'Approval Sub Division Head'],
+            ['dept' => $prodDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 6, 'name' => 'Approval Division Head'],
+            ['dept' => $prodDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,  'order' => 7, 'name' => 'Approval HRD'],
 
             // IT Flow
             ['dept' => $itDept->id, 'level' => $foreman->id,     'approver' => null,            'order' => 1, 'name' => 'Pengajuan'],
-            ['dept' => $itDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id,'order' => 2, 'name' => 'Approval Division Head'],
-            ['dept' => $itDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,  'order' => 3, 'name' => 'Approval HRD'],
+            ['dept' => $itDept->id, 'level' => $subdivHead->id,  'approver' => null,            'order' => 2, 'name' => 'Approval Sub Division Head'],
+            ['dept' => $itDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id,'order' => 3, 'name' => 'Approval Division Head'],
+            ['dept' => $itDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,  'order' => 4, 'name' => 'Approval HRD'],
 
             // Finance Flow
             ['dept' => $finDept->id, 'level' => $deptHead->id,    'approver' => $finDeptHead->id, 'order' => 1, 'name' => 'Pengajuan'],

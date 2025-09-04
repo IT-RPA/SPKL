@@ -203,7 +203,7 @@
                             </a>
                         </li>
                         
-<!-- Approval Menu -->
+<!-- Approval Menu - PERBAIKAN STEP NAMES -->
 <div class="menu-header">Approval</div>
 @php
     // Get current employee data berdasarkan email yang login
@@ -215,9 +215,6 @@
     $availableApprovals = [];
     
     if ($currentEmployee && $currentEmployee->jobLevel) {
-        // Cek apakah user memiliki approval berdasarkan job level code
-        $jobLevelCode = $currentEmployee->jobLevel->code;
-        
         // Cek approval yang tersedia untuk user ini
         $pendingApprovals = App\Models\OvertimeApproval::where('approver_employee_id', $currentEmployee->id)
             ->where('status', 'pending')
@@ -227,8 +224,14 @@
         // Group by step_name untuk menentukan menu yang perlu ditampilkan
         $approvalsByStep = $pendingApprovals->groupBy('step_name');
         
+        // ✅ PERBAIKAN: Sesuaikan dengan step_name yang benar di database
         if ($approvalsByStep->has('Approval Section Head')) {
             $availableApprovals['sect-head'] = 'Approval Section Head';
+            $showApprovalMenu = true;
+        }
+
+        if ($approvalsByStep->has('Approval Sub Department Head')) {
+            $availableApprovals['sub-dept-head'] = 'Approval Sub Department Head';
             $showApprovalMenu = true;
         }
         
@@ -237,8 +240,8 @@
             $showApprovalMenu = true;
         }
 
-        // ✅ PERBAIKAN: Step name yang benar untuk Sub Division Head
-        if ($approvalsByStep->has('Approval Sub Divisi')) {
+        // ✅ PERBAIKAN: Gunakan step_name yang benar untuk Sub Division Head
+        if ($approvalsByStep->has('Approval Sub Division Head')) {
             $availableApprovals['sub-div-head'] = 'Approval Sub Division Head';
             $showApprovalMenu = true;
         }
@@ -261,9 +264,13 @@
             
         if ($processedApprovals && empty($availableApprovals)) {
             // Jika tidak ada pending tapi ada history, tetap tampilkan menu berdasarkan job level
+            $jobLevelCode = $currentEmployee->jobLevel->code;
             switch ($jobLevelCode) {
                 case 'SECT':
                     $availableApprovals['sect-head'] = 'Approval Section Head';
+                    break;
+                case 'SUBDEPT':
+                    $availableApprovals['sub-dept-head'] = 'Approval Sub Department Head';
                     break;
                 case 'DEPT':
                     $availableApprovals['dept-head'] = 'Approval Department Head';
@@ -294,17 +301,27 @@
     <ul class="dropdown-menu">
         @if(isset($availableApprovals['sect-head']))
             <li><a class="dropdown-item" href="{{ route('approvals.sect-head') }}">
-                <i class="fas fa-user-check"></i> {{ $availableApprovals['sect-head'] }}
+                <i class="fas fa-user-check"></i> Section Head
                 @php $sectPending = $pendingApprovals->where('step_name', 'Approval Section Head')->count(); @endphp
                 @if($sectPending > 0)
                     <span class="badge bg-danger ms-1">{{ $sectPending }}</span>
                 @endif
             </a></li>
         @endif
+
+        @if(isset($availableApprovals['sub-dept-head']))
+            <li><a class="dropdown-item" href="{{ route('approvals.sub-dept-head') }}">
+                <i class="fas fa-user-tie"></i> Sub Department Head
+                @php $subdeptPending = $pendingApprovals->where('step_name', 'Approval Sub Department Head')->count(); @endphp
+                @if($subdeptPending > 0)
+                    <span class="badge bg-danger ms-1">{{ $subdeptPending }}</span>
+                @endif
+            </a></li>
+        @endif
         
         @if(isset($availableApprovals['dept-head']))
             <li><a class="dropdown-item" href="{{ route('approvals.dept-head') }}">
-                <i class="fas fa-user-tie"></i> {{ $availableApprovals['dept-head'] }}
+                <i class="fas fa-user-tie"></i> Department Head
                 @php $deptPending = $pendingApprovals->where('step_name', 'Approval Department Head')->count(); @endphp
                 @if($deptPending > 0)
                     <span class="badge bg-danger ms-1">{{ $deptPending }}</span>
@@ -312,11 +329,11 @@
             </a></li>
         @endif
 
-        {{-- ✅ PERBAIKAN: Route yang benar untuk Sub Division Head --}}
+        {{-- ✅ PERBAIKAN: Step name yang benar untuk Sub Division Head --}}
         @if(isset($availableApprovals['sub-div-head']))
             <li><a class="dropdown-item" href="{{ route('approvals.sub-div-head') }}">
-                <i class="fas fa-user-cog"></i> {{ $availableApprovals['sub-div-head'] }}
-                @php $subdivPending = $pendingApprovals->where('step_name', 'Approval Sub Divisi')->count(); @endphp
+                <i class="fas fa-user-cog"></i> Sub Division Head
+                @php $subdivPending = $pendingApprovals->where('step_name', 'Approval Sub Division Head')->count(); @endphp
                 @if($subdivPending > 0)
                     <span class="badge bg-danger ms-1">{{ $subdivPending }}</span>
                 @endif
@@ -325,7 +342,7 @@
         
         @if(isset($availableApprovals['div-head']))
             <li><a class="dropdown-item" href="{{ route('approvals.div-head') }}">
-                <i class="fas fa-user-graduate"></i> {{ $availableApprovals['div-head'] }}
+                <i class="fas fa-user-graduate"></i> Division Head
                 @php $divPending = $pendingApprovals->where('step_name', 'Approval Division Head')->count(); @endphp
                 @if($divPending > 0)
                     <span class="badge bg-danger ms-1">{{ $divPending }}</span>
@@ -335,7 +352,7 @@
         
         @if(isset($availableApprovals['hrd']))
             <li><a class="dropdown-item" href="{{ route('approvals.hrd') }}">
-                <i class="fas fa-user-shield"></i> {{ $availableApprovals['hrd'] }}
+                <i class="fas fa-user-shield"></i> HRD
                 @php $hrdPending = $pendingApprovals->where('step_name', 'Approval HRD')->count(); @endphp
                 @if($hrdPending > 0)
                     <span class="badge bg-danger ms-1">{{ $hrdPending }}</span>

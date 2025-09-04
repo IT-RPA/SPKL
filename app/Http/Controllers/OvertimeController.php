@@ -281,6 +281,15 @@ private function createApprovalRecords(OvertimeRequest $request, $requesterEmplo
                     ->where('is_active', true)
                     ->first();
                 break;
+
+            case 'SUBDEPT':
+                \Log::info("Searching for Sub Department Head approver in department {$request->department_id}...");
+                $approver = Employee::with('jobLevel')
+                    ->where('department_id', $request->department_id)
+                    ->where('job_level_id', $flowJob->job_level_id)
+                    ->where('is_active', true)
+                    ->first();
+                break;
                 
             case 'SECT':
                 \Log::info("Searching for Section Head approver in department {$request->department_id}...");
