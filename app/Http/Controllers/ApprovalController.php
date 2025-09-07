@@ -253,83 +253,105 @@ class ApprovalController extends Controller
         return !$previousPendingApproval;
     }
 
-    public function overtimeDetail(OvertimeApproval $approval)
-    {
-        $request = OvertimeRequest::with([
-            'requester',
-            'requesterEmployee.jobLevel', 
-            'department', 
-            'details.employee', 
-            'approvals.approverEmployee.jobLevel'
-        ])->find($approval->overtime_request_id);
+public function overtimeDetail(OvertimeApproval $approval)
+{
+    $request = OvertimeRequest::with([
+        'requester',
+        'requesterEmployee.jobLevel', 
+        'department', 
+        'details.employee', 
+        'approvals.approverEmployee.jobLevel'
+    ])->find($approval->overtime_request_id);
 
-        \Log::info("=== APPROVAL DETAIL DEBUG ===");
-        \Log::info("Request ID: {$request->id}");
-        \Log::info("Current Approval ID: {$approval->id}");
-        \Log::info("Current Approval Status: {$approval->status}");
-        \Log::info("Request last updated: " . $request->updated_at);
-        
-        foreach($request->details as $detail) {
-            \Log::info("Detail ID: {$detail->id}, Start: {$detail->start_time}, End: {$detail->end_time}, Updated: {$detail->updated_at}");
-        }
-
-        $approvalHistory = $request->approvals->map(function($app) {
-            return [
-                'step_name' => $app->step_name,
-                'level' => $app->approverEmployee ? $app->approverEmployee->jobLevel->name : 'Belum ditentukan',
-                'status' => ucfirst($app->status),
-                'date' => $app->approved_at ? $app->approved_at->format('d/m/Y H:i') : null,
-                'notes' => $app->notes,
-                'approver_name' => $app->approverEmployee ? $app->approverEmployee->name : 'Belum ditentukan'
-            ];
-        });
-
-        $canEditTime = $request->canEditTime(Auth::id());
-        
-        $currentEmployee = Employee::where('email', Auth::user()->email)->first();
-        $isCurrentUserApprover = ($approval->approver_employee_id === $currentEmployee->id);
-        $canApproveNow = $isCurrentUserApprover && $this->canUserApproveNow($approval);
-        
-        \Log::info("Can Edit Time: " . ($canEditTime ? 'TRUE' : 'FALSE') . " for User ID: " . Auth::id());
-        \Log::info("Is Current User Approver: " . ($isCurrentUserApprover ? 'TRUE' : 'FALSE'));
-        \Log::info("Can Approve Now: " . ($canApproveNow ? 'TRUE' : 'FALSE'));
-        \Log::info("=== END APPROVAL DEBUG ===");
-
-        $data = [
-            'overtime_id' => $request->id,
-            'can_edit_time' => $canEditTime,
-            'request_number' => $request->request_number,
-            'requester_name' => $request->requesterEmployee ? $request->requesterEmployee->name : $request->requester->name,
-            'requester_level' => $request->requesterEmployee ? $request->requesterEmployee->jobLevel->name : $request->requester_level,
-            'department_name' => $request->department->name,
-            'date' => $request->date->format('d/m/Y'),
-            'approval_history' => $approvalHistory,
-            
-            'has_pending_approval' => $canApproveNow,
-            'current_approval_status' => $approval->status,
-            'status' => $approval->status,
-            'approval_status' => $approval->status,
-            'can_approve' => $canApproveNow,
-            'current_approval_id' => $approval->id,
-            'is_user_turn' => $canApproveNow,
-            'is_current_user_approver' => $isCurrentUserApprover,
-            
-            'details' => $request->details->map(function($detail) {
-                return [
-                    'id' => $detail->id,
-                    'employee_name' => $detail->employee->name,
-                    'employee_id' => $detail->employee->employee_id,
-                    'start_time' => $detail->start_time,
-                    'end_time' => $detail->end_time,
-                    'work_priority' => $detail->work_priority,
-                    'work_process' => $detail->work_process,
-                    'qty_plan' => $detail->qty_plan,
-                    'qty_actual' => $detail->qty_actual,
-                    'notes' => $detail->notes,
-                ];
-            }),
-        ];
-
-        return response()->json($data);
+    \Log::info("=== APPROVAL DETAIL DEBUG ===");
+    \Log::info("Request ID: {$request->id}");
+    \Log::info("Request Status: {$request->status}");
+    \Log::info("Current Approval ID: {$approval->id}");
+    \Log::info("Current Approval Status: {$approval->status}");
+    
+    // Debug setiap detail
+    foreach($request->details as $detail) {
+        \Log::info("Detail ID: {$detail->id}, Type: {$detail->overtime_type}, Can Input Now: " . 
+                  ($detail->canInputPercentageNow() ? 'YES' : 'NO'));
     }
+
+    $approvalHistory = $request->approvals->map(function($app) {
+        return [
+            'step_name' => $app->step_name,
+            'level' => $app->approverEmployee ? $app->approverEmployee->jobLevel->name : 'Belum ditentukan',
+            'status' => ucfirst($app->status),
+            'date' => $app->approved_at ? $app->approved_at->format('d/m/Y H:i') : null,
+            'notes' => $app->notes,
+            'approver_name' => $app->approverEmployee ? $app->approverEmployee->name : 'Belum ditentukan'
+        ];
+    });
+
+    $canEditTime = $request->canEditTime(Auth::id());
+    $canInputPercentage = $request->canInputPercentage(Auth::id());
+    
+    $currentEmployee = Employee::where('email', Auth::user()->email)->first();
+    $isCurrentUserApprover = ($approval->approver_employee_id === $currentEmployee->id);
+    $canApproveNow = $isCurrentUserApprover && $this->canUserApproveNow($approval);
+    
+    // Debug tambahan untuk percentage
+    $hasQualitativeDetails = $request->details->where('overtime_type', 'qualitative')->count() > 0;
+    $qualitativeReadyCount = $request->details->where('overtime_type', 'qualitative')
+        ->filter(function($detail) {
+            return $detail->canInputPercentageNow();
+        })->count();
+    
+    \Log::info("Can Edit Time: " . ($canEditTime ? 'TRUE' : 'FALSE'));
+    \Log::info("Can Input Percentage: " . ($canInputPercentage ? 'TRUE' : 'FALSE'));
+    \Log::info("Has Qualitative: " . ($hasQualitativeDetails ? 'TRUE' : 'FALSE'));
+    \Log::info("Qualitative Ready Count: " . $qualitativeReadyCount);
+    \Log::info("=== END APPROVAL DEBUG ===");
+
+    $data = [
+        'overtime_id' => $request->id,
+        'can_edit_time' => $canEditTime,
+        'can_input_percentage' => $canInputPercentage,
+        'request_number' => $request->request_number,
+        'requester_name' => $request->requesterEmployee ? $request->requesterEmployee->name : $request->requester->name,
+        'requester_level' => $request->requesterEmployee ? $request->requesterEmployee->jobLevel->name : $request->requester_level,
+        'department_name' => $request->department->name,
+        'date' => $request->date->format('d/m/Y'),
+        'approval_history' => $approvalHistory,
+        
+        'has_pending_approval' => $canApproveNow,
+        'current_approval_status' => $approval->status,
+        'status' => $approval->status,
+        'approval_status' => $approval->status,
+        'can_approve' => $canApproveNow,
+        'current_approval_id' => $approval->id,
+        'is_user_turn' => $canApproveNow,
+        'is_current_user_approver' => $isCurrentUserApprover,
+        
+        'details' => $request->details->map(function($detail) {
+            $canInputNow = false;
+            try {
+                $canInputNow = $detail->canInputPercentageNow();
+            } catch (\Exception $e) {
+                \Log::error("Error calling canInputPercentageNow for detail {$detail->id}: " . $e->getMessage());
+            }
+            
+            return [
+                'id' => $detail->id,
+                'employee_name' => $detail->employee->name,
+                'employee_id' => $detail->employee->employee_id,
+                'start_time' => $detail->start_time,
+                'end_time' => $detail->end_time,
+                'work_priority' => $detail->work_priority,
+                'work_process' => $detail->work_process,
+                'overtime_type' => $detail->overtime_type ?? 'quantitative',
+                'qty_plan' => $detail->qty_plan,
+                'qty_actual' => $detail->qty_actual,
+                'percentage_realization' => $detail->percentage_realization,
+                'can_input_percentage_now' => $canInputNow,
+                'notes' => $detail->notes,
+            ];
+        }),
+    ];
+
+    return response()->json($data);
+}
 }

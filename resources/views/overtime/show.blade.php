@@ -10,6 +10,27 @@
                 <i class="fas fa-edit"></i> Edit Jam
             </button>
         @endif
+
+        @if(isset($canInputPercentage) && $canInputPercentage && $overtime->details()->where('overtime_type', 'qualitative')->exists())
+    @php
+        $hasPercentageReady = $overtime->details()
+            ->where('overtime_type', 'qualitative')
+            ->get()
+            ->filter(function($detail) {
+                try {
+                    return $detail->canInputPercentageNow();
+                } catch (\Exception $e) {
+                    return false;
+                }
+            })->count() > 0;
+    @endphp
+    
+    @if($hasPercentageReady)
+        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#updatePercentageModal">
+            <i class="fas fa-percentage"></i> Input Persentase
+        </button>
+    @endif
+@endif
         <a href="{{ route('overtime.index') }}" class="btn btn-secondary">Kembali</a>
     </div>
 </div>
@@ -132,6 +153,14 @@
                             <strong>Karyawan:</strong><br>
                             {{ $detail->employee->name }} - {{ $detail->employee->employee_id }}
                         </div>
+
+                        <div class="col-md-3">
+    <strong>Tipe:</strong><br>
+    <span class="badge bg-{{ $detail->overtime_type == 'quantitative' ? 'primary' : 'info' }}">
+        {{ ucfirst($detail->overtime_type) }}
+    </span>
+</div>
+
                         <div class="col-md-3">
                             <strong>Jam Mulai:</strong><br>
                             {{ $detail->start_time }}
@@ -154,25 +183,43 @@
                     </div>
                     
                     <div class="row mt-3">
-                        <div class="col-md-3">
-                            <strong>Qty Plan:</strong><br>
-                            {{ $detail->qty_plan ?? '-' }}
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Qty Actual:</strong><br>
-                            @if($detail->qty_plan)
-                                @if(isset($canInputActual) && $canInputActual)
-                                    <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-info' }}">
-                                        {{ $detail->qty_actual ?? 'Siap diisi' }}
-                                    </span>
-                                @else
-                                    <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-warning' }}">
-                                        {{ $detail->qty_actual ?? 'Menunggu approval' }}
-                                    </span>
-                                @endif
-                            @else
-                                -
-                            @endif
+                        @if($detail->overtime_type == 'quantitative')
+    <div class="col-md-3">
+        <strong>Qty Plan:</strong><br>
+        {{ $detail->qty_plan ?? '-' }}
+    </div>
+    <div class="col-md-3">
+        <strong>Qty Actual:</strong><br>
+        @if($detail->qty_plan)
+            @if(isset($canInputActual) && $canInputActual)
+                <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-info' }}">
+                    {{ $detail->qty_actual ?? 'Siap diisi' }}
+                </span>
+            @else
+                <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-warning' }}">
+                    {{ $detail->qty_actual ?? 'Menunggu approval' }}
+                </span>
+            @endif
+        @else
+            -
+        @endif
+    </div>
+@else
+    <div class="col-md-3">
+        <strong>Persentase Realisasi:</strong><br>
+        @if($detail->percentage_realization !== null)
+            <span class="badge bg-success">{{ $detail->percentage_realization }}%</span>
+        @elseif($overtime->canInputPercentage(Auth::id()) && $detail->canInputPercentageNow())
+            <span class="badge bg-info">Siap diisi</span>
+        @else
+            <span class="badge bg-warning">Menunggu</span>
+        @endif
+    </div>
+    <div class="col-md-3">
+        <strong>Status:</strong><br>
+        <span class="badge bg-info">Kualitatif</span>
+    </div>
+@endif
                         </div>
                         <div class="col-md-6">
                             <strong>Keterangan:</strong><br>
@@ -244,6 +291,80 @@
         @endif
     </div>
 </div>
+
+{{-- Modal Input Persentase --}}
+@if(isset($canInputPercentage) && $canInputPercentage && $overtime->details()->where('overtime_type', 'qualitative')->exists())
+<div class="modal fade" id="updatePercentageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-percentage"></i> Input Persentase Realisasi
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ route('overtime.update-percentage', $overtime) }}">
+                @csrf
+                @method('PUT')
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Silakan isi persentase realisasi sesuai dengan hasil kerja lembur kualitatif yang telah dilaksanakan.
+                    </div>
+                    
+                    @foreach($overtime->details->where('overtime_type', 'qualitative') as $detail)
+                    @if($detail->canInputPercentageNow())
+                    <div class="border rounded p-3 mb-3">
+                        <h6>{{ $detail->employee->name }} - {{ $detail->employee->employee_id }}</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Jam Lembur</label>
+                                <div class="form-control-plaintext">{{ $detail->start_time }} - {{ $detail->end_time }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Persentase Realisasi (%) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" 
+                                           name="details[{{ $detail->id }}][percentage_realization]" 
+                                           value="{{ $detail->percentage_realization }}" 
+                                           min="0" max="100" step="0.01"
+                                           placeholder="0-100" required>
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Tipe</label>
+                                <div class="form-control-plaintext">
+                                    <span class="badge bg-info">Kualitatif</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Prioritas Pekerjaan</label>
+                                <p class="form-control-plaintext small">{{ $detail->work_priority }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Proses</label>
+                                <p class="form-control-plaintext small">{{ $detail->work_process }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                    @endforeach
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Simpan Persentase
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
 
 {{-- ✅ PERBAIKAN: Modal Update Actual hanya untuk status 'act' --}}
 @if(isset($canInputActual) && $canInputActual && $overtime->details()->whereNotNull('qty_plan')->whereNull('qty_actual')->count() > 0)

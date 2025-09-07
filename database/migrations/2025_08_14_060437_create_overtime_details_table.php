@@ -16,13 +16,15 @@ return new class extends Migration
             $table->foreignId('employee_id')
                 ->constrained('employees')
                 ->onDelete('cascade');
-
             $table->time('start_time');
             $table->time('end_time');
             $table->text('work_priority');
             $table->text('work_process');
+            $table->enum('overtime_type', ['quantitative', 'qualitative'])->default('quantitative');
             $table->integer('qty_plan')->nullable();
             $table->integer('qty_actual')->nullable();
+            $table->decimal('percentage_realization', 5, 2)->nullable();
+            $table->boolean('can_input_percentage')->default(false);
             $table->text('notes')->nullable();
             $table->boolean('is_actual_enabled')->default(false);
             $table->timestamps();

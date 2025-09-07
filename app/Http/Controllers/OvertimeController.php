@@ -68,11 +68,10 @@ public function create()
     
     return view('overtime.create', compact('employees', 'departments', 'currentEmployeeData', 'eligibleRequesters'));
 }
-  public function store(Request $request)
+public function store(Request $request)
 {
     $currentUser = Auth::user();
     
-    // ✅ PERBAIKAN: Validasi bahwa employee_id yang dipilih adalah milik user yang login
     $selectedEmployee = Employee::with(['jobLevel', 'department'])
         ->find($request->employee_id);
     
@@ -81,7 +80,6 @@ public function create()
             ->with('error', 'Data karyawan tidak ditemukan.');
     }
     
-    // ✅ PERBAIKAN: Validasi bahwa employee yang dipilih sesuai dengan user login
     $currentEmployee = Employee::where('email', $currentUser->email)
         ->orWhere('name', 'LIKE', '%' . $currentUser->name . '%')
         ->where('is_active', true)
@@ -102,9 +100,12 @@ public function create()
         'details.*.end_time' => 'required',
         'details.*.work_priority' => 'required',
         'details.*.work_process' => 'required',
+        'details.*.overtime_type' => 'required|in:quantitative,qualitative',
+        'details.*.qty_plan' => 'required_if:details.*.overtime_type,quantitative|nullable|integer|min:1',
     ]);
 
-    // ✅ Validasi tambahan: pastikan department_id sesuai dengan employee
+    // TIDAK ADA VALIDASI MIXED TYPE - BOLEH CAMPUR!
+
     if ($selectedEmployee->department_id != $request->department_id) {
         return redirect()->route('overtime.create')
             ->with('error', 'Departemen tidak sesuai dengan data karyawan.');
@@ -128,8 +129,11 @@ public function create()
                 'end_time' => $detail['end_time'],
                 'work_priority' => $detail['work_priority'],
                 'work_process' => $detail['work_process'],
-                'qty_plan' => $detail['qty_plan'] ?? null,
+                'overtime_type' => $detail['overtime_type'],
+                'qty_plan' => $detail['overtime_type'] === 'quantitative' ? $detail['qty_plan'] : null,
                 'qty_actual' => null,
+                'percentage_realization' => null,
+                'can_input_percentage' => false,
                 'notes' => $detail['notes'] ?? null,
             ]);
         }
@@ -140,6 +144,88 @@ public function create()
 
     return redirect()->route('overtime.index')->with('success', 'Pengajuan lembur berhasil dibuat');
 }
+
+
+public function canInputPercentageNow()
+{
+    // Hanya untuk lembur kualitatif
+    if ($this->overtime_type !== 'qualitative') {
+        return false;
+    }
+    
+    // Cek apakah sudah melewati jam selesai ATAU semua approval sudah selesai
+    $overtime = $this->overtimeRequest;
+    
+    // Jika semua approval sudah selesai
+    if ($overtime->status === 'completed') {
+        return true;
+    }
+    
+    // Jika sudah melewati jam selesai lembur
+    try {
+        $endDateTime = \Carbon\Carbon::parse($overtime->date->format('Y-m-d') . ' ' . $this->end_time);
+        if (now()->greaterThan($endDateTime)) {
+            return true;
+        }
+    } catch (\Exception $e) {
+        \Log::error("Error parsing end time: " . $e->getMessage());
+    }
+    
+    return false;
+}
+
+public function isQualitative()
+{
+    return $this->overtime_type === 'qualitative';
+}
+
+public function updatePercentage(Request $request, OvertimeRequest $overtime)
+{
+    // Validasi permission
+    if (!$overtime->canInputPercentage(Auth::id())) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Anda tidak memiliki wewenang untuk mengisi persentase realisasi.'
+        ], 403);
+    }
+
+    $request->validate([
+        'details' => 'required|array',
+        'details.*.percentage_realization' => 'required|numeric|min:0|max:100',
+    ]);
+
+    try {
+        foreach ($request->details as $detailId => $data) {
+            $detail = OvertimeDetail::find($detailId);
+            if ($detail &&
+                $detail->overtime_request_id == $overtime->id &&
+                $detail->isQualitative() &&
+                $detail->canInputPercentageNow()) {
+
+                $detail->update([
+                    'percentage_realization' => $data['percentage_realization']
+                ]);
+
+                \Log::info("Percentage updated - Detail ID: {$detail->id}, Percentage: {$data['percentage_realization']}%");
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Persentase realisasi berhasil diupdate'
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error("Error updating percentage: " . $e->getMessage());
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan saat mengupdate persentase: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+
     public function show(OvertimeRequest $overtime)
 {
     // ✅ PERBAIKAN: FORCE FRESH DATA dari database (bypass cache)
@@ -162,11 +248,11 @@ public function create()
     
     $canInputActual = $overtime->canInputActual();
     $canEditTime = $overtime->canEditTime(Auth::id());
+    $canInputPercentage = $overtime->canInputPercentage(Auth::id()); // ✅ TAMBAHAN
     
-    \Log::info("Can Edit Time: " . ($canEditTime ? 'TRUE' : 'FALSE') . " for User ID: " . Auth::id());
-    \Log::info("=== END DEBUG ===");
+       \Log::info("Show overtime - Can Input Percentage: " . ($canInputPercentage ? 'TRUE' : 'FALSE') . " for User ID: " . Auth::id());
     
-    return view('overtime.show', compact('overtime', 'canInputActual', 'canEditTime'));
+    return view('overtime.show', compact('overtime', 'canInputActual', 'canEditTime', 'canInputPercentage'));
 }
 
     public function updateActual(Request $request, OvertimeRequest $overtime)

@@ -49,6 +49,74 @@ class OvertimeRequest extends Model
         return $this->hasMany(OvertimeApproval::class)->orderBy('step_order');
     }
 
+    public function canInputPercentage($currentUserId)
+{
+    try {
+        $currentUser = User::find($currentUserId);
+        if (!$currentUser) return false;
+
+        $currentEmployee = Employee::with('jobLevel')
+            ->where('email', $currentUser->email)
+            ->first();
+        if (!$currentEmployee) return false;
+
+        $requesterEmployee = $this->requesterEmployee()->with('jobLevel')->first();
+        if (!$requesterEmployee) return false;
+
+        $currentJobOrder   = $currentEmployee->jobLevel->level_order ?? 0;
+        $requesterJobOrder = $requesterEmployee->jobLevel->level_order ?? 0;
+
+        // --- Syarat waktu ---
+        $latestEndTime = $this->details()->max('end_time');
+        $passedEndTime = false;
+        if ($latestEndTime) {
+            $endDateTime = \Carbon\Carbon::parse($this->date->format('Y-m-d') . ' ' . $latestEndTime);
+            $passedEndTime = now()->greaterThan($endDateTime);
+        }
+
+        // --- Syarat status ---
+        $allApprovalsDone = $this->status === 'completed';
+        $statusOk = $allApprovalsDone || $this->status === 'approved' || $passedEndTime;
+
+        if (!$statusOk) {
+            return false;
+        }
+
+        // --- Cek apakah user ini approver di request ini ---
+        $isApprover = $this->approvals()
+            ->where('approver_employee_id', $currentEmployee->id)
+            ->whereIn('status', ['approved', 'pending'])
+            ->exists();
+
+        if (!$isApprover) {
+            return false;
+        }
+
+        // --- Cek ada detail kualitatif yang siap diisi ---
+        $readyDetails = $this->details->filter(function($d) {
+            return $d->isQualitative() && $d->canInputPercentageNow();
+        });
+
+        if ($readyDetails->isEmpty()) {
+            return false;
+        }
+
+        // --- User boleh input kalau lebih tinggi dari requester atau dia memang approver ---
+        return ($currentJobOrder > $requesterJobOrder) || $isApprover;
+    } catch (\Exception $e) {
+        \Log::error("canInputPercentage Error: " . $e->getMessage());
+        return false;
+    }
+}
+
+public function updatePercentagePermissions()
+{
+    // Update can_input_percentage untuk detail yang kualitatif
+    $this->details()->where('overtime_type', 'qualitative')->update([
+        'can_input_percentage' => true
+    ]);
+}
+
     public static function generateRequestNumber()
     {
         $date = now()->format('Ymd');
@@ -81,6 +149,7 @@ class OvertimeRequest extends Model
                 'status' => 'completed', // ✅ Gunakan status yang ada di enum
                 'status_color' => 'green'
             ]);
+            $this->updatePercentagePermissions();
             return;
         }
 

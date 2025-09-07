@@ -79,6 +79,17 @@
                                 <option value="">Pilih Karyawan</option>
                             </select>
                         </div>
+
+<div class="col-md-6">
+    <label class="form-label">Tipe Lembur</label>
+    <select class="form-control overtime-type-select" 
+            name="details[0][overtime_type]" 
+            onchange="toggleOvertimeType(this, 0)" required>
+        <option value="">Pilih Tipe</option>
+        <option value="quantitative">Kuantitatif (Dengan Target)</option>
+        <option value="qualitative">Kualitatif (Persentase)</option>
+    </select>
+</div>
                         
                         <div class="col-md-3">
                             <label class="form-label">Jam Mulai</label>
@@ -104,23 +115,33 @@
                     </div>
                     
                     <div class="row mt-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Qty Plan</label>
-                            <input type="number" class="form-control qty-plan" name="details[0][qty_plan]" 
-                                   onchange="toggleActual(this)">
-                        </div>
-                        
-                        <div class="col-md-4">
-                            <label class="form-label">Qty Actual</label>
-                            <input type="number" class="form-control qty-actual" name="details[0][qty_actual]" disabled>
-                            <small class="text-muted">Akan diisi setelah lembur selesai</small>
-                        </div>
-                        
-                        <div class="col-md-4">
-                            <label class="form-label">Keterangan</label>
-                            <textarea class="form-control" name="details[0][notes]" rows="2"></textarea>
-                        </div>
-                    </div>
+    <div class="col-md-4 qty-section" id="qtySection0">
+        <label class="form-label">Qty Plan</label>
+        <input type="number" class="form-control qty-plan" name="details[0][qty_plan]" 
+               onchange="toggleActual(this)" disabled>
+        <small class="text-muted">Hanya untuk tipe kuantitatif</small>
+    </div>
+    
+    <div class="col-md-4">
+        <label class="form-label">Qty Actual</label>
+        <input type="number" class="form-control qty-actual" name="details[0][qty_actual]" disabled>
+        <small class="text-muted">Akan diisi setelah lembur selesai</small>
+    </div>
+    
+    <div class="col-md-4">
+        <label class="form-label">Keterangan</label>
+        <textarea class="form-control" name="details[0][notes]" rows="2"></textarea>
+    </div>
+</div>
+
+<div class="row mt-2 percentage-info" id="percentageInfo0" style="display: none;">
+    <div class="col-md-12">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            <strong>Tipe Kualitatif:</strong> Persentase realisasi akan dapat diisi setelah semua approval selesai atau melewati jam lembur oleh atasan minimal 1 tingkat di atas pengaju.
+        </div>
+    </div>
+</div>
                     
                     <div class="mt-2">
                         <button type="button" class="btn btn-danger btn-sm" onclick="removeDetail(this)">
@@ -198,6 +219,25 @@ $(document).ready(function() {
             });
             return false;
         }
+
+        // VALIDASI: Semua tipe lembur harus diisi
+        let allTypesFilled = true;
+        $('.overtime-type-select').each(function() {
+            if (!$(this).val()) {
+                allTypesFilled = false;
+            }
+        });
+
+        if (!allTypesFilled) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'error',
+                title: 'Tipe Lembur Belum Lengkap',
+                text: 'Silakan pilih tipe lembur untuk semua detail.',
+                confirmButtonText: 'OK'
+            });
+            return false;
+        }
     });
 });
 
@@ -212,11 +252,9 @@ function checkFlowJobEligibility(employeeId, departmentId) {
         },
         success: function(response) {
             if (!response.eligible) {
-                // Tampilkan alert dan disable submit
                 $('#flowJobAlert').show();
                 $('#submitBtn').prop('disabled', true);
                 
-                // Tampilkan SweetAlert untuk info lebih detail
                 Swal.fire({
                     icon: 'warning',
                     title: 'Pengaju Tidak Valid',
@@ -229,11 +267,9 @@ function checkFlowJobEligibility(employeeId, departmentId) {
                     footer: '<small>Hubungi admin jika ada pertanyaan tentang flow approval</small>'
                 });
             } else {
-                // Hide alert dan enable submit
                 $('#flowJobAlert').hide();
                 $('#submitBtn').prop('disabled', false);
                 
-                // Optional: Tampilkan success toast
                 if (response.show_success) {
                     Swal.fire({
                         icon: 'success',
@@ -249,7 +285,6 @@ function checkFlowJobEligibility(employeeId, departmentId) {
         },
         error: function(xhr) {
             console.error('Error checking flow job eligibility:', xhr);
-            // Jika error, tetap allow submit tapi beri warning
             $('#flowJobAlert').hide();
             $('#submitBtn').prop('disabled', false);
         }
@@ -259,10 +294,7 @@ function checkFlowJobEligibility(employeeId, departmentId) {
 function updateEmployeeOptions(departmentId) {
     const filteredEmployees = allEmployees.filter(emp => emp.department_id == departmentId);
     
-    // ✅ JANGAN UPDATE PENGAJU DROPDOWN - BIARKAN TETAP SESUAI YANG DARI CONTROLLER
-    // Pengaju dropdown tidak perlu diupdate karena sudah fix dari controller
-    
-    // ✅ HANYA UPDATE DETAIL EMPLOYEE DROPDOWNS
+    // HANYA UPDATE DETAIL EMPLOYEE DROPDOWNS
     $('.employee-select').each(function() {
         const currentValue = $(this).val();
         $(this).empty().append('<option value="">Pilih Karyawan</option>');
@@ -273,38 +305,114 @@ function updateEmployeeOptions(departmentId) {
     });
 }
 
+// PERBAIKAN UTAMA: Fungsi addDetail() yang benar
 function addDetail() {
-    detailIndex++;
+    detailIndex++; // Increment global counter
     const container = document.getElementById('detailContainer');
-    const newDetail = container.firstElementChild.cloneNode(true);
+    const firstDetail = container.firstElementChild;
+    const newDetail = firstDetail.cloneNode(true);
     
-    // Update name attributes
-    newDetail.querySelectorAll('[name^="details[0]"]').forEach(input => {
-        input.name = input.name.replace('[0]', `[${detailIndex}]`);
-        input.value = '';
+    console.log(`Adding detail with index: ${detailIndex}`); // Debug log
+    
+    // Update SEMUA name attributes dengan index yang benar
+    newDetail.querySelectorAll('[name*="details[0]"]').forEach(input => {
+        const oldName = input.name;
+        const newName = oldName.replace('[0]', `[${detailIndex}]`);
+        input.name = newName;
+        input.value = ''; // Reset value
+        console.log(`Updated name: ${oldName} -> ${newName}`); // Debug log
     });
     
-    // Reset select
-    newDetail.querySelectorAll('select').forEach(select => {
-        select.value = '';
+    // Update SEMUA IDs yang mengandung "0" dengan index baru
+    newDetail.querySelectorAll('[id*="0"]').forEach(element => {
+        if (element.id) {
+            const oldId = element.id;
+            const newId = oldId.replace('0', detailIndex);
+            element.id = newId;
+            console.log(`Updated ID: ${oldId} -> ${newId}`); // Debug log
+        }
     });
     
+    // KUNCI PERBAIKAN: Update onchange attribute dengan index yang benar
+    const overtimeTypeSelect = newDetail.querySelector('.overtime-type-select');
+    if (overtimeTypeSelect) {
+        overtimeTypeSelect.setAttribute('onchange', `toggleOvertimeType(this, ${detailIndex})`);
+        console.log(`Set onchange: toggleOvertimeType(this, ${detailIndex})`); // Debug log
+    }
+    
+    // Update onchange untuk qty plan juga
+    const qtyPlanInput = newDetail.querySelector('.qty-plan');
+    if (qtyPlanInput) {
+        qtyPlanInput.setAttribute('onchange', 'toggleActual(this)');
+    }
+    
+    // Reset ke kondisi awal
+    resetDetailToInitialState(newDetail);
+    
+    // Append ke container
     container.appendChild(newDetail);
     
-    // Initialize select2 for new employee select
-    const newSelect = $(newDetail.querySelector('.employee-select'));
-    newSelect.select2({
-        placeholder: 'Pilih Karyawan',
-        width: '100%'
-    });
+    // Initialize select2 untuk dropdown baru
+    initializeNewDetailSelects(newDetail);
 
-    // ✅ PERBAIKAN: Update options untuk detail dropdown saja
+    // Update employee options jika department sudah dipilih
+    updateNewDetailEmployeeOptions(newDetail);
+    
+    console.log(`Detail added successfully with index: ${detailIndex}`);
+}
+
+function resetDetailToInitialState(detailElement) {
+    // Reset semua select ke pilihan kosong
+    detailElement.querySelectorAll('select').forEach(select => {
+        select.selectedIndex = 0;
+    });
+    
+    // Reset semua input text/number/textarea
+    detailElement.querySelectorAll('input, textarea').forEach(input => {
+        if (input.type !== 'button') {
+            input.value = '';
+        }
+    });
+    
+    // Reset qty plan ke disabled
+    const qtyPlan = detailElement.querySelector('.qty-plan');
+    if (qtyPlan) {
+        qtyPlan.disabled = true;
+        qtyPlan.required = false;
+    }
+    
+    // Reset qty actual ke disabled
+    const qtyActual = detailElement.querySelector('.qty-actual');
+    if (qtyActual) {
+        qtyActual.disabled = true;
+    }
+    
+    // Hide percentage info
+    const percentageInfo = detailElement.querySelector('.percentage-info');
+    if (percentageInfo) {
+        percentageInfo.style.display = 'none';
+    }
+}
+
+function initializeNewDetailSelects(detailElement) {
+    const employeeSelect = detailElement.querySelector('.employee-select');
+    if (employeeSelect) {
+        $(employeeSelect).select2({
+            placeholder: 'Pilih Karyawan',
+            width: '100%'
+        });
+    }
+}
+
+function updateNewDetailEmployeeOptions(detailElement) {
     const departmentId = $('#department_id').val();
     if (departmentId) {
         const filteredEmployees = allEmployees.filter(emp => emp.department_id == departmentId);
-        newSelect.empty().append('<option value="">Pilih Karyawan</option>');
+        const employeeSelect = $(detailElement.querySelector('.employee-select'));
+        
+        employeeSelect.empty().append('<option value="">Pilih Karyawan</option>');
         filteredEmployees.forEach(emp => {
-            newSelect.append(`<option value="${emp.id}">${emp.name} - ${emp.employee_id}</option>`);
+            employeeSelect.append(`<option value="${emp.id}">${emp.name} - ${emp.employee_id}</option>`);
         });
     }
 }
@@ -326,12 +434,72 @@ function removeDetail(button) {
 
 function toggleActual(planInput) {
     const actualInput = planInput.closest('.row').querySelector('.qty-actual');
-    if (planInput.value) {
+    if (planInput.value && planInput.value > 0) {
         actualInput.disabled = true;
         actualInput.value = '';
     } else {
-        actualInput.disabled = false;
+        actualInput.disabled = true; // Tetap disabled, akan diisi setelah approve
     }
+}
+
+// PERBAIKAN UTAMA: Fungsi toggleOvertimeType dengan logging yang jelas
+function toggleOvertimeType(selectElement, index) {
+    const overtimeType = selectElement.value;
+    
+    console.log(`toggleOvertimeType called with index: ${index}, type: ${overtimeType}`);
+    
+    // Cari elemen berdasarkan index yang diterima
+    const qtySection = document.getElementById(`qtySection${index}`);
+    const percentageInfo = document.getElementById(`percentageInfo${index}`);
+    
+    if (!qtySection) {
+        console.error(`qtySection${index} not found!`);
+        return;
+    }
+    
+    if (!percentageInfo) {
+        console.error(`percentageInfo${index} not found!`);
+        return;
+    }
+    
+    const qtyPlanInput = qtySection.querySelector('.qty-plan');
+    
+    if (!qtyPlanInput) {
+        console.error(`qty-plan input not found in qtySection${index}`);
+        return;
+    }
+    
+    console.log(`Found elements for index ${index}:`, {
+        qtySection: qtySection ? 'OK' : 'MISSING',
+        percentageInfo: percentageInfo ? 'OK' : 'MISSING',
+        qtyPlanInput: qtyPlanInput ? 'OK' : 'MISSING'
+    });
+    
+    // Reset state terlebih dahulu
+    qtyPlanInput.disabled = true;
+    qtyPlanInput.required = false;
+    qtyPlanInput.value = '';
+    percentageInfo.style.display = 'none';
+    
+    if (overtimeType === 'quantitative') {
+        console.log(`Setting quantitative for index ${index}`);
+        qtyPlanInput.disabled = false;
+        qtyPlanInput.required = true;
+        percentageInfo.style.display = 'none';
+    } else if (overtimeType === 'qualitative') {
+        console.log(`Setting qualitative for index ${index}`);
+        qtyPlanInput.disabled = true;
+        qtyPlanInput.required = false;
+        qtyPlanInput.value = '';
+        percentageInfo.style.display = 'block';
+    }
+    
+    console.log(`Finished toggle for index ${index}. Final state:`, {
+        type: overtimeType,
+        planDisabled: qtyPlanInput.disabled,
+        planRequired: qtyPlanInput.required,
+        percentageVisible: percentageInfo.style.display
+    });
 }
 </script>
 

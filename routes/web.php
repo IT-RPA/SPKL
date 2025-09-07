@@ -43,6 +43,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/overtime/{overtime}/update-time', [OvertimeController::class, 'updateTime'])->name('overtime.update-time');
     Route::put('/overtime/{overtime}/update-actual', [OvertimeController::class, 'updateActual'])->name('overtime.update-actual');
     Route::post('/check-overtime-eligibility', [OvertimeController::class, 'checkOvertimeEligibility']);
+    Route::put('/overtime/{overtime}/update-percentage', [OvertimeController::class, 'updatePercentage'])->name('overtime.update-percentage');
     
     
     // AJAX route untuk get employees by department
@@ -61,4 +62,5 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/reject/{approval}', [ApprovalController::class, 'reject'])->name('reject');
     });
     Route::get('/approvals/detail/{approval}', [ApprovalController::class, 'overtimeDetail'])->name('approvals.detail');
+    
 });
