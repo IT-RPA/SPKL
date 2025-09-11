@@ -11,21 +11,63 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .status-yellow { background-color: #fff3cd; color: #856404; }
-        .status-orange { background-color: #ffeaa7; color: #d63031; }
-        .status-blue { background-color: #cce5ff; color: #0066cc; }
-        .status-purple { background-color: #e6ccff; color: #6600cc; }
-        .status-green { background-color: #d4edda; color: #155724; }
-        .status-red { background-color: #f8d7da; color: #721c24; }
-        .status-gray { background-color: #e2e3e5; color: #6c757d; }
-        .status-act { background-color: #ffc107; color: #000; }
+       .status-badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    }
+
+    /* Status Colors */
+    .status-yellow { 
+        background-color: #fff3cd; 
+        color: #856404; 
+    }
+    .status-orange { 
+        background-color: #ffeaa7; 
+        color: #d63031; 
+    }
+    .status-blue { 
+        background-color: #cce5ff; 
+        color: #0066cc; 
+    }
+    .status-purple { 
+        background-color: #e6ccff; 
+        color: #6600cc; 
+    }
+    .status-green { 
+        background-color: #d4edda; 
+        color: #155724; 
+        border: 2px solid #28a745;
+    }
+    .status-red { 
+        background-color: #f8d7da; 
+        color: #721c24; 
+    }
+    .status-gray { 
+        background-color: #e2e3e5; 
+        color: #6c757d; 
+    }
+    .status-act { 
+    background-color: #ffc107; 
+    color: #000; 
+    border: 2px solid #fd7e14;
+    animation: pulse-warning 2s infinite;
+    }
+
+    @keyframes pulse-warning {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+    }
+}
+
         
         /* Custom Sidebar Styles */
         .sidebar {

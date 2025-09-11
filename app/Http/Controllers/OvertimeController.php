@@ -194,6 +194,9 @@ public function updatePercentage(Request $request, OvertimeRequest $overtime)
         'details.*.percentage_realization' => 'required|numeric|min:0|max:100',
     ]);
 
+    \Log::info("=== UPDATE PERCENTAGE DEBUG ===");
+    \Log::info("Overtime ID: {$overtime->id}, Current Status: {$overtime->status}");
+
     try {
         foreach ($request->details as $detailId => $data) {
             $detail = OvertimeDetail::find($detailId);
@@ -202,13 +205,19 @@ public function updatePercentage(Request $request, OvertimeRequest $overtime)
                 $detail->isQualitative() &&
                 $detail->canInputPercentageNow()) {
 
+                \Log::info("Updating detail ID: {$detail->id}, Old percentage: {$detail->percentage_realization}, New percentage: {$data['percentage_realization']}%");
+                
                 $detail->update([
                     'percentage_realization' => $data['percentage_realization']
                 ]);
-
-                \Log::info("Percentage updated - Detail ID: {$detail->id}, Percentage: {$data['percentage_realization']}%");
             }
         }
+
+        // ✅ PERBAIKAN: Trigger pengecekan status setelah update percentage
+        $overtime->checkAndUpdateStatusAfterDataInput();
+        
+        \Log::info("After update - Status: {$overtime->fresh()->status}, Color: {$overtime->fresh()->status_color}");
+        \Log::info("=== END UPDATE PERCENTAGE DEBUG ===");
 
         return response()->json([
             'success' => true,
@@ -224,8 +233,6 @@ public function updatePercentage(Request $request, OvertimeRequest $overtime)
         ], 500);
     }
 }
-
-
     public function show(OvertimeRequest $overtime)
 {
     // ✅ PERBAIKAN: FORCE FRESH DATA dari database (bypass cache)
@@ -255,40 +262,37 @@ public function updatePercentage(Request $request, OvertimeRequest $overtime)
     return view('overtime.show', compact('overtime', 'canInputActual', 'canEditTime', 'canInputPercentage'));
 }
 
-    public function updateActual(Request $request, OvertimeRequest $overtime)
-    {
-        // ✅ PERBAIKAN: Validasi bahwa status harus 'act'
-        if (!$overtime->canInputActual()) {
-            return redirect()->back()->with('error', 'Tidak dapat mengupdate qty actual. Pengajuan belum selesai diapprove.');
-        }
-
-        $request->validate([
-            'details' => 'required|array',
-            'details.*.qty_actual' => 'nullable|integer|min:0',
-        ]);
-
-        foreach ($request->details as $detailId => $data) {
-            $detail = OvertimeDetail::find($detailId);
-            if ($detail && $detail->overtime_request_id == $overtime->id) {
-                $detail->update(['qty_actual' => $data['qty_actual']]);
-            }
-        }
-
-        // ✅ PERBAIKAN: Update status menjadi completed jika semua actual sudah diisi
-        $incompleteActuals = $overtime->details()
-            ->whereNotNull('qty_plan')
-            ->whereNull('qty_actual')
-            ->count();
-
-        if ($incompleteActuals == 0) {
-            $overtime->update([
-                'status' => 'completed', 
-                'status_color' => 'green'
-            ]);
-        }
-
-        return redirect()->route('overtime.show', $overtime)->with('success', 'Qty Actual berhasil diupdate');
+  public function updateActual(Request $request, OvertimeRequest $overtime)
+{
+    // ✅ PERBAIKAN: Validasi bahwa status harus 'approved' atau 'act'
+    if (!$overtime->canInputActual()) {
+        return redirect()->back()->with('error', 'Tidak dapat mengupdate qty actual. Pengajuan belum selesai diapprove.');
     }
+
+    $request->validate([
+        'details' => 'required|array',
+        'details.*.qty_actual' => 'nullable|integer|min:0',
+    ]);
+
+    \Log::info("=== UPDATE ACTUAL DEBUG ===");
+    \Log::info("Overtime ID: {$overtime->id}, Current Status: {$overtime->status}");
+
+    foreach ($request->details as $detailId => $data) {
+        $detail = OvertimeDetail::find($detailId);
+        if ($detail && $detail->overtime_request_id == $overtime->id) {
+            \Log::info("Updating detail ID: {$detail->id}, Old actual: {$detail->qty_actual}, New actual: {$data['qty_actual']}");
+            $detail->update(['qty_actual' => $data['qty_actual']]);
+        }
+    }
+
+    // ✅ PERBAIKAN: Trigger pengecekan status setelah update data
+    $overtime->checkAndUpdateStatusAfterDataInput();
+
+    \Log::info("After update - Status: {$overtime->fresh()->status}, Color: {$overtime->fresh()->status_color}");
+    \Log::info("=== END UPDATE ACTUAL DEBUG ===");
+
+    return redirect()->route('overtime.show', $overtime)->with('success', 'Qty Actual berhasil diupdate');
+}
 
 private function createApprovalRecords(OvertimeRequest $request, $requesterEmployee)
 {

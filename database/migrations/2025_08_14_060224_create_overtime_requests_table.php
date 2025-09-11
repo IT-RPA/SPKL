@@ -32,6 +32,7 @@ return new class extends Migration
                 'approved_subdiv',
                 'approved_div',
                 'approved_hrd',
+                'approved',
                 'rejected',
                 'completed'
             ])->default('pending');

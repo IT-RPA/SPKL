@@ -53,22 +53,39 @@ public function overtimeRequest()
         return $this->overtime_type === 'qualitative';
     }
 
-    public function canInputPercentageNow()
-    {
-        if (!$this->isQualitative()) {
+    // Update method canInputPercentageNow di App\Models\OvertimeDetail
+
+public function canInputPercentageNow()
+{
+    try {
+        \Log::info("=== DEBUG canInputPercentageNow START ===");
+        \Log::info("Detail ID: {$this->id}, Employee: {$this->employee->name}");
+        \Log::info("Overtime Type: {$this->overtime_type}");
+        
+        // Hanya untuk lembur kualitatif
+        if ($this->overtime_type !== 'qualitative') {
+            \Log::info("FAILED: Not qualitative overtime");
             return false;
         }
-
-        // Cek apakah sudah bisa input berdasarkan approval atau waktu
-        $request = $this->overtimeRequest;
         
-        // Kondisi 1: Semua approval selesai
-        if ($request->status === 'completed') {
+        $overtime = $this->overtimeRequest;
+        \Log::info("Overtime Status: {$overtime->status}");
+        
+        // ✅ PERBAIKAN: Syarat yang disederhanakan
+        // Bisa input jika status 'approved' (semua approval selesai) atau 'completed'
+        if (in_array($overtime->status, ['approved', 'completed'])) {
+            \Log::info("SUCCESS: Status allows percentage input ({$overtime->status})");
             return true;
         }
-
-        // Kondisi 2: Sudah melewati jam selesai
-        $endDateTime = Carbon::parse($request->date->format('Y-m-d') . ' ' . $this->end_time);
-        return now()->greaterThan($endDateTime);
+        
+        \Log::info("FAILED: Status not ready for percentage input");
+        \Log::info("=== DEBUG canInputPercentageNow END ===");
+        return false;
+        
+    } catch (\Exception $e) {
+        \Log::error("canInputPercentageNow Error: " . $e->getMessage());
+        return false;
     }
+}
+
 }

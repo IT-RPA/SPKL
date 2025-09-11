@@ -11,7 +11,7 @@
             <table id="approvalsTable" class="table table-striped">
                 <thead>
                     <tr>
-                        <th>No. SPK</th>
+                        <th>No. SPK</th> 
                         <th>Pengaju</th>
                         <th>Level Pengaju</th>
                         <th>Departemen</th>
@@ -67,6 +67,25 @@
                                     </button>
                                 @endif
                             </div>
+                            
+                            <!-- ✅ TAMBAHAN: Indikator apakah sudah giliran user atau belum -->
+                            @if($approval->status == 'pending')
+                                @php
+                                    $currentEmployee = \App\Models\Employee::where('email', Auth::user()->email)->first();
+                                    $isCurrentUserApprover = ($approval->approver_employee_id === $currentEmployee->id);
+                                    $previousPendingExists = \App\Models\OvertimeApproval::where('overtime_request_id', $approval->overtime_request_id)
+                                        ->where('step_order', '<', $approval->step_order)
+                                        ->where('status', 'pending')
+                                        ->exists();
+                                    $canApproveNow = $isCurrentUserApprover && !$previousPendingExists;
+                                @endphp
+                                
+                                @if($canApproveNow)
+                                    <br><small class="text-success"><i class="fas fa-clock"></i> <strong>Giliran Anda</strong></small>
+                                @elseif($isCurrentUserApprover && $previousPendingExists)
+                                    <br><small class="text-warning"><i class="fas fa-hourglass-half"></i> Menunggu Approval Sebelumnya</small>
+                                @endif
+                            @endif
                         </td>
                     </tr>
                     @empty
@@ -441,6 +460,7 @@ function submitReject() {
 function generateDetailContent(data) {
     console.log('generateDetailContent called with:', data);
     console.log('can_edit_time value:', data.can_edit_time, 'type:', typeof data.can_edit_time);
+    console.log('can_input_percentage value:', data.can_input_percentage, 'type:', typeof data.can_input_percentage);
     
     let approvalHistoryHtml = '';
     if (data.approval_history && data.approval_history.length > 0) {
@@ -541,6 +561,86 @@ function generateDetailContent(data) {
         `;
     }
 
+    // ✅ TAMBAHAN: Form input persentase
+    let percentageFormHtml = '';
+    const canInputPercentage = data.can_input_percentage === true || data.can_input_percentage === 'true' || data.can_input_percentage === 1;
+    const hasQualitativeDetails = data.details && data.details.some(detail => detail.overtime_type === 'qualitative');
+    const hasPercentageInputReady = data.details && data.details.some(detail => 
+        detail.overtime_type === 'qualitative' && detail.can_input_percentage_now === true
+    );
+
+    console.log('Percentage form check:', {
+        canInputPercentage,
+        hasQualitativeDetails,
+        hasPercentageInputReady
+    });
+
+    if (canInputPercentage && hasQualitativeDetails && hasPercentageInputReady) {
+        const qualitativeDetails = data.details.filter(detail => 
+            detail.overtime_type === 'qualitative' && detail.can_input_percentage_now === true
+        );
+
+        percentageFormHtml = `
+            <hr>
+            <div class="alert alert-success">
+                <i class="fas fa-percentage"></i>
+                <strong>Input Persentase Tersedia:</strong> Anda dapat mengisi persentase realisasi untuk lembur kualitatif.
+            </div>
+            <h6>Input Persentase Realisasi:</h6>
+            <form id="editPercentageForm">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Jam</th>
+                                <th>Prioritas</th>
+                                <th>Proses</th>
+                                <th>Persentase Realisasi (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${qualitativeDetails.map(detail => `
+                                <tr>
+                                    <td>${detail.employee_name}</td>
+                                    <td>${detail.start_time} - ${detail.end_time}</td>
+                                    <td>${detail.work_priority}</td>
+                                    <td>${detail.work_process}</td>
+                                    <td>
+                                        <input type="number" class="form-control form-control-sm" 
+                                               name="details[${detail.id}][percentage_realization]" 
+                                               value="${detail.percentage_realization || ''}" 
+                                               min="0" max="100" step="0.01"
+                                               placeholder="0-100%">
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-success btn-sm" onclick="updatePercentage()">
+                    <i class="fas fa-percentage"></i> Update Persentase
+                </button>
+            </form>
+        `;
+    } else if (canInputPercentage && hasQualitativeDetails && !hasPercentageInputReady) {
+        percentageFormHtml = `
+            <hr>
+            <div class="alert alert-warning">
+                <i class="fas fa-clock"></i>
+                <strong>Persentase Belum Siap:</strong> Lembur kualitatif belum dapat diisi persentasenya. Tunggu sampai approval selesai atau melewati jam lembur.
+            </div>
+        `;
+    } else if (canInputPercentage && !hasQualitativeDetails) {
+        percentageFormHtml = `
+            <hr>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Info:</strong> Tidak ada lembur kualitatif pada pengajuan ini.
+            </div>
+        `;
+    }
+
     return `
         <div class="row">
             <div class="col-md-6">
@@ -552,6 +652,7 @@ function generateDetailContent(data) {
                 <p><strong>Tanggal:</strong> ${data.date}</p>
                 <p><strong>Departemen:</strong> ${data.department_name}</p>
                 <p><strong>Can Edit Time:</strong> <span class="badge bg-${canEditTime ? 'success' : 'secondary'}">${canEditTime ? 'Ya' : 'Tidak'}</span></p>
+                <p><strong>Can Input Percentage:</strong> <span class="badge bg-${canInputPercentage ? 'success' : 'secondary'}">${canInputPercentage ? 'Ya' : 'Tidak'}</span></p>
             </div>
         </div>
         <hr>
@@ -563,10 +664,12 @@ function generateDetailContent(data) {
                         <th>Nama</th>
                         <th>ID Karyawan</th>
                         <th>Jam</th>
+                        <th>Tipe</th>
                         <th>Prioritas</th>
                         <th>Proses</th>
                         <th>Qty Plan</th>
                         <th>Qty Act</th>
+                        <th>Persentase</th>
                         <th>Keterangan</th>
                     </tr>
                 </thead>
@@ -577,21 +680,121 @@ function generateDetailContent(data) {
                                 <td>${detail.employee_name}</td>
                                 <td>${detail.employee_id}</td>
                                 <td>${detail.start_time} - ${detail.end_time}</td>
+                                <td>
+                                    <span class="badge bg-${detail.overtime_type === 'quantitative' ? 'primary' : 'info'}">
+                                        ${detail.overtime_type === 'quantitative' ? 'Kuantitatif' : 'Kualitatif'}
+                                    </span>
+                                </td>
                                 <td>${detail.work_priority}</td>
                                 <td>${detail.work_process}</td>
-                                <td>${detail.qty_plan || '-'}</td>
-                                <td>${detail.qty_actual || '-'}</td>
+                                <td>${detail.overtime_type === 'quantitative' ? (detail.qty_plan || '-') : '-'}</td>
+                                <td>${detail.overtime_type === 'quantitative' ? (detail.qty_actual || '-') : '-'}</td>
+                                <td>
+                                    ${detail.overtime_type === 'qualitative' ? 
+                                        (detail.percentage_realization !== null ? 
+                                            `<span class="badge bg-success">${detail.percentage_realization}%</span>` : 
+                                            (detail.can_input_percentage_now ? 
+                                                '<span class="badge bg-info">Siap diisi</span>' : 
+                                                '<span class="badge bg-warning">Menunggu</span>'
+                                            )
+                                        ) : '-'
+                                    }
+                                </td>
                                 <td>${detail.notes || '-'}</td>
                             </tr>
                         `).join('') :
-                        '<tr><td colspan="7" class="text-center">Tidak ada detail lembur</td></tr>'
+                        '<tr><td colspan="10" class="text-center">Tidak ada detail lembur</td></tr>'
                     }
                 </tbody>
             </table>
         </div>
         ${editTimeFormHtml}
+        ${percentageFormHtml}
         ${approvalHistoryHtml}
     `;
+}
+
+// ✅ TAMBAHAN: Fungsi untuk update persentase
+function updatePercentage() {
+    console.log('updatePercentage called, currentOvertimeId:', currentOvertimeId);
+    
+    if (!currentOvertimeId) {
+        alert('Error: Overtime ID tidak ditemukan');
+        return;
+    }
+    
+    const form = document.getElementById('editPercentageForm');
+    if (!form) {
+        alert('Error: Form edit percentage tidak ditemukan');
+        return;
+    }
+    
+    const formData = new FormData(form);
+    formData.append('_method', 'PUT');
+    
+    console.log('Form data to be sent:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+    
+    const updateButton = form.querySelector('button');
+    const originalText = updateButton.innerHTML;
+    updateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    updateButton.disabled = true;
+    
+    fetch(`/overtime/${currentOvertimeId}/update-percentage`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                console.log('Non-JSON response:', text);
+                throw new Error('Response bukan JSON: ' + text);
+            });
+        }
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        if (data.success) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Persentase realisasi berhasil diupdate',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    // Refresh modal dengan data terbaru
+                    showDetailModal(currentApprovalId);
+                });
+            } else {
+                alert('Persentase realisasi berhasil diupdate');
+                // Refresh modal dengan data terbaru
+                showDetailModal(currentApprovalId);
+            }
+        } else {
+            alert('Gagal update persentase: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan: ' + error.message);
+    })
+    .finally(() => {
+        updateButton.innerHTML = originalText;
+        updateButton.disabled = false;
+    });
 }
 
 function generateEditForm(data) {
