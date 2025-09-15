@@ -11,6 +11,7 @@ use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\JobLevelController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\FlowJobController;
+use App\Http\Controllers\ReportController; 
 use Illuminate\Support\Facades\Route;
 
 // Authentication Routes
@@ -45,16 +46,22 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/check-overtime-eligibility', [OvertimeController::class, 'checkOvertimeEligibility']);
     Route::put('/overtime/{overtime}/update-percentage', [OvertimeController::class, 'updatePercentage'])->name('overtime.update-percentage');
     
-    
     // AJAX route untuk get employees by department
     Route::get('/api/employees-by-department', [OvertimeController::class, 'getEmployeesByDepartment'])->name('api.employees-by-department');
+    
+    // ✅ NEW: Report Routes
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/overtime-leaderboard', [ReportController::class, 'index'])->name('overtime-leaderboard');
+        Route::get('/employee-details/{employee}', [ReportController::class, 'getEmployeeDetails'])->name('employee-details');
+        Route::get('/export-excel', [ReportController::class, 'exportExcel'])->name('export-excel');
+    });
     
     // Approval Routes
     Route::prefix('approvals')->name('approvals.')->group(function () {
         Route::get('/sect-head', [ApprovalController::class, 'sectHeadIndex'])->name('sect-head');
         Route::get('/sub-dept-head', [ApprovalController::class, 'subDeptHeadIndex'])->name('sub-dept-head');
         Route::get('/dept-head', [ApprovalController::class, 'deptHeadIndex'])->name('dept-head');
-        route::get('/sub-div-head', [ApprovalController::class, 'subDivHeadIndex'])->name('sub-div-head');
+        Route::get('/sub-div-head', [ApprovalController::class, 'subDivHeadIndex'])->name('sub-div-head');
         Route::get('/div-head', [ApprovalController::class, 'divHeadIndex'])->name('div-head');
         Route::get('/hrd', [ApprovalController::class, 'hrdIndex'])->name('hrd');
         
@@ -63,4 +70,4 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::get('/approvals/detail/{approval}', [ApprovalController::class, 'overtimeDetail'])->name('approvals.detail');
     
-});
+}); 

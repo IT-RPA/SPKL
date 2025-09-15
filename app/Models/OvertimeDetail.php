@@ -43,6 +43,22 @@ public function overtimeRequest()
         return $this->belongsTo(Employee::class);
     }
 
+    public function getDurationInMinutes()
+    {
+        $startTime = \Carbon\Carbon::parse($this->start_time);
+        $endTime = \Carbon\Carbon::parse($this->end_time);
+        return $endTime->diffInMinutes($startTime);
+    }
+
+    // ✅ NEW: Helper method to format duration
+    public function getFormattedDuration()
+    {
+        $minutes = $this->getDurationInMinutes();
+        $hours = floor($minutes / 60);
+        $mins = $minutes % 60;
+        return sprintf('%d jam %d menit', $hours, $mins);
+    }
+
     public function isQuantitative()
     {
         return $this->overtime_type === 'quantitative';

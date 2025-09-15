@@ -155,6 +155,140 @@
                 left: 0;
             }
         }
+
+        /* Report Leaderboard Styles - Tambahkan ini ke dalam <style> tag di layouts/app.blade.php */
+
+/* Report Leaderboard Styles */
+.card.border-left-primary {
+    border-left: 4px solid #007bff;
+}
+
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+}
+
+.trophy-gold {
+    color: #ffd700;
+}
+
+.trophy-silver {
+    color: #c0c0c0;
+}
+
+.trophy-bronze {
+    color: #cd7f32;
+}
+
+/* DataTable custom styling for leaderboard */
+#leaderboardTable tbody tr:nth-child(1) {
+    background: linear-gradient(45deg, #fff3cd, #ffffff) !important;
+    border-left: 4px solid #ffc107;
+}
+
+#leaderboardTable tbody tr:nth-child(2) {
+    background: linear-gradient(45deg, #f8f9fa, #ffffff) !important;
+    border-left: 4px solid #6c757d;
+}
+
+#leaderboardTable tbody tr:nth-child(3) {
+    background: linear-gradient(45deg, #fff3cd, #ffffff) !important;
+    border-left: 4px solid #fd7e14;
+}
+
+/* Hover effects */
+#leaderboardTable tbody tr:hover {
+    background-color: #f8f9fa !important;
+    transition: all 0.3s ease;
+}
+
+/* Modal customization */
+.modal-xl {
+    max-width: 90%;
+}
+
+/* Badge animations */
+.badge {
+    transition: all 0.3s ease;
+}
+
+.badge:hover {
+    transform: scale(1.05);
+}
+
+/* Loading animation for buttons */
+.btn.loading {
+    position: relative;
+    pointer-events: none;
+    color: transparent !important;
+}
+
+.btn.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.8s linear infinite;
+}
+
+.btn-success.loading::after {
+    border-color: #ffffff;
+    border-top-color: transparent;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Fix DataTable responsive issues */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    margin-bottom: 1rem;
+}
+
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    margin-top: 1rem;
+}
+
+/* Additional DataTable fixes */
+.dataTables_wrapper {
+    overflow-x: auto;
+}
+
+table.dataTable {
+    width: 100% !important;
+}
+
+table.dataTable thead th,
+table.dataTable tbody td {
+    white-space: nowrap;
+}
+
+/* Responsive table adjustments */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .badge {
+        font-size: 0.65rem;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.775rem;
+    }
+}
     </style>
 </head>
 <body>
@@ -244,6 +378,15 @@
                                 <i class="fas fa-clock"></i> Pengajuan Lembur
                             </a>
                         </li>
+
+                        <!-- Report -->
+                         <div class="menu-header">Report</div>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('reports.overtime-leaderboard') }}">
+                                    <i class="fas fa-chart-bar"></i> Report Lembur
+                                </a>
+                            </li>
+
                         
 <!-- Approval Menu - PERBAIKAN STEP NAMES -->
 <div class="menu-header">Approval</div>
