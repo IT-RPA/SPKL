@@ -19,19 +19,33 @@ class ReportController extends Controller
     public function index(Request $request)
     {
         // Get filter parameters
-        $month = $request->get('month');
-        $year = $request->get('year', date('Y'));
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
         $department_id = $request->get('department_id');
-        
-        // Build query for overtime leaderboard
+        $status_filter = $request->get('status_filter', 'completed'); // Default ke completed
+
+        // Build query untuk overtime leaderboard
         $query = Employee::with(['department', 'jobLevel'])
-            ->whereHas('overtimeDetails', function ($q) use ($month, $year) {
-                $q->whereHas('overtimeRequest', function ($subQ) use ($month, $year) {
-                    $subQ->where('status', 'approved');
-                    if ($month) {
-                        $subQ->whereMonth('date', $month);
+            ->whereHas('overtimeDetails', function ($q) use ($startDate, $endDate, $status_filter) {
+                $q->whereHas('overtimeRequest', function ($subQ) use ($startDate, $endDate, $status_filter) {
+                    // Filter berdasarkan status
+                    if ($status_filter === 'completed') {
+                        $subQ->where('status', 'completed');
+                    } elseif ($status_filter === 'in_progress') {
+                        $subQ->whereIn('status', ['approved_sect', 'approved_subdept', 'approved_dept', 'approved_subdiv', 'approved_div', 'pending']);
+                    } elseif ($status_filter === 'realisasi') {
+                        $subQ->where('status', 'approved'); // Status approved tapi belum isi data
+                    } elseif ($status_filter === 'all') {
+                        // Tidak ada filter status khusus
                     }
-                    $subQ->whereYear('date', $year);
+                    
+                    // Filter berdasarkan tanggal
+                    if ($startDate) {
+                        $subQ->where('date', '>=', $startDate);
+                    }
+                    if ($endDate) {
+                        $subQ->where('date', '<=', $endDate);
+                    }
                 });
             });
 
@@ -39,17 +53,29 @@ class ReportController extends Controller
             $query->where('department_id', $department_id);
         }
 
-        // Get employees with total overtime hours
-        $employees = $query->get()->map(function ($employee) use ($month, $year) {
-            $overtimeDetails = $employee->overtimeDetails()
-                ->whereHas('overtimeRequest', function ($q) use ($month, $year) {
-                    $q->where('status', 'approved');
-                    if ($month) {
-                        $q->whereMonth('date', $month);
+        // Get employees dengan total overtime hours
+        $employees = $query->get()->map(function ($employee) use ($startDate, $endDate, $status_filter) {
+            $overtimeDetailsQuery = $employee->overtimeDetails()
+                ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $status_filter) {
+                    // Filter berdasarkan status
+                    if ($status_filter === 'completed') {
+                        $q->where('status', 'completed');
+                    } elseif ($status_filter === 'in_progress') {
+                        $q->whereIn('status', ['approved_sect', 'approved_subdept', 'approved_dept', 'approved_subdiv', 'approved_div', 'pending']);
+                    } elseif ($status_filter === 'realisasi') {
+                        $q->where('status', 'approved');
                     }
-                    $q->whereYear('date', $year);
-                })
-                ->get();
+                    
+                    // Filter berdasarkan tanggal
+                    if ($startDate) {
+                        $q->where('date', '>=', $startDate);
+                    }
+                    if ($endDate) {
+                        $q->where('date', '<=', $endDate);
+                    }
+                });
+
+            $overtimeDetails = $overtimeDetailsQuery->get();
 
             $totalMinutes = 0;
             $totalRequests = 0;
@@ -74,9 +100,12 @@ class ReportController extends Controller
                 'total_requests' => $totalRequests,
                 'formatted_time' => $this->formatMinutesToHours($totalMinutes)
             ];
+        })->filter(function ($employee) {
+            // Hanya tampilkan yang punya jam lembur
+            return $employee->total_hours > 0;
         })->sortByDesc('total_hours')->values();
 
-        // Get departments for filter
+        // Get departments untuk filter
         $departments = \App\Models\Department::orderBy('name')->get();
 
         if ($request->ajax()) {
@@ -85,26 +114,45 @@ class ReportController extends Controller
             ]);
         }
 
-        return view('reports.overtime-leaderboard', compact('employees', 'departments', 'month', 'year', 'department_id'));
+        return view('reports.overtime-leaderboard', compact(
+            'employees', 
+            'departments', 
+            'startDate', 
+            'endDate', 
+            'department_id',
+            'status_filter'
+        ));
     }
 
     public function getEmployeeDetails(Request $request, $employeeId)
     {
-        $month = $request->get('month');
-        $year = $request->get('year', date('Y'));
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        $status_filter = $request->get('status_filter', 'completed');
 
         $employee = Employee::with(['department', 'jobLevel'])->findOrFail($employeeId);
 
         $details = OvertimeDetail::with(['overtimeRequest' => function($q) {
-                $q->select('id', 'request_number', 'date');
+                $q->select('id', 'request_number', 'date', 'status');
             }])
             ->where('employee_id', $employeeId)
-            ->whereHas('overtimeRequest', function ($q) use ($month, $year) {
-                $q->where('status', 'approved');
-                if ($month) {
-                    $q->whereMonth('date', $month);
+            ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $status_filter) {
+                // Filter berdasarkan status
+                if ($status_filter === 'completed') {
+                    $q->where('status', 'completed');
+                } elseif ($status_filter === 'in_progress') {
+                    $q->whereIn('status', ['approved_sect', 'approved_subdept', 'approved_dept', 'approved_subdiv', 'approved_div', 'pending']);
+                } elseif ($status_filter === 'realisasi') {
+                    $q->where('status', 'approved');
                 }
-                $q->whereYear('date', $year);
+                
+                // Filter berdasarkan tanggal
+                if ($startDate) {
+                    $q->where('date', '>=', $startDate);
+                }
+                if ($endDate) {
+                    $q->where('date', '<=', $endDate);
+                }
             })
             ->orderBy('created_at', 'desc')
             ->get()
@@ -121,7 +169,8 @@ class ReportController extends Controller
                     'duration_minutes' => $duration,
                     'formatted_duration' => $this->formatMinutesToHours($duration),
                     'work_priority' => $detail->work_priority,
-                    'work_process' => $detail->work_process
+                    'work_process' => $detail->work_process,
+                    'status' => $detail->overtimeRequest->status
                 ];
             });
 
@@ -133,19 +182,31 @@ class ReportController extends Controller
 
     public function exportExcel(Request $request)
     {
-        $month = $request->get('month');
-        $year = $request->get('year', date('Y'));
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
         $department_id = $request->get('department_id');
+        $status_filter = $request->get('status_filter', 'completed');
 
         // Get the same data as index method
         $query = Employee::with(['department', 'jobLevel'])
-            ->whereHas('overtimeDetails', function ($q) use ($month, $year) {
-                $q->whereHas('overtimeRequest', function ($subQ) use ($month, $year) {
-                    $subQ->where('status', 'approved');
-                    if ($month) {
-                        $subQ->whereMonth('date', $month);
+            ->whereHas('overtimeDetails', function ($q) use ($startDate, $endDate, $status_filter) {
+                $q->whereHas('overtimeRequest', function ($subQ) use ($startDate, $endDate, $status_filter) {
+                    // Filter berdasarkan status
+                    if ($status_filter === 'completed') {
+                        $subQ->where('status', 'completed');
+                    } elseif ($status_filter === 'in_progress') {
+                        $subQ->whereIn('status', ['approved_sect', 'approved_subdept', 'approved_dept', 'approved_subdiv', 'approved_div', 'pending']);
+                    } elseif ($status_filter === 'realisasi') {
+                        $subQ->where('status', 'approved');
                     }
-                    $subQ->whereYear('date', $year);
+                    
+                    // Filter berdasarkan tanggal
+                    if ($startDate) {
+                        $subQ->where('date', '>=', $startDate);
+                    }
+                    if ($endDate) {
+                        $subQ->where('date', '<=', $endDate);
+                    }
                 });
             });
 
@@ -153,16 +214,27 @@ class ReportController extends Controller
             $query->where('department_id', $department_id);
         }
 
-        $employees = $query->get()->map(function ($employee) use ($month, $year) {
-            $overtimeDetails = $employee->overtimeDetails()
-                ->whereHas('overtimeRequest', function ($q) use ($month, $year) {
-                    $q->where('status', 'approved');
-                    if ($month) {
-                        $q->whereMonth('date', $month);
+        $employees = $query->get()->map(function ($employee) use ($startDate, $endDate, $status_filter) {
+            $overtimeDetailsQuery = $employee->overtimeDetails()
+                ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $status_filter) {
+                    // Filter berdasarkan status
+                    if ($status_filter === 'completed') {
+                        $q->where('status', 'completed');
+                    } elseif ($status_filter === 'in_progress') {
+                        $q->whereIn('status', ['approved_sect', 'approved_subdept', 'approved_dept', 'approved_subdiv', 'approved_div', 'pending']);
+                    } elseif ($status_filter === 'realisasi') {
+                        $q->where('status', 'approved');
                     }
-                    $q->whereYear('date', $year);
-                })
-                ->get();
+                    
+                    if ($startDate) {
+                        $q->where('date', '>=', $startDate);
+                    }
+                    if ($endDate) {
+                        $q->where('date', '<=', $endDate);
+                    }
+                });
+
+            $overtimeDetails = $overtimeDetailsQuery->get();
 
             $totalMinutes = 0;
             $totalRequests = 0;
@@ -183,6 +255,8 @@ class ReportController extends Controller
                 'total_requests' => $totalRequests,
                 'formatted_time' => $this->formatMinutesToHours($totalMinutes)
             ];
+        })->filter(function ($employee) {
+            return $employee->total_hours > 0;
         })->sortByDesc('total_hours')->values();
 
         // Create Excel file
@@ -190,21 +264,47 @@ class ReportController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
 
         // Set title
-        $periodText = $month ? Carbon::create($year, $month)->format('F Y') : $year;
+        $periodText = '';
+        if ($startDate && $endDate) {
+            $periodText = Carbon::parse($startDate)->format('d/m/Y') . ' - ' . Carbon::parse($endDate)->format('d/m/Y');
+        } elseif ($startDate) {
+            $periodText = 'Sejak ' . Carbon::parse($startDate)->format('d/m/Y');
+        } elseif ($endDate) {
+            $periodText = 'Sampai ' . Carbon::parse($endDate)->format('d/m/Y');
+        } else {
+            $periodText = 'Semua Periode';
+        }
+
+        $statusText = '';
+        switch ($status_filter) {
+            case 'completed':
+                $statusText = 'Completed';
+                break;
+            case 'in_progress':
+                $statusText = 'In Progress';
+                break;
+            case 'realisasi':
+                $statusText = 'Realisasi';
+                break;
+            default:
+                $statusText = 'Semua Status';
+        }
+
         $sheet->setTitle('Overtime Leaderboard');
         $sheet->setCellValue('A1', 'LAPORAN LEADERBOARD LEMBUR');
         $sheet->setCellValue('A2', 'Periode: ' . $periodText);
+        $sheet->setCellValue('A3', 'Status: ' . $statusText);
 
         // Set headers
         $headers = ['No', 'ID Karyawan', 'Nama Karyawan', 'Department', 'Level Jabatan', 'Total Jam', 'Total Pengajuan'];
         $col = 'A';
         foreach ($headers as $header) {
-            $sheet->setCellValue($col . '4', $header);
+            $sheet->setCellValue($col . '5', $header);
             $col++;
         }
 
         // Fill data
-        $row = 5;
+        $row = 6;
         $no = 1;
         foreach ($employees as $employee) {
             $sheet->setCellValue('A' . $row, $no++);
@@ -222,7 +322,7 @@ class ReportController extends Controller
 
         // Save and download
         $writer = new Xlsx($spreadsheet);
-        $filename = 'overtime_leaderboard_' . $periodText . '_' . date('YmdHis') . '.xlsx';
+        $filename = 'overtime_leaderboard_' . $statusText . '_' . date('YmdHis') . '.xlsx';
         
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
@@ -251,13 +351,18 @@ class ReportController extends Controller
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
+        // Status styling
+        $sheet->mergeCells('A3:G3');
+        $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(12);
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
         // Header styling
-        $sheet->getStyle('A4:G4')->getFont()->setBold(true);
-        $sheet->getStyle('A4:G4')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('D9EAD3');
-        $sheet->getStyle('A4:G4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A5:G5')->getFont()->setBold(true);
+        $sheet->getStyle('A5:G5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('D9EAD3');
+        $sheet->getStyle('A5:G5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Data styling
-        $sheet->getStyle('A4:G' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('A5:G' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 
         // Auto size columns
         foreach (range('A', 'G') as $col) {

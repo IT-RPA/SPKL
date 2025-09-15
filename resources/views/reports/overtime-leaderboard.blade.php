@@ -16,32 +16,44 @@
         </div>
         <div class="card-body">
             <form id="filterForm" method="GET">
+                <!-- Quick Date Range Buttons -->
                 <div class="row">
+                    <div class="col-12 mb-3">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary date-range-btn" data-range="today">Hari Ini</button>
+                            <button type="button" class="btn btn-outline-secondary date-range-btn" data-range="this_week">Minggu Ini</button>
+                            <button type="button" class="btn btn-outline-secondary date-range-btn" data-range="this_month">Bulan Ini</button>
+                            <button type="button" class="btn btn-outline-secondary date-range-btn" data-range="last_month">Bulan Lalu</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- Date Range -->
                     <div class="col-md-3">
-                        <label for="year" class="form-label">Tahun</label>
-                        <select name="year" id="year" class="form-select">
-                            @for($y = date('Y'); $y >= date('Y') - 5; $y--)
-                                <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
-                            @endfor
-                        </select>
+                        <label for="start_date" class="form-label">Tanggal Mulai</label>
+                        <input type="date" name="start_date" id="start_date" class="form-control" 
+                               value="{{ $startDate }}">
                     </div>
                     <div class="col-md-3">
-                        <label for="month" class="form-label">Bulan</label>
-                        <select name="month" id="month" class="form-select">
-                            <option value="">Semua Bulan</option>
-                            @php
-                                $months = [
-                                    1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
-                                    5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
-                                    9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
-                                ];
-                            @endphp
-                            @foreach($months as $num => $name)
-                                <option value="{{ $num }}" {{ $month == $num ? 'selected' : '' }}>{{ $name }}</option>
-                            @endforeach
+                        <label for="end_date" class="form-label">Tanggal Selesai</label>
+                        <input type="date" name="end_date" id="end_date" class="form-control" 
+                               value="{{ $endDate }}">
+                    </div>
+                    
+                    <!-- Status Filter -->
+                    <div class="col-md-2">
+                        <label for="status_filter" class="form-label">Status</label>
+                        <select name="status_filter" id="status_filter" class="form-select">
+                            <option value="completed" {{ $status_filter == 'completed' ? 'selected' : '' }}>Completed</option>
+                            <option value="in_progress" {{ $status_filter == 'in_progress' ? 'selected' : '' }}>In Progress</option>
+                            <option value="realisasi" {{ $status_filter == 'realisasi' ? 'selected' : '' }}>Realisasi</option>
+                            <option value="all" {{ $status_filter == 'all' ? 'selected' : '' }}>Semua Status</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    
+                    <!-- Department Filter -->
+                    <div class="col-md-2">
                         <label for="department_id" class="form-label">Department</label>
                         <select name="department_id" id="department_id" class="form-select">
                             <option value="">Semua Department</option>
@@ -52,19 +64,70 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3 d-flex align-items-end gap-2">
-                        <button type="submit" class="btn btn-primary">
+                    
+                    <!-- Action Buttons -->
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
                             <i class="fas fa-search"></i> Filter
                         </button>
-                        <a href="{{ route('reports.overtime-leaderboard') }}" class="btn btn-secondary">
+                        <a href="{{ route('reports.overtime-leaderboard') }}" class="btn btn-secondary btn-sm">
                             <i class="fas fa-undo"></i> Reset
                         </a>
-                        <button type="button" class="btn btn-success" id="exportExcel">
-                            <i class="fas fa-file-excel"></i> Export Excel
+                        <button type="button" class="btn btn-success btn-sm" id="exportExcel">
+                            <i class="fas fa-file-excel"></i> Export
                         </button>
                     </div>
                 </div>
+                
+                <!-- Status Legend -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <small class="text-muted">
+                            <strong>Keterangan Status:</strong>
+                            <span class="badge bg-success ms-2">Completed</span> <em>Sudah diapprove semua & data lengkap</em> |
+                            <span class="badge bg-warning ms-2">In Progress</span> <em>Sedang proses approval</em> |
+                            <span class="badge bg-info ms-2">Realisasi</span> <em>Perlu input qty actual/persentase</em>
+                        </small>
+                    </div>
+                </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Current Filter Info -->
+    <div class="card mb-4">
+        <div class="card-body bg-light">
+            <div class="row">
+                <div class="col-md-12">
+                    <h6 class="mb-2"><i class="fas fa-info-circle"></i> Filter Aktif:</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        @if($startDate || $endDate)
+                            <span class="badge bg-primary">
+                                <i class="fas fa-calendar"></i> 
+                                @if($startDate && $endDate)
+                                    {{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}
+                                @elseif($startDate)
+                                    Sejak {{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }}
+                                @else
+                                    Sampai {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}
+                                @endif
+                            </span>
+                        @endif
+                        
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-tasks"></i> 
+                            Status: {{ ucfirst(str_replace('_', ' ', $status_filter ?? 'completed')) }}
+                        </span>
+                        
+                        @if($department_id)
+                            <span class="badge bg-info">
+                                <i class="fas fa-building"></i> 
+                                Dept: {{ $departments->firstWhere('id', $department_id)?->name ?? 'Unknown' }}
+                            </span>
+                        @endif
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -104,10 +167,8 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-list"></i> Ranking Lembur
-                    @if($month && $year)
-                        - {{ $months[$month] ?? '' }} {{ $year }}
-                    @elseif($year)
-                        - {{ $year }}
+                    @if($startDate && $endDate)
+                        - {{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }} s/d {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}
                     @endif
                 </h5>
                 <span class="badge bg-info">Total: <span id="totalEmployees">{{ count($employees) }}</span> karyawan</span>
@@ -207,7 +268,7 @@
                                 <td colspan="8" class="text-center py-4">
                                     <div class="text-muted">
                                         <i class="fas fa-inbox fa-3x mb-3"></i>
-                                        <p>Tidak ada data lembur untuk periode yang dipilih</p>
+                                        <p>Tidak ada data lembur untuk filter yang dipilih</p>
                                     </div>
                                 </td>
                             </tr>
@@ -256,6 +317,7 @@
                                 <th>Durasi</th>
                                 <th>Prioritas Pekerjaan</th>
                                 <th>Proses Pekerjaan</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody id="detailsTableBody">
@@ -290,6 +352,10 @@
 #noResultsRow {
     display: none;
 }
+
+.badge {
+    font-size: 0.75em;
+}
 </style>
 @endsection
 
@@ -302,11 +368,42 @@ $(document).ready(function() {
     // Export Excel functionality
     $('#exportExcel').click(function() {
         var params = new URLSearchParams();
-        params.append('year', $('#year').val());
-        params.append('month', $('#month').val());
+        params.append('start_date', $('#start_date').val());
+        params.append('end_date', $('#end_date').val());
+        params.append('status_filter', $('#status_filter').val());
         params.append('department_id', $('#department_id').val());
         
         window.location.href = '{{ route("reports.export-excel") }}?' + params.toString();
+    });
+    
+    // Quick date range buttons
+    $('.date-range-btn').click(function() {
+        var range = $(this).data('range');
+        var today = new Date();
+        var startDate, endDate;
+        
+        switch(range) {
+            case 'today':
+                startDate = endDate = today.toISOString().split('T')[0];
+                break;
+            case 'this_week':
+                var monday = new Date(today.setDate(today.getDate() - today.getDay() + 1));
+                startDate = monday.toISOString().split('T')[0];
+                endDate = new Date().toISOString().split('T')[0];
+                break;
+            case 'this_month':
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+                endDate = new Date().toISOString().split('T')[0];
+                break;
+            case 'last_month':
+                var lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                startDate = lastMonth.toISOString().split('T')[0];
+                endDate = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0];
+                break;
+        }
+        
+        $('#start_date').val(startDate);
+        $('#end_date').val(endDate);
     });
 });
 
@@ -474,18 +571,23 @@ function initializeCustomTable() {
 }
 
 function showEmployeeDetails(employeeId) {
-    const year = $('#year').val();
-    const month = $('#month').val();
+    const startDate = $('#start_date').val();
+    const endDate = $('#end_date').val();
+    const statusFilter = $('#status_filter').val();
     
     // Show loading state
     $('#employeeInfo').html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>');
-    $('#detailsTableBody').html('<tr><td colspan="7" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>');
+    $('#detailsTableBody').html('<tr><td colspan="8" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>');
     $('#employeeDetailsModal').modal('show');
     
     $.ajax({
         url: `{{ route('reports.employee-details', ':id') }}`.replace(':id', employeeId),
         method: 'GET',
-        data: { year: year, month: month },
+        data: { 
+            start_date: startDate,
+            end_date: endDate,
+            status_filter: statusFilter
+        },
         success: function(response) {
             // Fill employee info
             const employee = response.employee;
@@ -517,10 +619,34 @@ function showEmployeeDetails(employeeId) {
                 </div>
             `);
 
-            // Fill details table - simple HTML only, no DataTables
+            // Fill details table
             let tableBody = '';
             if (response.details && response.details.length > 0) {
                 response.details.forEach(function(detail) {
+                    // Status badge
+                    let statusBadge = '';
+                    switch(detail.status) {
+                        case 'completed':
+                            statusBadge = '<span class="badge bg-success">Completed</span>';
+                            break;
+                        case 'approved':
+                            statusBadge = '<span class="badge bg-info">Realisasi</span>';
+                            break;
+                        case 'approved_sect':
+                        case 'approved_subdept':
+                        case 'approved_dept':
+                        case 'approved_subdiv':
+                        case 'approved_div':
+                        case 'pending':
+                            statusBadge = '<span class="badge bg-warning">In Progress</span>';
+                            break;
+                        case 'rejected':
+                            statusBadge = '<span class="badge bg-danger">Rejected</span>';
+                            break;
+                        default:
+                            statusBadge = `<span class="badge bg-secondary">${detail.status}</span>`;
+                    }
+                    
                     tableBody += `
                         <tr>
                             <td><span class="fw-bold text-primary">${detail.spk_number}</span></td>
@@ -530,13 +656,14 @@ function showEmployeeDetails(employeeId) {
                             <td><span class="badge bg-warning text-dark">${detail.formatted_duration}</span></td>
                             <td>${detail.work_priority}</td>
                             <td>${detail.work_process}</td>
+                            <td>${statusBadge}</td>
                         </tr>
                     `;
                 });
             } else {
                 tableBody = `
                     <tr>
-                        <td colspan="7" class="text-center text-muted">Tidak ada data lembur</td>
+                        <td colspan="8" class="text-center text-muted">Tidak ada data lembur</td>
                     </tr>
                 `;
             }
@@ -546,7 +673,7 @@ function showEmployeeDetails(employeeId) {
         error: function(xhr, status, error) {
             console.error('AJAX Error:', error);
             $('#employeeInfo').html('<div class="alert alert-danger">Gagal memuat informasi karyawan</div>');
-            $('#detailsTableBody').html('<tr><td colspan="7" class="text-center text-danger">Gagal memuat data</td></tr>');
+            $('#detailsTableBody').html('<tr><td colspan="8" class="text-center text-danger">Gagal memuat data</td></tr>');
             
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
