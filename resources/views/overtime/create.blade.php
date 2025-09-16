@@ -309,50 +309,59 @@ function updateEmployeeOptions(departmentId) {
 function addDetail() {
     detailIndex++; // Increment global counter
     const container = document.getElementById('detailContainer');
-    const firstDetail = container.firstElementChild;
+    const firstDetail = container.querySelector('.detail-row');
+    
+    if (!firstDetail) {
+        console.error('First detail row not found');
+        return;
+    }
+    
     const newDetail = firstDetail.cloneNode(true);
     
-    console.log(`Adding detail with index: ${detailIndex}`); // Debug log
+    console.log(`Adding detail with index: ${detailIndex}`);
     
     // Update SEMUA name attributes dengan index yang benar
-    newDetail.querySelectorAll('[name*="details[0]"]').forEach(input => {
+    newDetail.querySelectorAll('[name]').forEach(input => {
         const oldName = input.name;
-        const newName = oldName.replace('[0]', `[${detailIndex}]`);
+        // Perbaiki regex untuk menangani berbagai format index
+        const newName = oldName.replace(/\[(\d+)\]/g, `[${detailIndex}]`);
         input.name = newName;
-        input.value = ''; // Reset value
-        console.log(`Updated name: ${oldName} -> ${newName}`); // Debug log
+        console.log(`Updated name: ${oldName} -> ${newName}`);
     });
     
-    // Update SEMUA IDs yang mengandung "0" dengan index baru
-    newDetail.querySelectorAll('[id*="0"]').forEach(element => {
+    // Update SEMUA IDs dengan pattern yang lebih spesifik
+    newDetail.querySelectorAll('[id]').forEach(element => {
         if (element.id) {
             const oldId = element.id;
-            const newId = oldId.replace('0', detailIndex);
+            // Ganti angka di akhir ID dengan index baru
+            const newId = oldId.replace(/\d+$/, detailIndex);
             element.id = newId;
-            console.log(`Updated ID: ${oldId} -> ${newId}`); // Debug log
+            console.log(`Updated ID: ${oldId} -> ${newId}`);
         }
     });
     
-    // KUNCI PERBAIKAN: Update onchange attribute dengan index yang benar
+    // PERBAIKAN KUNCI: Update onchange attribute dengan index yang benar
     const overtimeTypeSelect = newDetail.querySelector('.overtime-type-select');
     if (overtimeTypeSelect) {
         overtimeTypeSelect.setAttribute('onchange', `toggleOvertimeType(this, ${detailIndex})`);
-        console.log(`Set onchange: toggleOvertimeType(this, ${detailIndex})`); // Debug log
+        // Hapus event listener lama jika ada
+        overtimeTypeSelect.removeAttribute('data-initialized');
+        console.log(`Set onchange: toggleOvertimeType(this, ${detailIndex})`);
     }
     
-    // Update onchange untuk qty plan juga
+    // Update onchange untuk qty plan
     const qtyPlanInput = newDetail.querySelector('.qty-plan');
     if (qtyPlanInput) {
         qtyPlanInput.setAttribute('onchange', 'toggleActual(this)');
     }
     
-    // Reset ke kondisi awal
+    // Reset ke kondisi awal SEBELUM di-append
     resetDetailToInitialState(newDetail);
     
     // Append ke container
     container.appendChild(newDetail);
     
-    // Initialize select2 untuk dropdown baru
+    // Initialize select2 untuk dropdown baru SETELAH di-append
     initializeNewDetailSelects(newDetail);
 
     // Update employee options jika department sudah dipilih
@@ -362,16 +371,22 @@ function addDetail() {
 }
 
 function resetDetailToInitialState(detailElement) {
+    // Destroy select2 yang ada sebelum reset
+    $(detailElement).find('.select2-container').remove();
+    $(detailElement).find('select').removeClass('select2-hidden-accessible');
+    
     // Reset semua select ke pilihan kosong
     detailElement.querySelectorAll('select').forEach(select => {
         select.selectedIndex = 0;
+        select.value = '';
+        // Remove select2 classes
+        $(select).removeClass('select2-hidden-accessible');
     });
     
     // Reset semua input text/number/textarea
-    detailElement.querySelectorAll('input, textarea').forEach(input => {
-        if (input.type !== 'button') {
-            input.value = '';
-        }
+    detailElement.querySelectorAll('input:not([type="button"]), textarea').forEach(input => {
+        input.value = '';
+        input.removeAttribute('style'); // Remove inline styles
     });
     
     // Reset qty plan ke disabled
@@ -379,18 +394,27 @@ function resetDetailToInitialState(detailElement) {
     if (qtyPlan) {
         qtyPlan.disabled = true;
         qtyPlan.required = false;
+        qtyPlan.value = '';
     }
     
     // Reset qty actual ke disabled
     const qtyActual = detailElement.querySelector('.qty-actual');
     if (qtyActual) {
         qtyActual.disabled = true;
+        qtyActual.value = '';
     }
     
     // Hide percentage info
     const percentageInfo = detailElement.querySelector('.percentage-info');
     if (percentageInfo) {
         percentageInfo.style.display = 'none';
+    }
+    
+    // Reset overtime type select
+    const overtimeTypeSelect = detailElement.querySelector('.overtime-type-select');
+    if (overtimeTypeSelect) {
+        overtimeTypeSelect.value = '';
+        overtimeTypeSelect.selectedIndex = 0;
     }
 }
 
