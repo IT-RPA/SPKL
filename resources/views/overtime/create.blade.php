@@ -40,33 +40,51 @@
             </div>
 
             <div class="row mb-4">
-               {{-- Ganti bagian dropdown employee_id dengan kode ini --}}
-<div class="col-md-6">
-    <label for="employee_id" class="form-label">Pengaju (Karyawan)</label>
-    <select class="form-select @error('employee_id') is-invalid @enderror" 
-            name="employee_id" id="employee_id" required>
-        <option value="">Pilih Karyawan Pengaju</option>
-        @if(isset($eligibleRequesters))
-            @foreach($eligibleRequesters as $requester)
-                <option value="{{ $requester->id }}" 
-                        {{ (old('employee_id') == $requester->id || (isset($currentEmployeeData) && $currentEmployeeData->id == $requester->id)) ? 'selected' : '' }}>
-                    {{ $requester->name }} - {{ $requester->employee_id }} ({{ $requester->jobLevel->name ?? 'N/A' }})
-                </option>
-            @endforeach
-        @endif
-    </select>
-    @error('employee_id')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-    <small class="text-muted">Hanya dapat memilih diri sendiri sebagai pengaju</small>
-    
-    {{-- Alert untuk flow job validation --}}
-    <div id="flowJobAlert" class="alert alert-warning mt-2" style="display: none;">
-        <i class="fas fa-exclamation-triangle"></i>
-        <strong>Perhatian!</strong> Karyawan yang dipilih tidak memiliki wewenang untuk mengajukan lembur di departemen ini.
-        <br><small>Silakan pilih karyawan lain atau hubungi admin untuk mengatur flow approval.</small>
-    </div>
-</div>
+               {{-- Dropdown employee_id (Pengaju) --}}
+                <div class="col-md-6">
+                    <label for="employee_id" class="form-label">Pengaju (Karyawan)</label>
+                    <select class="form-select @error('employee_id') is-invalid @enderror" 
+                            name="employee_id" id="employee_id" required>
+                        <option value="">Pilih Karyawan Pengaju</option>
+                        @if(isset($eligibleRequesters))
+                            @foreach($eligibleRequesters as $requester)
+                                <option value="{{ $requester->id }}" 
+                                        {{ (old('employee_id') == $requester->id || (isset($currentEmployeeData) && $currentEmployeeData->id == $requester->id)) ? 'selected' : '' }}>
+                                    {{ $requester->name }} - {{ $requester->employee_id }} ({{ $requester->jobLevel->name ?? 'N/A' }})
+                                </option>
+                            @endforeach
+                        @endif
+                    </select>
+                    @error('employee_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                    <small class="text-muted">Hanya dapat memilih diri sendiri sebagai pengaju</small>
+                    
+                    {{-- Alert untuk flow job validation --}}
+                    <div id="flowJobAlert" class="alert alert-warning mt-2" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Perhatian!</strong> Karyawan yang dipilih tidak memiliki wewenang untuk mengajukan lembur di departemen ini.
+                        <br><small>Silakan pilih karyawan lain atau hubungi admin untuk mengatur flow approval.</small>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ✅ INFORMASI HIERARKI --}}
+            @if(isset($currentEmployeeData))
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Informasi Hierarki</h6>
+                        <p class="mb-1"><strong>Level Anda:</strong> {{ $currentEmployeeData->jobLevel->name ?? 'N/A' }} 
+                           <small class="text-muted">({{ $currentEmployeeData->jobLevel->code ?? 'N/A' }})</small></p>
+                        <p class="mb-0"><small class="text-muted">
+                            <i class="fas fa-lightbulb"></i> 
+                            Anda dapat mengajukan lembur untuk karyawan dengan level yang sama atau di bawah level Anda dalam departemen yang sama.
+                        </small></p>
+                    </div>
+                </div>
+            </div>
+            @endif
 
             {{-- Detail Section --}}
             <h5>Detail Lembur</h5>
@@ -77,19 +95,31 @@
                             <label class="form-label">Nama Karyawan</label>
                             <select class="form-select employee-select" name="details[0][employee_id]" required>
                                 <option value="">Pilih Karyawan</option>
+                                {{-- ✅ TAMPILKAN HANYA EMPLOYEES YANG ELIGIBLE --}}
+                                @foreach($employees as $employee)
+                                    <option value="{{ $employee->id }}" data-level="{{ $employee->jobLevel->name ?? 'N/A' }}" 
+                                            data-level-order="{{ $employee->jobLevel->level_order ?? 999 }}">
+                                        {{ $employee->name }} - {{ $employee->employee_id }} 
+                                        <small>({{ $employee->jobLevel->name ?? 'N/A' }})</small>
+                                    </option>
+                                @endforeach
                             </select>
+                            <small class="text-muted eligible-employee-hint">
+                                <i class="fas fa-users"></i> 
+                                Hanya menampilkan karyawan yang dapat Anda ajukan lembur
+                            </small>
                         </div>
 
-<div class="col-md-6">
-    <label class="form-label">Tipe Lembur</label>
-    <select class="form-control overtime-type-select" 
-            name="details[0][overtime_type]" 
-            onchange="toggleOvertimeType(this, 0)" required>
-        <option value="">Pilih Tipe</option>
-        <option value="quantitative">Kuantitatif (Dengan Target)</option>
-        <option value="qualitative">Kualitatif (Persentase)</option>
-    </select>
-</div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tipe Lembur</label>
+                            <select class="form-control overtime-type-select" 
+                                    name="details[0][overtime_type]" 
+                                    onchange="toggleOvertimeType(this, 0)" required>
+                                <option value="">Pilih Tipe</option>
+                                <option value="quantitative">Kuantitatif (Dengan Target)</option>
+                                <option value="qualitative">Kualitatif (Persentase)</option>
+                            </select>
+                        </div>
                         
                         <div class="col-md-3">
                             <label class="form-label">Jam Mulai</label>
@@ -115,33 +145,33 @@
                     </div>
                     
                     <div class="row mt-3">
-    <div class="col-md-4 qty-section" id="qtySection0">
-        <label class="form-label">Qty Plan</label>
-        <input type="number" class="form-control qty-plan" name="details[0][qty_plan]" 
-               onchange="toggleActual(this)" disabled>
-        <small class="text-muted">Hanya untuk tipe kuantitatif</small>
-    </div>
-    
-    <div class="col-md-4">
-        <label class="form-label">Qty Actual</label>
-        <input type="number" class="form-control qty-actual" name="details[0][qty_actual]" disabled>
-        <small class="text-muted">Akan diisi setelah lembur selesai</small>
-    </div>
-    
-    <div class="col-md-4">
-        <label class="form-label">Keterangan</label>
-        <textarea class="form-control" name="details[0][notes]" rows="2"></textarea>
-    </div>
-</div>
+                        <div class="col-md-4 qty-section" id="qtySection0">
+                            <label class="form-label">Qty Plan</label>
+                            <input type="number" class="form-control qty-plan" name="details[0][qty_plan]" 
+                                   onchange="toggleActual(this)" disabled>
+                            <small class="text-muted">Hanya untuk tipe kuantitatif</small>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label">Qty Actual</label>
+                            <input type="number" class="form-control qty-actual" name="details[0][qty_actual]" disabled>
+                            <small class="text-muted">Akan diisi setelah lembur selesai</small>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label">Keterangan</label>
+                            <textarea class="form-control" name="details[0][notes]" rows="2"></textarea>
+                        </div>
+                    </div>
 
-<div class="row mt-2 percentage-info" id="percentageInfo0" style="display: none;">
-    <div class="col-md-12">
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i>
-            <strong>Tipe Kualitatif:</strong> Persentase realisasi akan dapat diisi setelah semua approval selesai atau melewati jam lembur oleh atasan minimal 1 tingkat di atas pengaju.
-        </div>
-    </div>
-</div>
+                    <div class="row mt-2 percentage-info" id="percentageInfo0" style="display: none;">
+                        <div class="col-md-12">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Tipe Kualitatif:</strong> Persentase realisasi akan dapat diisi setelah semua approval selesai atau melewati jam lembur oleh atasan minimal 1 tingkat di atas pengaju.
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="mt-2">
                         <button type="button" class="btn btn-danger btn-sm" onclick="removeDetail(this)">
@@ -168,13 +198,15 @@
 @push('scripts')
 <script>
 let detailIndex = 0;
-let allEmployees = @json($employees);
+let allEmployees = @json($employees); // ✅ Sudah filtered dari controller
 
 $(document).ready(function() {
     // Initialize select2 for first employee select
     $('.employee-select').select2({
         placeholder: 'Pilih Karyawan',
-        width: '100%'
+        width: '100%',
+        templateResult: formatEmployeeOption, // ✅ Format dengan level info
+        templateSelection: formatEmployeeSelection
     });
 
     $('#employee_id').select2({
@@ -182,15 +214,17 @@ $(document).ready(function() {
         width: '100%'
     });
 
-    // Department change handler
+    // Department change handler (tidak perlu update lagi karena sudah filtered)
     $('#department_id').on('change', function() {
         const departmentId = $(this).val();
-        updateEmployeeOptions(departmentId);
         
         // Reset pengaju dan hide alert
         $('#employee_id').val('').trigger('change');
         $('#flowJobAlert').hide();
         $('#submitBtn').prop('disabled', false);
+        
+        // ✅ PERBAIKAN: Update employee options dengan data yang sudah difilter
+        updateEmployeeOptionsForAll();
     });
 
     // Employee pengaju change handler - validasi flow job
@@ -238,8 +272,59 @@ $(document).ready(function() {
             });
             return false;
         }
+
+        // ✅ VALIDASI TAMBAHAN: Cek apakah ada karyawan level tinggi yang dipilih
+        validateHierarchyBeforeSubmit(e);
     });
 });
+
+// ✅ FUNGSI BARU: Format option dengan info level
+function formatEmployeeOption(option) {
+    if (!option.id) return option.text;
+    
+    const level = $(option.element).data('level') || 'N/A';
+    const levelOrder = $(option.element).data('level-order') || 999;
+    
+    return $(`
+        <div>
+            <strong>${option.text}</strong>
+            <br><small class="text-muted">Level: ${level}</small>
+        </div>
+    `);
+}
+
+function formatEmployeeSelection(option) {
+    return option.text;
+}
+
+// ✅ FUNGSI BARU: Validasi hierarki sebelum submit
+function validateHierarchyBeforeSubmit(e) {
+    let hasViolation = false;
+    let violations = [];
+
+    $('.employee-select').each(function() {
+        const selectedEmployeeId = $(this).val();
+        if (selectedEmployeeId) {
+            const selectedOption = $(this).find('option:selected');
+            const employeeLevel = selectedOption.data('level') || 'N/A';
+            const employeeName = selectedOption.text().split(' - ')[0]; // Ambil nama saja
+            
+            // Bisa ditambahkan logic validasi tambahan di sini jika diperlukan
+            // Untuk sekarang, karena sudah difilter di backend, tidak perlu validasi tambahan
+        }
+    });
+
+    if (hasViolation) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'Pelanggaran Hierarki',
+            html: violations.join('<br>'),
+            confirmButtonText: 'OK'
+        });
+        return false;
+    }
+}
 
 function checkFlowJobEligibility(employeeId, departmentId) {
     $.ajax({
@@ -291,17 +376,32 @@ function checkFlowJobEligibility(employeeId, departmentId) {
     });
 }
 
-function updateEmployeeOptions(departmentId) {
-    const filteredEmployees = allEmployees.filter(emp => emp.department_id == departmentId);
-    
-    // HANYA UPDATE DETAIL EMPLOYEE DROPDOWNS
+// ✅ PERBAIKAN: Update employee options untuk semua dropdown
+function updateEmployeeOptionsForAll() {
     $('.employee-select').each(function() {
         const currentValue = $(this).val();
-        $(this).empty().append('<option value="">Pilih Karyawan</option>');
-        filteredEmployees.forEach(emp => {
+        const $select = $(this);
+        
+        // Clear existing options
+        $select.empty().append('<option value="">Pilih Karyawan</option>');
+        
+        // Add filtered employees
+        allEmployees.forEach(emp => {
             const selected = currentValue == emp.id ? 'selected' : '';
-            $(this).append(`<option value="${emp.id}" ${selected}>${emp.name} - ${emp.employee_id}</option>`);
+            const levelName = emp.job_level ? emp.job_level.name : 'N/A';
+            const levelOrder = emp.job_level ? emp.job_level.level_order : 999;
+            
+            $select.append(`
+                <option value="${emp.id}" ${selected} 
+                        data-level="${levelName}" 
+                        data-level-order="${levelOrder}">
+                    ${emp.name} - ${emp.employee_id} <small>(${levelName})</small>
+                </option>
+            `);
         });
+        
+        // Reinitialize select2
+        $select.trigger('change');
     });
 }
 
@@ -344,7 +444,6 @@ function addDetail() {
     const overtimeTypeSelect = newDetail.querySelector('.overtime-type-select');
     if (overtimeTypeSelect) {
         overtimeTypeSelect.setAttribute('onchange', `toggleOvertimeType(this, ${detailIndex})`);
-        // Hapus event listener lama jika ada
         overtimeTypeSelect.removeAttribute('data-initialized');
         console.log(`Set onchange: toggleOvertimeType(this, ${detailIndex})`);
     }
@@ -379,14 +478,13 @@ function resetDetailToInitialState(detailElement) {
     detailElement.querySelectorAll('select').forEach(select => {
         select.selectedIndex = 0;
         select.value = '';
-        // Remove select2 classes
         $(select).removeClass('select2-hidden-accessible');
     });
     
     // Reset semua input text/number/textarea
     detailElement.querySelectorAll('input:not([type="button"]), textarea').forEach(input => {
         input.value = '';
-        input.removeAttribute('style'); // Remove inline styles
+        input.removeAttribute('style');
     });
     
     // Reset qty plan ke disabled
@@ -419,32 +517,56 @@ function resetDetailToInitialState(detailElement) {
 }
 
 function initializeNewDetailSelects(detailElement) {
-    const employeeSelect = detailElement.querySelector('.employee-select');
-    if (employeeSelect) {
-        $(employeeSelect).select2({
-            placeholder: 'Pilih Karyawan',
-            width: '100%'
-        });
-    }
+    // Tunggu sebentar untuk memastikan DOM sudah ter-update
+    setTimeout(function() {
+        const employeeSelect = detailElement.querySelector('.employee-select');
+        if (employeeSelect && !$(employeeSelect).hasClass('select2-hidden-accessible')) {
+            try {
+                $(employeeSelect).select2({
+                    placeholder: 'Pilih Karyawan',
+                    width: '100%',
+                    templateResult: formatEmployeeOption,
+                    templateSelection: formatEmployeeSelection,
+                    dropdownParent: $(detailElement)
+                });
+                console.log('Select2 initialized for new employee select');
+            } catch (error) {
+                console.error('Error initializing select2:', error);
+            }
+        }
+    }, 100);
 }
 
 function updateNewDetailEmployeeOptions(detailElement) {
-    const departmentId = $('#department_id').val();
-    if (departmentId) {
-        const filteredEmployees = allEmployees.filter(emp => emp.department_id == departmentId);
-        const employeeSelect = $(detailElement.querySelector('.employee-select'));
+    const employeeSelect = $(detailElement.querySelector('.employee-select'));
+    
+    employeeSelect.empty().append('<option value="">Pilih Karyawan</option>');
+    allEmployees.forEach(emp => {
+        const levelName = emp.job_level ? emp.job_level.name : 'N/A';
+        const levelOrder = emp.job_level ? emp.job_level.level_order : 999;
         
-        employeeSelect.empty().append('<option value="">Pilih Karyawan</option>');
-        filteredEmployees.forEach(emp => {
-            employeeSelect.append(`<option value="${emp.id}">${emp.name} - ${emp.employee_id}</option>`);
-        });
-    }
+        employeeSelect.append(`
+            <option value="${emp.id}" 
+                    data-level="${levelName}" 
+                    data-level-order="${levelOrder}">
+                ${emp.name} - ${emp.employee_id} <small>(${levelName})</small>
+            </option>
+        `);
+    });
 }
 
 function removeDetail(button) {
     const detailRows = document.querySelectorAll('.detail-row');
     if (detailRows.length > 1) {
-        button.closest('.detail-row').remove();
+        // Destroy select2 sebelum remove
+        const rowToRemove = button.closest('.detail-row');
+        $(rowToRemove).find('select').each(function() {
+            if ($(this).hasClass('select2-hidden-accessible')) {
+                $(this).select2('destroy');
+            }
+        });
+        
+        rowToRemove.remove();
     } else {
         Swal.fire({
             icon: 'info',
@@ -466,15 +588,24 @@ function toggleActual(planInput) {
     }
 }
 
-// PERBAIKAN UTAMA: Fungsi toggleOvertimeType dengan logging yang jelas
+// PERBAIKAN UTAMA: Fungsi toggleOvertimeType dengan fallback yang lebih baik
 function toggleOvertimeType(selectElement, index) {
     const overtimeType = selectElement.value;
     
     console.log(`toggleOvertimeType called with index: ${index}, type: ${overtimeType}`);
     
-    // Cari elemen berdasarkan index yang diterima
-    const qtySection = document.getElementById(`qtySection${index}`);
-    const percentageInfo = document.getElementById(`percentageInfo${index}`);
+    // Cari elemen dengan berbagai cara fallback
+    let qtySection = document.getElementById(`qtySection${index}`);
+    let percentageInfo = document.getElementById(`percentageInfo${index}`);
+    
+    // Fallback: jika tidak ditemukan berdasarkan ID, cari berdasarkan posisi
+    if (!qtySection || !percentageInfo) {
+        const detailRow = selectElement.closest('.detail-row');
+        if (detailRow) {
+            qtySection = qtySection || detailRow.querySelector('.qty-section');
+            percentageInfo = percentageInfo || detailRow.querySelector('.percentage-info');
+        }
+    }
     
     if (!qtySection) {
         console.error(`qtySection${index} not found!`);
@@ -489,7 +620,7 @@ function toggleOvertimeType(selectElement, index) {
     const qtyPlanInput = qtySection.querySelector('.qty-plan');
     
     if (!qtyPlanInput) {
-        console.error(`qty-plan input not found in qtySection${index}`);
+        console.error(`qty-plan input not found in qtySection`);
         return;
     }
     
@@ -525,6 +656,25 @@ function toggleOvertimeType(selectElement, index) {
         percentageVisible: percentageInfo.style.display
     });
 }
+
+// ✅ TAMBAHAN: Event delegation untuk handling dynamic elements
+$(document).ready(function() {
+    // Event delegation untuk select overtime type yang dinamis
+    $(document).on('change', '.overtime-type-select', function() {
+        const detailRow = $(this).closest('.detail-row');
+        const allRows = $('.detail-row');
+        const currentIndex = allRows.index(detailRow);
+        
+        console.log(`Event delegation: overtime type changed for index ${currentIndex}`);
+        toggleOvertimeType(this, currentIndex);
+    });
+    
+    // Event delegation untuk qty plan
+    $(document).on('change', '.qty-plan', function() {
+        toggleActual(this);
+    });
+});
+
 </script>
 
 {{-- SweetAlert2 CDN --}}
