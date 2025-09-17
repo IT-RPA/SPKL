@@ -141,13 +141,59 @@ public function updatePercentagePermissions()
 }
 
     public static function generateRequestNumber()
-    {
-        $date = now()->format('Ymd');
-        $lastRequest = static::whereDate('created_at', now())->latest()->first();
-        $sequence = $lastRequest ? (int)substr($lastRequest->request_number, -3) + 1 : 1;
+{
+    $date = now()->format('Ymd'); // Format: 20250917
+    $prefix = 'SPK';
+    
+    \Log::info("=== GENERATE REQUEST NUMBER DEBUG ===");
+    \Log::info("Date: {$date}");
+    
+    // ✅ PERBAIKAN: Cari nomor terakhir berdasarkan pattern request_number, bukan created_at
+    $lastRequest = static::where('request_number', 'like', $prefix . $date . '%')
+        ->orderBy('request_number', 'desc')
+        ->first();
+    
+    if ($lastRequest) {
+        \Log::info("Last request found: {$lastRequest->request_number}");
         
-        return 'SPK' . $date . str_pad($sequence, 3, '0', STR_PAD_LEFT);
+        // Ambil 3 digit terakhir dan increment
+        $lastSequence = (int)substr($lastRequest->request_number, -3);
+        $sequence = $lastSequence + 1;
+        
+        \Log::info("Last sequence: {$lastSequence}, New sequence: {$sequence}");
+    } else {
+        \Log::info("No previous request found for today, starting with sequence 1");
+        $sequence = 1;
     }
+    
+    // Format sequence dengan leading zero
+    $formattedSequence = str_pad($sequence, 3, '0', STR_PAD_LEFT);
+    $requestNumber = $prefix . $date . $formattedSequence;
+    
+    \Log::info("Generated request number: {$requestNumber}");
+    
+    // ✅ SAFETY CHECK: Pastikan nomor belum ada (untuk menghindari race condition)
+    $attempts = 0;
+    $maxAttempts = 100;
+    
+    while (static::where('request_number', $requestNumber)->exists() && $attempts < $maxAttempts) {
+        $attempts++;
+        $sequence++;
+        $formattedSequence = str_pad($sequence, 3, '0', STR_PAD_LEFT);
+        $requestNumber = $prefix . $date . $formattedSequence;
+        
+        \Log::warning("Request number {$requestNumber} already exists, trying next sequence (attempt {$attempts})");
+    }
+    
+    if ($attempts >= $maxAttempts) {
+        throw new \Exception('Unable to generate unique request number after ' . $maxAttempts . ' attempts');
+    }
+    
+    \Log::info("Final request number: {$requestNumber} (after {$attempts} attempts)");
+    \Log::info("=== END GENERATE REQUEST NUMBER DEBUG ===");
+    
+    return $requestNumber;
+}
 
 public function updateStatusAndColor()
 {
