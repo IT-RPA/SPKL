@@ -9,9 +9,11 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title">Daftar Level Jabatan</h3>
+                    @permission('create-job-levels')
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#jobLevelModal">
                         <i class="fas fa-plus"></i> Tambah Level Jabatan
                     </button>
+                    @endpermission
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -24,7 +26,9 @@
                                     <th>Urutan Level</th>
                                     <th>Jumlah Karyawan</th>
                                     <th>Status</th>
+                                     @if(Auth::user()->hasPermission('edit-job-levels') || Auth::user()->hasPermission('delete-job-levels'))
                                     <th>Aksi</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -42,7 +46,10 @@
                                             {{ $jobLevel->is_active ? 'Aktif' : 'Nonaktif' }}
                                         </span>
                                     </td>
+                                    @if(Auth::user()->hasPermission('edit-job-levels') || Auth::user()->hasPermission('delete-job-levels'))
                                     <td>
+                                        <div class="btn-group" role="group">
+                                             @permission('edit-job-levels')
                                         <button type="button" class="btn btn-sm btn-warning edit-btn" 
                                                 data-id="{{ $jobLevel->id }}"
                                                 data-name="{{ $jobLevel->name }}"
@@ -52,12 +59,17 @@
                                                 data-is_active="{{ $jobLevel->is_active }}">
                                             <i class="fas fa-edit"></i>
                                         </button>
+                                        @endpermission
+                                        @permission('delete-job-levels')
                                         <button type="button" class="btn btn-sm btn-danger delete-btn" 
                                                 data-id="{{ $jobLevel->id }}"
                                                 data-name="{{ $jobLevel->name }}">
                                             <i class="fas fa-trash"></i>
                                         </button>
+                                        @endpermission
+                                        </div>
                                     </td>
+                                    @endif
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -69,6 +81,7 @@
     </div>
 </div>
 
+@permission('create-job-levels')
 <!-- Modal -->
 <div class="modal fade" id="jobLevelModal" tabindex="-1" role="dialog" aria-labelledby="jobLevelModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -124,6 +137,7 @@
         </div>
     </div>
 </div>
+@endpermission
 @endsection
 
 @push('scripts')
@@ -161,6 +175,7 @@ $(document).ready(function() {
         order: [[3, 'asc']] // Sort by level_order column
     });
 
+    @permission('create-job-levels')
     // Reset modal hanya ketika bukan mode edit
     $('#jobLevelModal').on('show.bs.modal', function() {
         if (!isEditMode) {
@@ -184,7 +199,9 @@ $(document).ready(function() {
     $('button[data-bs-target="#jobLevelModal"]').on('click', function() {
         isEditMode = false;
     });
+    @endpermission
 
+    @permission('edit-job-levels')
     // Edit button click - set flag untuk mode edit
     $(document).on('click', '.edit-btn', function(e) {
         e.preventDefault();
@@ -216,7 +233,9 @@ $(document).ready(function() {
         // Tampilkan modal
         $('#jobLevelModal').modal('show');
     });
+    @endpermission
 
+    @if(Auth::user()->hasPermission('create-job-levels') || Auth::user()->hasPermission('edit-job-levels'))
     // Form submission
     $('#jobLevelForm').on('submit', function(e) {
         e.preventDefault();
@@ -274,7 +293,9 @@ $(document).ready(function() {
             }
         });
     });
+    @endif
 
+    @permission('delete-job-levels')
     // Delete button click
     $(document).on('click', '.delete-btn', function(e) {
         e.preventDefault();
@@ -325,6 +346,7 @@ $(document).ready(function() {
             }
         });
     });
+    @endpermission
 });
 </script>
 @endpush

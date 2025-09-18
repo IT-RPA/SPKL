@@ -7,6 +7,15 @@ use Illuminate\Http\Request;
 
 class JobLevelController extends Controller
 {
+    public function __construct()
+    {
+        // Terapkan middleware permission untuk setiap action
+        $this->middleware('check.permission:view-job-levels')->only(['index', 'show']);
+        $this->middleware('check.permission:create-job-levels')->only(['create', 'store']);
+        $this->middleware('check.permission:edit-job-levels')->only(['edit', 'update']);
+        $this->middleware('check.permission:delete-job-levels')->only(['destroy']);
+    }
+    
     public function index()
     {
         $jobLevels = JobLevel::with('employees')->orderBy('level_order')->get();

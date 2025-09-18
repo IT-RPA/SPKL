@@ -9,9 +9,11 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title">Daftar Departemen</h3>
+                    @permission('create-departments')
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#departmentModal">
                         <i class="fas fa-plus"></i> Tambah Departemen
                     </button>
+                    @endpermission
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -24,7 +26,9 @@
                                     <th>Jumlah Karyawan</th>
                                     <th>Jumlah Flow</th>
                                     <th>Status</th>
+                                     @if(Auth::user()->hasPermission('edit-departments') || Auth::user()->hasPermission('delete-departments'))
                                     <th>Aksi</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -36,25 +40,33 @@
                                     <td>{{ $department->active_employees_count }}</td>
                                     <td>{{ $department->flowJobs->count() }}</td>
                                     <td>
-    <span class="badge {{ $department->is_active ? 'bg-success' : 'bg-danger' }}">
-        {{ $department->is_active ? 'Aktif' : 'Nonaktif' }}
-    </span>
+                                        <span class="badge {{ $department->is_active ? 'bg-success' : 'bg-danger' }}">
+                                            {{ $department->is_active ? 'Aktif' : 'Nonaktif' }}
+                                        </span>
                                     </td> 
+                                    @if(Auth::user()->hasPermission('edit-departments') || Auth::user()->hasPermission('delete-departments'))
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-warning edit-btn" 
+                                        <div class="btn-group" role="group">
+                                            @permission('edit-departments')
+                                            <button type="button" class="btn btn-sm btn-warning edit-btn" 
                                                 data-id="{{ $department->id }}"
                                                 data-name="{{ $department->name }}"
                                                 data-code="{{ $department->code }}"
                                                 data-description="{{ $department->description }}"
                                                 data-is_active="{{ $department->is_active }}">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-danger delete-btn" 
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            @endpermission
+                                            @permission('delete-departments')
+                                            <button type="button" class="btn btn-sm btn-danger delete-btn" 
                                                 data-id="{{ $department->id }}"
                                                 data-name="{{ $department->name }}">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            @endpermission
+                                        </div>
                                     </td>
+                                    @endif
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -66,6 +78,7 @@
     </div>
 </div>
 
+@permission('create-departments')
 <!-- Modal -->
 <div class="modal fade" id="departmentModal" tabindex="-1" role="dialog" aria-labelledby="departmentModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -114,6 +127,7 @@
         </div>
     </div>
 </div>
+@endpermission
 @endsection
 
 @push('scripts')
@@ -150,6 +164,7 @@ $(document).ready(function() {
         }
     });
 
+    @permission('create-departments')
     // Reset modal hanya ketika bukan mode edit
     $('#departmentModal').on('show.bs.modal', function() {
         if (!isEditMode) {
@@ -173,7 +188,9 @@ $(document).ready(function() {
     $('button[data-bs-target="#departmentModal"]').on('click', function() {
         isEditMode = false;
     });
+    @endpermission
 
+    @permission('edit-departments')
     // Edit button click - set flag untuk mode edit
     $(document).on('click', '.edit-btn', function(e) {
         e.preventDefault();
@@ -203,7 +220,9 @@ $(document).ready(function() {
         // Tampilkan modal
         $('#departmentModal').modal('show');
     });
+    @endpermission
 
+    @if(Auth::user()->hasPermission('create-departments') || Auth::user()->hasPermission('edit-departments'))
     // Form submission
     $('#departmentForm').on('submit', function(e) {
         e.preventDefault();
@@ -261,7 +280,9 @@ $(document).ready(function() {
             }
         });
     });
+    @endif
 
+    @permission('delete-departments')
     // Delete button click
     $(document).on('click', '.delete-btn', function(e) {
         e.preventDefault();
@@ -312,6 +333,7 @@ $(document).ready(function() {
             }
         });
     });
+    @endpermission
 });
 </script>
 @endpush

@@ -9,9 +9,11 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title">Daftar Flow Job</h3>
+                    @permission('create-flow-jobs')
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#flowJobModal">
                         <i class="fas fa-plus"></i> Tambah Flow Job
                     </button>
+                    @endpermission
                 </div>
                 <div class="card-body">
                     <!-- Filter by Department -->
@@ -35,7 +37,9 @@
                                     <th>Nama Step</th>
                                     <th>Level Jabatan</th>
                                     <th>Status</th>
+                                     @if(Auth::user()->hasPermission('edit-flow-jobs') || Auth::user()->hasPermission('delete-flow-jobs'))
                                     <th>Aksi</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -58,21 +62,27 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-warning edit-btn"
-                                            data-id="{{ $flowJob->id }}"
-                                            data-department_id="{{ $flowJob->department_id }}"
-                                            data-job_level_id="{{ $flowJob->job_level_id }}"
-                                            data-step_order="{{ $flowJob->step_order }}"
-                                            data-step_name="{{ $flowJob->step_name }}"
-                                            data-is_active="{{ $flowJob->is_active }}">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-danger delete-btn"
-                                            data-id="{{ $flowJob->id }}"
-                                            data-department="{{ $departmentName }}"
-                                            data-step="{{ $flowJob->step_name }}">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                          <div class="btn-group" role="group">
+                                             @permission('edit-flow-jobs')
+                                            <button type="button" class="btn btn-sm btn-warning edit-btn"
+                                                data-id="{{ $flowJob->id }}"
+                                                data-department_id="{{ $flowJob->department_id }}"
+                                                data-job_level_id="{{ $flowJob->job_level_id }}"
+                                                data-step_order="{{ $flowJob->step_order }}"
+                                                data-step_name="{{ $flowJob->step_name }}"
+                                                data-is_active="{{ $flowJob->is_active }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            @endpermission
+                                            @permission('delete-flow-jobs')
+                                            <button type="button" class="btn btn-sm btn-danger delete-btn"
+                                                data-id="{{ $flowJob->id }}"
+                                                data-department="{{ $departmentName }}"
+                                                data-step="{{ $flowJob->step_name }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            @endpermission
+                                        </div>
                                     </td>
                                 </tr>
                                 @endforeach
@@ -86,6 +96,7 @@
     </div>
 </div>
 
+@permission('create-flow-jobs')
 <!-- Modal -->
 <div class="modal fade" id="flowJobModal" tabindex="-1" role="dialog" aria-labelledby="flowJobModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -152,6 +163,7 @@
         </div>
     </div>
 </div>
+@endpermission
 @endsection
 
 @push('scripts')
@@ -201,7 +213,8 @@ $(document).ready(function() {
             table.column(1).search(selectedDepartment).draw();
         }
     });
-
+    
+    @permission('create-flow-jobs')
     // Reset modal hanya ketika bukan mode edit
     $('#flowJobModal').on('show.bs.modal', function() {
         if (!isEditMode) {
@@ -225,7 +238,9 @@ $(document).ready(function() {
     $('button[data-bs-target="#flowJobModal"]').on('click', function() {
         isEditMode = false;
     });
+    @endpermission
 
+    @permission('edit-flow-jobs')
     // Edit button click - set flag untuk mode edit
     $(document).on('click', '.edit-btn', function(e) {
         e.preventDefault();
@@ -257,7 +272,9 @@ $(document).ready(function() {
         // Tampilkan modal
         $('#flowJobModal').modal('show');
     });
+    @endpermission
 
+    @if(Auth::user()->hasPermission('create-flow-jobs') || Auth::user()->hasPermission('edit-flow-jobs'))
     // Form submission
     $('#flowJobForm').on('submit', function(e) {
         e.preventDefault();
@@ -316,7 +333,9 @@ $(document).ready(function() {
             }
         });
     });
+    @endif
 
+    @permission('delete-flow-jobs')
     // Delete button click
     $(document).on('click', '.delete-btn', function(e) {
         e.preventDefault();
@@ -368,6 +387,7 @@ $(document).ready(function() {
             }
         });
     });
+    @endpermission
 });
 </script>
 @endpush

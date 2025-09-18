@@ -7,6 +7,15 @@ use Illuminate\Http\Request;
 
 class DepartmentController extends Controller
 {
+    public function __construct()
+    {
+        // Terapkan middleware permission untuk setiap action
+        $this->middleware('check.permission:view-departments')->only(['index', 'show']);
+        $this->middleware('check.permission:create-departments')->only(['create', 'store']);
+        $this->middleware('check.permission:edit-departments')->only(['edit', 'update']);
+        $this->middleware('check.permission:delete-departments')->only(['destroy']);
+    }
+
     public function index()
     {
         $departments = Department::withCount(['employees' => function($query) {

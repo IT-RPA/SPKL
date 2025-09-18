@@ -9,6 +9,15 @@ use Illuminate\Http\Request;
 
 class FlowJobController extends Controller
 {
+    public function __construct()
+    {
+        // ✅ PERBAIKAN: Gunakan middleware yang sudah terdaftar di Kernel
+        $this->middleware('check.permission:view-flow-jobs')->only(['index', 'show']);
+        $this->middleware('check.permission:create-flow-jobs')->only(['create', 'store']);
+        $this->middleware('check.permission:edit-flow-jobs')->only(['edit', 'update']);
+        $this->middleware('check.permission:delete-flow-jobs')->only(['destroy']);
+    }
+
     public function index()
     {
         $flowJobs = FlowJob::with(['department', 'jobLevel'])->orderBy('department_id')->orderBy('step_order')->get();
