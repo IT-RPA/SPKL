@@ -9,9 +9,11 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title">Daftar Karyawan</h3>
+                    @permission('create-employees')
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#employeeModal">
                         <i class="fas fa-plus"></i> Tambah Karyawan
                     </button>
+                    @endpermission
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -25,7 +27,9 @@
                                     <th>Departemen</th>
                                     <th>Level Jabatan</th>
                                     <th>Status</th>
+                                    @if(Auth::user()->hasPermission('edit-employees') || Auth::user()->hasPermission('delete-employees'))
                                     <th>Aksi</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -38,27 +42,36 @@
                                     <td>{{ $employee->department->name }}</td>
                                     <td>{{ $employee->jobLevel->name }}</td>
                                     <td>
- <span class="badge {{ $employee->is_active ? 'bg-success' : 'bg-danger' }}">
-        {{ $employee->is_active ? 'Aktif' : 'Nonaktif' }}
-    </span>
+                                        <span class="badge {{ $employee->is_active ? 'bg-success' : 'bg-danger' }}">
+                                            {{ $employee->is_active ? 'Aktif' : 'Nonaktif' }}
+                                        </span>
                                     </td>
+                                    @if(Auth::user()->hasPermission('edit-employees') || Auth::user()->hasPermission('delete-employees'))
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-warning edit-btn" 
-                                                data-id="{{ $employee->id }}"
-                                                data-employee_id="{{ $employee->employee_id }}"
-                                                data-name="{{ $employee->name }}"
-                                                data-email="{{ $employee->email }}"
-                                                data-department_id="{{ $employee->department_id }}"
-                                                data-job_level_id="{{ $employee->job_level_id }}"
-                                                data-is_active="{{ $employee->is_active }}">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-danger delete-btn" 
-                                                data-id="{{ $employee->id }}"
-                                                data-name="{{ $employee->name }}">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        <div class="btn-group" role="group">
+                                            @permission('edit-employees')
+                                            <button type="button" class="btn btn-sm btn-warning edit-btn" 
+                                                    data-id="{{ $employee->id }}"
+                                                    data-employee_id="{{ $employee->employee_id }}"
+                                                    data-name="{{ $employee->name }}"
+                                                    data-email="{{ $employee->email }}"
+                                                    data-department_id="{{ $employee->department_id }}"
+                                                    data-job_level_id="{{ $employee->job_level_id }}"
+                                                    data-is_active="{{ $employee->is_active }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            @endpermission
+                                            
+                                            @permission('delete-employees')
+                                            <button type="button" class="btn btn-sm btn-danger delete-btn" 
+                                                    data-id="{{ $employee->id }}"
+                                                    data-name="{{ $employee->name }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            @endpermission
+                                        </div>
                                     </td>
+                                    @endif
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -70,6 +83,7 @@
     </div>
 </div>
 
+@permission('create-employees')
 <!-- Modal -->
 <div class="modal fade" id="employeeModal" tabindex="-1" role="dialog" aria-labelledby="employeeModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
@@ -158,6 +172,7 @@
         </div>
     </div>
 </div>
+@endpermission
 @endsection
 
 @push('scripts')
@@ -194,6 +209,7 @@ $(document).ready(function() {
         }
     });
 
+    @permission('create-employees')
     // Reset modal hanya ketika bukan mode edit
     $('#employeeModal').on('show.bs.modal', function() {
         if (!isEditMode) {
@@ -217,7 +233,9 @@ $(document).ready(function() {
     $('button[data-bs-target="#employeeModal"]').on('click', function() {
         isEditMode = false;
     });
+    @endpermission
 
+    @permission('edit-employees')
     // Edit button click - set flag untuk mode edit
     $(document).on('click', '.edit-btn', function(e) {
         e.preventDefault();
@@ -251,7 +269,9 @@ $(document).ready(function() {
         // Tampilkan modal
         $('#employeeModal').modal('show');
     });
+    @endpermission
 
+    @if(Auth::user()->hasPermission('create-employees') || Auth::user()->hasPermission('edit-employees'))
     // Form submission
     $('#employeeForm').on('submit', function(e) {
         e.preventDefault();
@@ -309,7 +329,9 @@ $(document).ready(function() {
             }
         });
     });
+    @endif
 
+    @permission('delete-employees')
     // Delete button click
     $(document).on('click', '.delete-btn', function(e) {
         e.preventDefault();
@@ -360,6 +382,7 @@ $(document).ready(function() {
             }
         });
     });
+    @endpermission
 });
 </script>
 @endpush

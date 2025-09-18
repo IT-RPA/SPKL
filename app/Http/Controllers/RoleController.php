@@ -8,10 +8,19 @@ use Illuminate\Http\Request;
 
 class RoleController extends Controller
 {
+    public function __construct()
+    {
+        // Terapkan middleware permission untuk setiap action
+        $this->middleware('check.permission:view-roles')->only(['index', 'show']);
+        $this->middleware('check.permission:create-roles')->only(['create', 'store']);
+        $this->middleware('check.permission:edit-roles')->only(['edit', 'update']);
+        $this->middleware('check.permission:delete-roles')->only(['destroy']);
+    }
+
     public function index()
     {
         $roles = Role::with('permissions')->get();
-    return view('roles.index', compact('roles'));
+        return view('roles.index', compact('roles'));
     }
 
     public function create()

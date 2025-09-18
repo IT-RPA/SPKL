@@ -330,46 +330,69 @@ table.dataTable tbody td {
                             </a>
                         </li>
                         
-                        <!-- Management Data -->
+                        <!-- Management Data - Cek permission untuk seluruh section -->
+                        @if(Auth::user()->hasPermission('view-users') || Auth::user()->hasPermission('view-roles') || Auth::user()->hasPermission('view-permissions'))
                         <div class="menu-header">Management Data</div>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-cogs"></i> Management Data
                             </a>
                             <ul class="dropdown-menu">
+                                @permission('view-users')
                                 <li><a class="dropdown-item" href="{{ route('users.index') }}">
                                     <i class="fas fa-users"></i> User
                                 </a></li>
+                                @endpermission
+                                
+                                @permission('view-roles')
                                 <li><a class="dropdown-item" href="{{ route('roles.index') }}">
                                     <i class="fas fa-user-tag"></i> Role
                                 </a></li>
+                                @endpermission
+                                
+                                @permission('view-permissions')
                                 <li><a class="dropdown-item" href="{{ route('permissions.index') }}">
                                     <i class="fas fa-key"></i> Permission
                                 </a></li>
+                                @endpermission
                             </ul>
                         </li>
+                        @endif
                         
-                        <!-- Data Master -->
+                        <!-- Data Master - Cek permission untuk masing-masing item -->
+                        @if(Auth::user()->hasPermission('view-employees') || Auth::user()->hasPermission('view-departments') || Auth::user()->hasPermission('view-job-levels') || Auth::user()->hasPermission('view-flow-jobs'))
                         <div class="menu-header">Data Master</div>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-database"></i> Data Master
                             </a>
                             <ul class="dropdown-menu">
+                                @permission('view-employees')
                                 <li><a class="dropdown-item" href="{{ route('employees.index') }}">
                                     <i class="fas fa-user-friends"></i> Karyawan
                                 </a></li>
+                                @endpermission
+                                
+                                @permission('view-departments')
                                 <li><a class="dropdown-item" href="{{ route('departments.index') }}">
                                     <i class="fas fa-building"></i> Department
                                 </a></li>
-                                 <li><a class="dropdown-item" href="{{ route('job-levels.index') }}">
+                                @endpermission
+                                
+                                @permission('view-job-levels')
+                                <li><a class="dropdown-item" href="{{ route('job-levels.index') }}">
                                     <i class="fas fa-sitemap"></i> Level Jabatan
                                 </a></li>
-                                 <li><a class="dropdown-item" href="{{ route('flow-jobs.index') }}">
+                                @endpermission
+                                
+                                @permission('view-flow-jobs')
+                                <li><a class="dropdown-item" href="{{ route('flow-jobs.index') }}">
                                     <i class="fas fa-stream"></i> Flow Job
                                 </a></li>
+                                @endpermission
                             </ul>
                         </li>
+                        @endif
                         
                         <!-- Pengajuan Lembur -->
                         <div class="menu-header">Pengajuan</div>

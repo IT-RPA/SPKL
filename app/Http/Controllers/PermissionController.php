@@ -7,10 +7,19 @@ use Illuminate\Http\Request;
 
 class PermissionController extends Controller
 {
+    public function __construct()
+    {
+        // Terapkan middleware permission untuk setiap action
+        $this->middleware('check.permission:view-permissions')->only(['index', 'show']);
+        $this->middleware('check.permission:create-permissions')->only(['create', 'store']);
+        $this->middleware('check.permission:edit-permissions')->only(['edit', 'update']);
+        $this->middleware('check.permission:delete-permissions')->only(['destroy']);
+    }
+
     public function index()
     {
-    $permissions = Permission::all(); // ganti paginate() -> all()
-    return view('permissions.index', compact('permissions'));
+        $permissions = Permission::all();
+        return view('permissions.index', compact('permissions'));
     }
 
     public function create()
@@ -33,6 +42,7 @@ class PermissionController extends Controller
 
     public function edit(Permission $permission)
     {
+        $permissions = Permission::all();
         return view('permissions.edit', compact('permission'));
     }
 

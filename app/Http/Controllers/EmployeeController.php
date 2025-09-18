@@ -9,6 +9,15 @@ use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
 {
+    public function __construct()
+    {
+        // Terapkan middleware permission untuk setiap action
+        $this->middleware('check.permission:view-employees')->only(['index', 'show']);
+        $this->middleware('check.permission:create-employees')->only(['create', 'store']);
+        $this->middleware('check.permission:edit-employees')->only(['edit', 'update']);
+        $this->middleware('check.permission:delete-employees')->only(['destroy']);
+    }
+
     public function index()
     {
         $employees = Employee::with(['department', 'jobLevel'])->get();
