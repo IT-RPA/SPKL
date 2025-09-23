@@ -5,6 +5,34 @@
     <h2>Approval Sect Head</h2>
 </div>
 
+{{-- TAMBAHAN: Alert untuk percentage yang perlu diinput --}}
+@php
+    $currentEmployee = \App\Models\Employee::where('email', Auth::user()->email)->first();
+    $pendingPercentageCount = 0;
+    
+    if ($currentEmployee) {
+        $pendingPercentageCount = \App\Models\OvertimeRequest::whereHas('details', function($query) {
+                $query->where('overtime_type', 'qualitative')
+                      ->whereNull('percentage_realization');
+            })
+            ->whereHas('approvals', function($query) use ($currentEmployee) {
+                $query->where('approver_employee_id', $currentEmployee->id)
+                      ->where('status', 'approved');
+            })
+            ->where('status', 'approved')
+            ->count();
+    }
+@endphp
+
+@if($pendingPercentageCount > 0)
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <i class="fas fa-percentage"></i>
+    <strong>Perhatian!</strong> 
+    Ada {{ $pendingPercentageCount }} pengajuan lembur kualitatif yang memerlukan input persentase realisasi dari Anda.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+@endif
+
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
@@ -18,6 +46,7 @@
                         <th>Tanggal</th>
                         <th>Step</th>
                         <th>Status</th>
+                        <th>Persentase</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -33,23 +62,62 @@
                             <span class="badge bg-info">{{ $approval->step_name }}</span>
                         </td>
                         <td>
-                            <span class="badge bg-{{ $approval->status == 'approved' ? 'success' : ($approval->status == 'rejected' ? 'danger' : 'warning') }}">
-                                {{ ucfirst($approval->status) }}
-                            </span>
+                            @if(isset($approval->needs_percentage_input) && $approval->needs_percentage_input)
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-percentage"></i> Perlu Input %
+                                </span>
+                            @else
+                                <span class="badge bg-{{ $approval->status == 'approved' ? 'success' : ($approval->status == 'rejected' ? 'danger' : 'warning') }}">
+                                    {{ ucfirst($approval->status) }}
+                                </span>
+                            @endif
                             @if($approval->notes)
                                 <br><small class="text-muted">{{ $approval->notes }}</small>
                             @endif
                         </td>
                         <td>
+                            @php
+                                $qualitativeDetails = $approval->overtimeRequest->details->where('overtime_type', 'qualitative');
+                                $totalQualitative = $qualitativeDetails->count();
+                                $filledPercentage = $qualitativeDetails->whereNotNull('percentage_realization')->count();
+                                $needsPercentage = $totalQualitative - $filledPercentage;
+                            @endphp
+                            
+                            @if($totalQualitative > 0)
+                                @if($needsPercentage > 0)
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        {{ $needsPercentage }} belum diisi
+                                    </span>
+                                @else
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle"></i>
+                                        Semua terisi ({{ $filledPercentage }})
+                                    </span>
+                                @endif
+                            @else
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-minus"></i>
+                                    Tidak ada kualitatif
+                                </span>
+                            @endif
+                        </td>
+                        <td>
                             <div class="btn-group" role="group">
-                                <!-- Tombol Detail selalu ada -->
                                 <button class="btn btn-sm btn-outline-primary" 
                                         onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
                                         title="Lihat Detail">
                                     <i class="fas fa-eye"></i> Detail
                                 </button>
                                 
-                                <!-- Tombol Edit (hanya tampil jika status pending dan user memiliki akses edit) -->
+                                @if(isset($approval->needs_percentage_input) && $approval->needs_percentage_input)
+                                    <button class="btn btn-sm btn-warning" 
+                                            onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
+                                            title="Input Persentase">
+                                        <i class="fas fa-percentage"></i> Input %
+                                    </button>
+                                @endif
+                                
                                 @if($approval->status == 'pending' && auth()->user()->can('edit-overtime'))
                                     <button class="btn btn-sm btn-outline-warning"
                                             onclick="editOvertimeModal({{ $approval->overtimeRequest->id }})"
@@ -58,7 +126,6 @@
                                     </button>
                                 @endif
                                 
-                                <!-- Tombol Delete (hanya tampil jika user memiliki akses delete) -->
                                 @if(auth()->user()->can('delete-overtime'))
                                     <button class="btn btn-sm btn-outline-danger"
                                             onclick="confirmDelete({{ $approval->overtimeRequest->id }}, '{{ $approval->overtimeRequest->request_number }}')"
@@ -68,7 +135,6 @@
                                 @endif
                             </div>
                             
-                            <!-- ✅ TAMBAHAN: Indikator apakah sudah giliran user atau belum -->
                             @if($approval->status == 'pending')
                                 @php
                                     $currentEmployee = \App\Models\Employee::where('email', Auth::user()->email)->first();
@@ -85,12 +151,14 @@
                                 @elseif($isCurrentUserApprover && $previousPendingExists)
                                     <br><small class="text-warning"><i class="fas fa-hourglass-half"></i> Menunggu Approval Sebelumnya</small>
                                 @endif
+                            @elseif(isset($approval->needs_percentage_input) && $approval->needs_percentage_input)
+                                <br><small class="text-warning"><i class="fas fa-percentage"></i> <strong>Perlu Input Persentase</strong></small>
                             @endif
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="text-center">Tidak ada data untuk disetujui</td>
+                        <td colspan="9" class="text-center">Tidak ada data untuk disetujui</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -112,7 +180,6 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                <!-- Tombol Approve/Reject hanya muncul jika status pending -->
                 <div id="approvalButtons" style="display: none;">
                     <button type="button" class="btn btn-danger me-2" onclick="showRejectModal()">
                         <i class="fas fa-times"></i> Reject
@@ -245,20 +312,10 @@ function showDetailModal(approvalId, requestNumber) {
         currentOvertimeId = data.overtime_id;
         document.getElementById('modalBody').innerHTML = generateDetailContent(data);
         
-        // Tampilkan tombol approval hanya jika ada approval yang pending
-        // Cek dari beberapa sumber data yang mungkin
         const hasCurrentPendingApproval = data.has_pending_approval || 
                                          data.current_approval_status === 'pending' || 
                                          data.status === 'pending' ||
                                          (data.approval_status && data.approval_status === 'pending');
-        
-        console.log('Checking approval buttons visibility:', {
-            has_pending_approval: data.has_pending_approval,
-            current_approval_status: data.current_approval_status,
-            status: data.status,
-            approval_status: data.approval_status,
-            showButtons: hasCurrentPendingApproval
-        });
                                          
         if (hasCurrentPendingApproval) {
             document.getElementById('approvalButtons').style.display = 'block';
@@ -272,196 +329,7 @@ function showDetailModal(approvalId, requestNumber) {
     });
 }
 
-function editOvertimeModal(overtimeId) {
-    document.getElementById('editModalBody').innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data untuk edit...</div>';
-    new bootstrap.Modal(document.getElementById('editModal')).show();
-    
-    fetch(`/overtime/${overtimeId}/edit`)
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('editModalBody').innerHTML = generateEditForm(data);
-        currentOvertimeId = overtimeId;
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        document.getElementById('editModalBody').innerHTML = '<div class="alert alert-danger">Gagal memuat data: ' + error.message + '</div>';
-    });
-}
-
-function confirmDelete(overtimeId, requestNumber) {
-    deleteOvertimeId = overtimeId;
-    document.getElementById('deleteRequestNumber').textContent = requestNumber;
-    new bootstrap.Modal(document.getElementById('deleteModal')).show();
-}
-
-function deleteOvertime() {
-    if (!deleteOvertimeId) return;
-    
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
-    const originalText = confirmBtn.innerHTML;
-    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menghapus...';
-    confirmBtn.disabled = true;
-    
-    fetch(`/overtime/${deleteOvertimeId}`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Tutup modal
-            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
-            
-            // Tampilkan pesan sukses
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil!',
-                    text: 'Data lembur berhasil dihapus',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            } else {
-                alert('Data lembur berhasil dihapus');
-            }
-            
-            // Refresh halaman
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } else {
-            alert('Gagal menghapus data: ' + (data.message || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Terjadi kesalahan: ' + error.message);
-    })
-    .finally(() => {
-        confirmBtn.innerHTML = originalText;
-        confirmBtn.disabled = false;
-    });
-}
-
-function saveEditChanges() {
-    const form = document.getElementById('editOvertimeForm');
-    if (!form) {
-        alert('Form edit tidak ditemukan');
-        return;
-    }
-    
-    const formData = new FormData(form);
-    formData.append('_method', 'PUT');
-    
-    fetch(`/overtime/${currentOvertimeId}`, {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-            
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil!',
-                    text: 'Data lembur berhasil diupdate',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            } else {
-                alert('Data lembur berhasil diupdate');
-            }
-            
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } else {
-            alert('Gagal update data: ' + (data.message || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Terjadi kesalahan: ' + error.message);
-    });
-}
-
-function showRejectModal() {
-    new bootstrap.Modal(document.getElementById('rejectModal')).show();
-}
-
-function approveRequest() {
-    if (!currentApprovalId) return;
-    
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/approvals/approve/${currentApprovalId}`;
-    
-    const csrfToken = document.createElement('input');
-    csrfToken.type = 'hidden';
-    csrfToken.name = '_token';
-    csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    
-    const methodInput = document.createElement('input');
-    methodInput.type = 'hidden';
-    methodInput.name = '_method';
-    methodInput.value = 'PUT';
-    
-    form.appendChild(csrfToken);
-    form.appendChild(methodInput);
-    document.body.appendChild(form);
-    form.submit();
-}
-
-function submitReject() {
-    if (!currentApprovalId) return;
-    
-    const reason = document.getElementById('reason').value;
-    if (!reason.trim()) {
-        alert('Alasan penolakan harus diisi');
-        return;
-    }
-    
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/approvals/reject/${currentApprovalId}`;
-    
-    const csrfToken = document.createElement('input');
-    csrfToken.type = 'hidden';
-    csrfToken.name = '_token';
-    csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    
-    const methodInput = document.createElement('input');
-    methodInput.type = 'hidden';
-    methodInput.name = '_method';
-    methodInput.value = 'PUT';
-    
-    const reasonInput = document.createElement('input');
-    reasonInput.type = 'hidden';
-    reasonInput.name = 'reason';
-    reasonInput.value = reason;
-    
-    form.appendChild(csrfToken);
-    form.appendChild(methodInput);
-    form.appendChild(reasonInput);
-    document.body.appendChild(form);
-    form.submit();
-}
-
 function generateDetailContent(data) {
-    console.log('generateDetailContent called with:', data);
-    console.log('can_edit_time value:', data.can_edit_time, 'type:', typeof data.can_edit_time);
-    console.log('can_input_percentage value:', data.can_input_percentage, 'type:', typeof data.can_input_percentage);
-    
     let approvalHistoryHtml = '';
     if (data.approval_history && data.approval_history.length > 0) {
         approvalHistoryHtml = `
@@ -498,8 +366,6 @@ function generateDetailContent(data) {
 
     let editTimeFormHtml = '';
     const canEditTime = data.can_edit_time === true || data.can_edit_time === 'true' || data.can_edit_time === 1;
-    
-    console.log('Final canEditTime:', canEditTime);
     
     if (canEditTime && data.details && data.details.length > 0) {
         editTimeFormHtml = `
@@ -543,37 +409,14 @@ function generateDetailContent(data) {
                 </button>
             </form>
         `;
-    } else if (canEditTime) {
-        editTimeFormHtml = `
-            <hr>
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i>
-                <strong>Perhatian:</strong> Anda memiliki akses edit jam, tetapi tidak ada detail lembur yang tersedia.
-            </div>
-        `;
-    } else {
-        editTimeFormHtml = `
-            <hr>
-            <div class="alert alert-secondary">
-                <i class="fas fa-lock"></i>
-                <strong>Info:</strong> Anda tidak memiliki akses untuk mengedit jam lembur ini.
-            </div>
-        `;
     }
 
-    // ✅ TAMBAHAN: Form input persentase
     let percentageFormHtml = '';
     const canInputPercentage = data.can_input_percentage === true || data.can_input_percentage === 'true' || data.can_input_percentage === 1;
     const hasQualitativeDetails = data.details && data.details.some(detail => detail.overtime_type === 'qualitative');
     const hasPercentageInputReady = data.details && data.details.some(detail => 
         detail.overtime_type === 'qualitative' && detail.can_input_percentage_now === true
     );
-
-    console.log('Percentage form check:', {
-        canInputPercentage,
-        hasQualitativeDetails,
-        hasPercentageInputReady
-    });
 
     if (canInputPercentage && hasQualitativeDetails && hasPercentageInputReady) {
         const qualitativeDetails = data.details.filter(detail => 
@@ -714,10 +557,7 @@ function generateDetailContent(data) {
     `;
 }
 
-// ✅ TAMBAHAN: Fungsi untuk update persentase
 function updatePercentage() {
-    console.log('updatePercentage called, currentOvertimeId:', currentOvertimeId);
-    
     if (!currentOvertimeId) {
         alert('Error: Overtime ID tidak ditemukan');
         return;
@@ -731,11 +571,6 @@ function updatePercentage() {
     
     const formData = new FormData(form);
     formData.append('_method', 'PUT');
-    
-    console.log('Form data to be sent:');
-    for (let pair of formData.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
-    }
     
     const updateButton = form.querySelector('button');
     const originalText = updateButton.innerHTML;
@@ -751,21 +586,8 @@ function updatePercentage() {
         },
         body: formData
     })
-    .then(response => {
-        console.log('Response status:', response.status);
-        
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-            return response.json();
-        } else {
-            return response.text().then(text => {
-                console.log('Non-JSON response:', text);
-                throw new Error('Response bukan JSON: ' + text);
-            });
-        }
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('Response data:', data);
         if (data.success) {
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
@@ -775,13 +597,11 @@ function updatePercentage() {
                     timer: 2000,
                     showConfirmButton: false
                 }).then(() => {
-                    // Refresh modal dengan data terbaru
-                    showDetailModal(currentApprovalId);
+                    location.reload();
                 });
             } else {
                 alert('Persentase realisasi berhasil diupdate');
-                // Refresh modal dengan data terbaru
-                showDetailModal(currentApprovalId);
+                location.reload();
             }
         } else {
             alert('Gagal update persentase: ' + (data.message || 'Unknown error'));
@@ -797,9 +617,83 @@ function updatePercentage() {
     });
 }
 
+function updateTime() {
+    if (!currentOvertimeId) {
+        alert('Error: Overtime ID tidak ditemukan');
+        return;
+    }
+    
+    const form = document.getElementById('editTimeForm');
+    if (!form) {
+        alert('Error: Form edit time tidak ditemukan');
+        return;
+    }
+    
+    const formData = new FormData(form);
+    formData.append('_method', 'PUT');
+    
+    const updateButton = form.querySelector('button');
+    const originalText = updateButton.innerHTML;
+    updateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    updateButton.disabled = true;
+    
+    fetch(`/overtime/${currentOvertimeId}/update-time`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Jam lembur berhasil diupdate',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                alert('Jam lembur berhasil diupdate');
+                location.reload();
+            }
+        } else {
+            alert('Gagal update jam lembur: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan: ' + error.message);
+    })
+    .finally(() => {
+        updateButton.innerHTML = originalText;
+        updateButton.disabled = false;
+    });
+}
+
+function editOvertimeModal(overtimeId) {
+    document.getElementById('editModalBody').innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data untuk edit...</div>';
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+    
+    fetch(`/overtime/${overtimeId}/edit`)
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('editModalBody').innerHTML = generateEditForm(data);
+        currentOvertimeId = overtimeId;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('editModalBody').innerHTML = '<div class="alert alert-danger">Gagal memuat data: ' + error.message + '</div>';
+    });
+}
+
 function generateEditForm(data) {
-    // Ini adalah placeholder untuk form edit
-    // Anda perlu menyesuaikan dengan struktur data yang sebenarnya
     return `
         <form id="editOvertimeForm">
             <div class="row">
@@ -821,83 +715,102 @@ function generateEditForm(data) {
                 <label class="form-label">Keterangan</label>
                 <textarea class="form-control" name="notes" rows="3">${data.notes || ''}</textarea>
             </div>
-            
-            <!-- Tambahkan field lain sesuai kebutuhan -->
         </form>
     `;
 }
 
-function updateTime() {
-    console.log('updateTime called, currentOvertimeId:', currentOvertimeId);
-    
-    if (!currentOvertimeId) {
-        alert('Error: Overtime ID tidak ditemukan');
-        return;
-    }
-    
-    const form = document.getElementById('editTimeForm');
+function saveEditChanges() {
+    const form = document.getElementById('editOvertimeForm');
     if (!form) {
-        alert('Error: Form edit time tidak ditemukan');
+        alert('Form edit tidak ditemukan');
         return;
     }
     
     const formData = new FormData(form);
     formData.append('_method', 'PUT');
     
-    console.log('Form data to be sent:');
-    for (let pair of formData.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
-    }
-    
-    const updateButton = form.querySelector('button');
-    const originalText = updateButton.innerHTML;
-    updateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
-    updateButton.disabled = true;
-    
-    fetch(`/overtime/${currentOvertimeId}/update-time`, {
+    fetch(`/overtime/${currentOvertimeId}`, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+            'Accept': 'application/json'
         },
         body: formData
     })
-    .then(response => {
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-        
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-            return response.json();
-        } else {
-            return response.text().then(text => {
-                console.log('Non-JSON response:', text);
-                throw new Error('Response bukan JSON: ' + text);
-            });
-        }
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('Response data:', data);
         if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+            
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: 'success',
                     title: 'Berhasil!',
-                    text: 'Jam lembur berhasil diupdate',
+                    text: 'Data lembur berhasil diupdate',
                     timer: 2000,
                     showConfirmButton: false
-                }).then(() => {
-                    bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
-                    location.reload();
                 });
             } else {
-                alert('Jam lembur berhasil diupdate');
-                bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
-                location.reload();
+                alert('Data lembur berhasil diupdate');
             }
+            
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
         } else {
-            alert('Gagal update jam lembur: ' + (data.message || 'Unknown error'));
+            alert('Gagal update data: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan: ' + error.message);
+    });
+}
+
+function confirmDelete(overtimeId, requestNumber) {
+    deleteOvertimeId = overtimeId;
+    document.getElementById('deleteRequestNumber').textContent = requestNumber;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function deleteOvertime() {
+    if (!deleteOvertimeId) return;
+    
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    const originalText = confirmBtn.innerHTML;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menghapus...';
+    confirmBtn.disabled = true;
+    
+    fetch(`/overtime/${deleteOvertimeId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Data lembur berhasil dihapus',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                alert('Data lembur berhasil dihapus');
+            }
+            
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            alert('Gagal menghapus data: ' + (data.message || 'Unknown error'));
         }
     })
     .catch(error => {
@@ -905,9 +818,71 @@ function updateTime() {
         alert('Terjadi kesalahan: ' + error.message);
     })
     .finally(() => {
-        updateButton.innerHTML = originalText;
-        updateButton.disabled = false;
+        confirmBtn.innerHTML = originalText;
+        confirmBtn.disabled = false;
     });
+}
+
+function showRejectModal() {
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+}
+
+function approveRequest() {
+    if (!currentApprovalId) return;
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/approvals/approve/${currentApprovalId}`;
+    
+    const csrfToken = document.createElement('input');
+    csrfToken.type = 'hidden';
+    csrfToken.name = '_token';
+    csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    const methodInput = document.createElement('input');
+    methodInput.type = 'hidden';
+    methodInput.name = '_method';
+    methodInput.value = 'PUT';
+    
+    form.appendChild(csrfToken);
+    form.appendChild(methodInput);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function submitReject() {
+    if (!currentApprovalId) return;
+    
+    const reason = document.getElementById('reason').value;
+    if (!reason.trim()) {
+        alert('Alasan penolakan harus diisi');
+        return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/approvals/reject/${currentApprovalId}`;
+    
+    const csrfToken = document.createElement('input');
+    csrfToken.type = 'hidden';
+    csrfToken.name = '_token';
+    csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    const methodInput = document.createElement('input');
+    methodInput.type = 'hidden';
+    methodInput.name = '_method';
+    methodInput.value = 'PUT';
+    
+    const reasonInput = document.createElement('input');
+    reasonInput.type = 'hidden';
+    reasonInput.name = 'reason';
+    reasonInput.value = reason;
+    
+    form.appendChild(csrfToken);
+    form.appendChild(methodInput);
+    form.appendChild(reasonInput);
+    document.body.appendChild(form);
+    form.submit();
 }
 </script>
 @endpush

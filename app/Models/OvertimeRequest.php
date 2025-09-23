@@ -390,4 +390,66 @@ public function canEditTime($currentUserId)
         return false;
     }
 }
+
+/**
+ * Check apakah ada detail qualitative yang perlu input percentage
+ */
+public function hasQualitativeNeedingPercentage()
+{
+    return $this->details()
+        ->where('overtime_type', 'qualitative')
+        ->whereNull('percentage_realization')
+        ->exists();
+}
+
+/**
+ * Get count qualitative details yang perlu input percentage
+ */
+public function getQualitativeNeedingPercentageCount()
+{
+    return $this->details()
+        ->where('overtime_type', 'qualitative')
+        ->whereNull('percentage_realization')
+        ->count();
+}
+
+/**
+ * Get count qualitative details yang sudah terisi percentage
+ */
+public function getQualitativeFilledPercentageCount()
+{
+    return $this->details()
+        ->where('overtime_type', 'qualitative')
+        ->whereNotNull('percentage_realization')
+        ->count();
+}
+
+/**
+ * Check apakah user bisa input percentage untuk overtime ini
+ * berdasarkan level user dan status approval
+ */
+public function canUserInputPercentage($userId)
+{
+    // User harus sudah approve overtime ini
+    $userApproval = $this->approvals()
+        ->whereHas('approverEmployee', function($query) use ($userId) {
+            $query->whereHas('users', function($q) use ($userId) {
+                $q->where('id', $userId);
+            });
+        })
+        ->where('status', 'approved')
+        ->first();
+
+    if (!$userApproval) {
+        return false;
+    }
+
+    // Overtime harus sudah status approved (semua approval selesai)
+    if ($this->status !== 'approved') {
+        return false;
+    }
+
+    // Ada detail qualitative yang perlu diinput
+    return $this->hasQualitativeNeedingPercentage();
+}
 }

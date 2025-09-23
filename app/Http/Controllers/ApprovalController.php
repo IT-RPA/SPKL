@@ -11,151 +11,40 @@ use Illuminate\Support\Facades\DB;
 
 class ApprovalController extends Controller
 {
-    // ✅ PERBAIKAN: Method untuk Section Head
-    public function sectHeadIndex()
+    public function hrdIndex()
     {
-        $currentEmployee = Employee::where('email', Auth::user()->email)->first();
-        
-        if (!$currentEmployee) {
-            return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
-        }
-
-        $approvals = OvertimeApproval::with([
-            'overtimeRequest.requesterEmployee.jobLevel', 
-            'overtimeRequest.department', 
-            'overtimeRequest.approvals.approverEmployee.jobLevel',
-            'overtimeRequest.details.employee',
-            'approverEmployee.jobLevel'
-        ])
-        ->where('approver_employee_id', $currentEmployee->id)
-        ->where('approver_level', 'SECT') // Sesuaikan dengan job level code
-        ->orderBy('created_at', 'desc')
-        ->paginate(10);
-
-        return view('approvals.sect-head', compact('approvals'));
+        $approvals = $this->getApprovalsWithPercentageNeeded('HRD');
+        return view('approvals.hrd', compact('approvals'));
     }
 
-   public function subdeptHeadIndex()
-{
-    $currentEmployee = Employee::where('email', Auth::user()->email)->first();
-    
-    if (!$currentEmployee) {
-        return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
-    }
-
-    // ✅ PERBAIKAN: Gunakan SUBDEPT untuk Sub Department Head
-    $approvals = OvertimeApproval::with([
-        'overtimeRequest.requesterEmployee.jobLevel', 
-        'overtimeRequest.department', 
-        'overtimeRequest.approvals.approverEmployee.jobLevel',
-        'overtimeRequest.details.employee',
-        'approverEmployee.jobLevel'
-    ])
-    ->where('approver_employee_id', $currentEmployee->id)
-    ->where('approver_level', 'SUBDEPT') // ✅ PASTIKAN INI SESUAI DENGAN CODE DI job_levels
-    ->orderBy('created_at', 'desc')
-    ->paginate(10);
-
-    return view('approvals.sub-dept-head', compact('approvals'));
-}
-
-    // ✅ PERBAIKAN: Method untuk Department Head
     public function deptHeadIndex()
     {
-        $currentEmployee = Employee::where('email', Auth::user()->email)->first();
-        
-        if (!$currentEmployee) {
-            return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
-        }
-
-        $approvals = OvertimeApproval::with([
-            'overtimeRequest.requesterEmployee.jobLevel', 
-            'overtimeRequest.department', 
-            'overtimeRequest.approvals.approverEmployee.jobLevel',
-            'overtimeRequest.details.employee',
-            'approverEmployee.jobLevel'
-        ])
-        ->where('approver_employee_id', $currentEmployee->id)
-        ->where('approver_level', 'DEPT') // Sesuaikan dengan job level code
-        ->orderBy('created_at', 'desc')
-        ->paginate(10);
-
+        $approvals = $this->getApprovalsWithPercentageNeeded('DEPT');
         return view('approvals.dept-head', compact('approvals'));
     }
 
-    // ✅ PERBAIKAN: Method untuk Sub Division Head - YANG INI YANG BERMASALAH!
+    public function subdeptHeadIndex()
+    {
+        $approvals = $this->getApprovalsWithPercentageNeeded('SUBDEPT');
+        return view('approvals.sub-dept-head', compact('approvals'));
+    }
+
+    public function sectHeadIndex()
+    {
+        $approvals = $this->getApprovalsWithPercentageNeeded('SECT');
+        return view('approvals.sect-head', compact('approvals'));
+    }
+
     public function subDivHeadIndex()
     {
-        $currentEmployee = Employee::where('email', Auth::user()->email)->first();
-        
-        if (!$currentEmployee) {
-            return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
-        }
-
-        // ✅ PERBAIKAN: Untuk Sub Division Head, ambil approval sesuai level
-        $approvals = OvertimeApproval::with([
-            'overtimeRequest.requesterEmployee.jobLevel', 
-            'overtimeRequest.department', 
-            'overtimeRequest.approvals.approverEmployee.jobLevel',
-            'overtimeRequest.details.employee',
-            'approverEmployee.jobLevel'
-        ])
-        ->where('approver_employee_id', $currentEmployee->id)
-        ->where('approver_level', 'SUBDIV') // ✅ PASTIKAN INI SESUAI DENGAN CODE DI job_levels
-        ->orderBy('created_at', 'desc')
-        ->paginate(10);
-
-        // ✅ YANG INI YANG HILANG - HARUS RETURN VIEW!
+        $approvals = $this->getApprovalsWithPercentageNeeded('SUBDIV');
         return view('approvals.sub-div-head', compact('approvals'));
     }
 
-    // ✅ PERBAIKAN: Method untuk Division Head
     public function divHeadIndex()
     {
-        $currentEmployee = Employee::where('email', Auth::user()->email)->first();
-        
-        if (!$currentEmployee) {
-            return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
-        }
-
-        // ✅ PERBAIKAN: Untuk Division Head, ambil semua approval dari semua departemen yang dia handle
-        $approvals = OvertimeApproval::with([
-            'overtimeRequest.requesterEmployee.jobLevel', 
-            'overtimeRequest.department', 
-            'overtimeRequest.approvals.approverEmployee.jobLevel',
-            'overtimeRequest.details.employee',
-            'approverEmployee.jobLevel'
-        ])
-        ->where('approver_employee_id', $currentEmployee->id)
-        ->where('approver_level', 'DIV') // Sesuaikan dengan job level code
-        ->orderBy('created_at', 'desc')
-        ->paginate(10);
-
+        $approvals = $this->getApprovalsWithPercentageNeeded('DIV');
         return view('approvals.div-head', compact('approvals'));
-    }
-
-    // ✅ PERBAIKAN: Method untuk HRD
-    public function hrdIndex()
-    {
-        $currentEmployee = Employee::where('email', Auth::user()->email)->first();
-        
-        if (!$currentEmployee) {
-            return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
-        }
-
-        $approvals = OvertimeApproval::with([
-            'overtimeRequest.requesterEmployee.jobLevel', 
-            'overtimeRequest.department', 
-            'overtimeRequest.approvals.approverEmployee.jobLevel',
-            'overtimeRequest.details.employee',
-            'approverEmployee.jobLevel'
-        ])
-        ->where('approver_employee_id', $currentEmployee->id)
-        ->where('approver_level', 'HRD') // Sesuaikan dengan job level code
-        ->orderBy('created_at', 'desc')
-        ->paginate(10);
-
-        return view('approvals.hrd', compact('approvals'));
     }
 
     // Method approve, reject, dan lainnya tetap sama
@@ -354,4 +243,68 @@ public function overtimeDetail(OvertimeApproval $approval)
 
     return response()->json($data);
 }
+
+    /**
+     * Method untuk mengambil semua approval dengan tambahan data percentage yang perlu diinput
+     */
+    private function getApprovalsWithPercentageNeeded($approverLevel)
+    {
+        $currentEmployee = Employee::where('email', Auth::user()->email)->first();
+        
+        if (!$currentEmployee) {
+            return collect();
+        }
+
+        // Ambil approval biasa (pending/approved/rejected)
+        $approvals = OvertimeApproval::with([
+            'overtimeRequest.requesterEmployee.jobLevel', 
+            'overtimeRequest.department', 
+            'overtimeRequest.approvals.approverEmployee.jobLevel',
+            'overtimeRequest.details.employee',
+            'approverEmployee.jobLevel'
+        ])
+        ->where('approver_employee_id', $currentEmployee->id)
+        ->where('approver_level', $approverLevel)
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+        // TAMBAHAN: Ambil juga overtime yang sudah approved dan perlu input percentage
+        // untuk level yang sama atau di bawah current employee
+        $overtimesNeedingPercentage = OvertimeRequest::with([
+            'requesterEmployee.jobLevel', 
+            'department', 
+            'details.employee',
+            'approvals.approverEmployee.jobLevel'
+        ])
+        ->where('status', 'approved') // Status approved = perlu input data
+        ->whereHas('details', function($query) {
+            $query->where('overtime_type', 'qualitative')
+                ->whereNull('percentage_realization');
+        })
+        ->whereHas('approvals', function($query) use ($currentEmployee) {
+            $query->where('approver_employee_id', $currentEmployee->id)
+                ->where('status', 'approved'); // User ini sudah approve
+        })
+        ->get();
+
+        // Gabungkan data untuk ditampilkan dalam satu tabel
+        $combinedData = $approvals->toBase();
+        
+        // Tambahkan data percentage yang perlu diinput sebagai "pseudo approval"
+        foreach ($overtimesNeedingPercentage as $overtime) {
+            // Cari approval user ini untuk overtime tersebut
+            $userApproval = $overtime->approvals->where('approver_employee_id', $currentEmployee->id)->first();
+            
+            if ($userApproval) {
+                // Buat duplikat approval tapi dengan flag khusus
+                $pseudoApproval = $userApproval->replicate();
+                $pseudoApproval->needs_percentage_input = true;
+                $pseudoApproval->percentage_status = 'needs_input';
+                
+                $combinedData->push($pseudoApproval);
+            }
+        }
+
+        return $combinedData->sortByDesc('created_at');
+    }
 }

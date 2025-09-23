@@ -411,171 +411,258 @@ table.dataTable tbody td {
                             </li>
 
                         
-<!-- Approval Menu - PERBAIKAN STEP NAMES -->
-<div class="menu-header">Approval</div>
-@php
-    // Get current employee data berdasarkan email yang login
-    $currentEmployee = App\Models\Employee::with('jobLevel')
-        ->where('email', Auth::user()->email)
-        ->first();
-    
-    $showApprovalMenu = false;
-    $availableApprovals = [];
-    
-    if ($currentEmployee && $currentEmployee->jobLevel) {
-        // Cek approval yang tersedia untuk user ini
-        $pendingApprovals = App\Models\OvertimeApproval::where('approver_employee_id', $currentEmployee->id)
-            ->where('status', 'pending')
-            ->with('overtimeRequest')
-            ->get();
-        
-        // Group by step_name untuk menentukan menu yang perlu ditampilkan
-        $approvalsByStep = $pendingApprovals->groupBy('step_name');
-        
-        // ✅ PERBAIKAN: Sesuaikan dengan step_name yang benar di database
-        if ($approvalsByStep->has('Approval Section Head')) {
-            $availableApprovals['sect-head'] = 'Approval Section Head';
-            $showApprovalMenu = true;
-        }
+                        <!-- Approval Menu - PERBAIKAN STEP NAMES -->
+                        <div class="menu-header">Approval</div>
+                        @php
+                            // Get current employee data berdasarkan email yang login
+                            $currentEmployee = App\Models\Employee::with('jobLevel')
+                                ->where('email', Auth::user()->email)
+                                ->first();
+                            
+                            $showApprovalMenu = false;
+                            $availableApprovals = [];
+                            $pendingPercentageCount = 0; // TAMBAHAN: Counter untuk percentage yang perlu diinput
+                            
+                            if ($currentEmployee && $currentEmployee->jobLevel) {
+                                // Cek approval yang tersedia untuk user ini
+                                $pendingApprovals = App\Models\OvertimeApproval::where('approver_employee_id', $currentEmployee->id)
+                                    ->where('status', 'pending')
+                                    ->with('overtimeRequest')
+                                    ->get();
+                                
+                                // TAMBAHAN: Hitung berapa banyak overtime yang perlu input persentase
+                                $percentageNeeded = App\Models\OvertimeRequest::whereHas('details', function($query) {
+                                        $query->where('overtime_type', 'qualitative')
+                                            ->whereNull('percentage_realization');
+                                    })
+                                    ->whereHas('approvals', function($query) use ($currentEmployee) {
+                                        $query->where('approver_employee_id', $currentEmployee->id)
+                                            ->whereIn('status', ['approved', 'pending']);
+                                    })
+                                    ->where('status', 'approved') // Status approved = sudah selesai approval, tinggal input data
+                                    ->count();
+                                
+                                $pendingPercentageCount = $percentageNeeded;
+                                
+                                // Group by step_name untuk menentukan menu yang perlu ditampilkan
+                                $approvalsByStep = $pendingApprovals->groupBy('step_name');
+                                
+                                // Sesuaikan dengan step_name yang benar di database
+                                if ($approvalsByStep->has('Approval Section Head')) {
+                                    $availableApprovals['sect-head'] = 'Approval Section Head';
+                                    $showApprovalMenu = true;
+                                }
 
-        if ($approvalsByStep->has('Approval Sub Department Head')) {
-            $availableApprovals['sub-dept-head'] = 'Approval Sub Department Head';
-            $showApprovalMenu = true;
-        }
-        
-        if ($approvalsByStep->has('Approval Department Head')) {
-            $availableApprovals['dept-head'] = 'Approval Department Head';
-            $showApprovalMenu = true;
-        }
+                                if ($approvalsByStep->has('Approval Sub Department Head')) {
+                                    $availableApprovals['sub-dept-head'] = 'Approval Sub Department Head';
+                                    $showApprovalMenu = true;
+                                }
+                                
+                                if ($approvalsByStep->has('Approval Department Head')) {
+                                    $availableApprovals['dept-head'] = 'Approval Department Head';
+                                    $showApprovalMenu = true;
+                                }
 
-        // ✅ PERBAIKAN: Gunakan step_name yang benar untuk Sub Division Head
-        if ($approvalsByStep->has('Approval Sub Division Head')) {
-            $availableApprovals['sub-div-head'] = 'Approval Sub Division Head';
-            $showApprovalMenu = true;
-        }
-        
-        if ($approvalsByStep->has('Approval Division Head')) {
-            $availableApprovals['div-head'] = 'Approval Division Head';
-            $showApprovalMenu = true;
-        }
-        
-        if ($approvalsByStep->has('Approval HRD')) {
-            $availableApprovals['hrd'] = 'Approval HRD';
-            $showApprovalMenu = true;
-        }
-        
-        // Juga tampilkan approval yang sudah diproses untuk history
-        $processedApprovals = App\Models\OvertimeApproval::where('approver_employee_id', $currentEmployee->id)
-            ->whereIn('status', ['approved', 'rejected'])
-            ->with('overtimeRequest')
-            ->exists();
-            
-        if ($processedApprovals && empty($availableApprovals)) {
-            // Jika tidak ada pending tapi ada history, tetap tampilkan menu berdasarkan job level
-            $jobLevelCode = $currentEmployee->jobLevel->code;
-            switch ($jobLevelCode) {
-                case 'SECT':
-                    $availableApprovals['sect-head'] = 'Approval Section Head';
-                    break;
-                case 'SUBDEPT':
-                    $availableApprovals['sub-dept-head'] = 'Approval Sub Department Head';
-                    break;
-                case 'DEPT':
-                    $availableApprovals['dept-head'] = 'Approval Department Head';
-                    break;
-                case 'SUBDIV':
-                    $availableApprovals['sub-div-head'] = 'Approval Sub Division Head';
-                    break;
-                case 'DIV':
-                    $availableApprovals['div-head'] = 'Approval Division Head';
-                    break;
-                case 'HRD':
-                    $availableApprovals['hrd'] = 'Approval HRD';
-                    break;
-            }
-            $showApprovalMenu = true;
-        }
-    }
-@endphp
+                                if ($approvalsByStep->has('Approval Sub Division Head')) {
+                                    $availableApprovals['sub-div-head'] = 'Approval Sub Division Head';
+                                    $showApprovalMenu = true;
+                                }
+                                
+                                if ($approvalsByStep->has('Approval Division Head')) {
+                                    $availableApprovals['div-head'] = 'Approval Division Head';
+                                    $showApprovalMenu = true;
+                                }
+                                
+                                if ($approvalsByStep->has('Approval HRD')) {
+                                    $availableApprovals['hrd'] = 'Approval HRD';
+                                    $showApprovalMenu = true;
+                                }
+                                
+                                // Jika ada data percentage yang perlu diinput, tetap tampilkan menu
+                                if ($pendingPercentageCount > 0) {
+                                    $showApprovalMenu = true;
+                                    // Set approval berdasarkan job level jika belum ada
+                                    if (empty($availableApprovals)) {
+                                        $jobLevelCode = $currentEmployee->jobLevel->code;
+                                        switch ($jobLevelCode) {
+                                            case 'SECT':
+                                                $availableApprovals['sect-head'] = 'Approval Section Head';
+                                                break;
+                                            case 'SUBDEPT':
+                                                $availableApprovals['sub-dept-head'] = 'Approval Sub Department Head';
+                                                break;
+                                            case 'DEPT':
+                                                $availableApprovals['dept-head'] = 'Approval Department Head';
+                                                break;
+                                            case 'SUBDIV':
+                                                $availableApprovals['sub-div-head'] = 'Approval Sub Division Head';
+                                                break;
+                                            case 'DIV':
+                                                $availableApprovals['div-head'] = 'Approval Division Head';
+                                                break;
+                                            case 'HRD':
+                                                $availableApprovals['hrd'] = 'Approval HRD';
+                                                break;
+                                        }
+                                    }
+                                }
+                                
+                                // Juga tampilkan approval yang sudah diproses untuk history
+                                $processedApprovals = App\Models\OvertimeApproval::where('approver_employee_id', $currentEmployee->id)
+                                    ->whereIn('status', ['approved', 'rejected'])
+                                    ->with('overtimeRequest')
+                                    ->exists();
+                                    
+                                if ($processedApprovals && empty($availableApprovals) && $pendingPercentageCount == 0) {
+                                    // Logic yang sudah ada sebelumnya...
+                                    $jobLevelCode = $currentEmployee->jobLevel->code;
+                                    switch ($jobLevelCode) {
+                                        case 'SECT':
+                                            $availableApprovals['sect-head'] = 'Approval Section Head';
+                                            break;
+                                        case 'SUBDEPT':
+                                            $availableApprovals['sub-dept-head'] = 'Approval Sub Department Head';
+                                            break;
+                                        case 'DEPT':
+                                            $availableApprovals['dept-head'] = 'Approval Department Head';
+                                            break;
+                                        case 'SUBDIV':
+                                            $availableApprovals['sub-div-head'] = 'Approval Sub Division Head';
+                                            break;
+                                        case 'DIV':
+                                            $availableApprovals['div-head'] = 'Approval Division Head';
+                                            break;
+                                        case 'HRD':
+                                            $availableApprovals['hrd'] = 'Approval HRD';
+                                            break;
+                                    }
+                                    $showApprovalMenu = true;
+                                }
+                            }
+                        @endphp
 
-@if($showApprovalMenu)
-<li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="fas fa-check-circle"></i> Approval
-        @if($pendingApprovals && $pendingApprovals->count() > 0)
-            <span class="badge bg-danger ms-1">{{ $pendingApprovals->count() }}</span>
-        @endif
-    </a>
-    <ul class="dropdown-menu">
-        @if(isset($availableApprovals['sect-head']))
-            <li><a class="dropdown-item" href="{{ route('approvals.sect-head') }}">
-                <i class="fas fa-user-check"></i> Section Head
-                @php $sectPending = $pendingApprovals->where('step_name', 'Approval Section Head')->count(); @endphp
-                @if($sectPending > 0)
-                    <span class="badge bg-danger ms-1">{{ $sectPending }}</span>
-                @endif
-            </a></li>
-        @endif
+                        @if($showApprovalMenu)
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-check-circle"></i> Approval
+                                @if(($pendingApprovals && $pendingApprovals->count() > 0) || $pendingPercentageCount > 0)
+                                    @php
+                                        $totalNotifications = ($pendingApprovals ? $pendingApprovals->count() : 0) + $pendingPercentageCount;
+                                    @endphp
+                                    <span class="badge bg-danger ms-1">{{ $totalNotifications }}</span>
+                                @endif
+                            </a>
+                            <ul class="dropdown-menu">
+                                @if(isset($availableApprovals['sect-head']))
+                                    <li><a class="dropdown-item" href="{{ route('approvals.sect-head') }}">
+                                        <i class="fas fa-user-check"></i> Section Head
+                                        @php 
+                                            $sectPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval Section Head')->count() : 0;
+                                            $sectPercentage = 0;
+                                            if ($currentEmployee->jobLevel->code == 'SECT' && $pendingPercentageCount > 0) {
+                                                $sectPercentage = $pendingPercentageCount;
+                                            }
+                                            $sectTotal = $sectPending + $sectPercentage;
+                                        @endphp
+                                        @if($sectTotal > 0)
+                                            <span class="badge bg-danger ms-1">{{ $sectTotal }}</span>
+                                        @endif
+                                    </a></li>
+                                @endif
 
-        @if(isset($availableApprovals['sub-dept-head']))
-            <li><a class="dropdown-item" href="{{ route('approvals.sub-dept-head') }}">
-                <i class="fas fa-user-tie"></i> Sub Department Head
-                @php $subdeptPending = $pendingApprovals->where('step_name', 'Approval Sub Department Head')->count(); @endphp
-                @if($subdeptPending > 0)
-                    <span class="badge bg-danger ms-1">{{ $subdeptPending }}</span>
-                @endif
-            </a></li>
-        @endif
-        
-        @if(isset($availableApprovals['dept-head']))
-            <li><a class="dropdown-item" href="{{ route('approvals.dept-head') }}">
-                <i class="fas fa-user-tie"></i> Department Head
-                @php $deptPending = $pendingApprovals->where('step_name', 'Approval Department Head')->count(); @endphp
-                @if($deptPending > 0)
-                    <span class="badge bg-danger ms-1">{{ $deptPending }}</span>
-                @endif
-            </a></li>
-        @endif
+                                @if(isset($availableApprovals['sub-dept-head']))
+                                    <li><a class="dropdown-item" href="{{ route('approvals.sub-dept-head') }}">
+                                        <i class="fas fa-user-tie"></i> Sub Department Head
+                                        @php 
+                                            $subdeptPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval Sub Department Head')->count() : 0;
+                                            $subdeptPercentage = 0;
+                                            if ($currentEmployee->jobLevel->code == 'SUBDEPT' && $pendingPercentageCount > 0) {
+                                                $subdeptPercentage = $pendingPercentageCount;
+                                            }
+                                            $subdeptTotal = $subdeptPending + $subdeptPercentage;
+                                        @endphp
+                                        @if($subdeptTotal > 0)
+                                            <span class="badge bg-danger ms-1">{{ $subdeptTotal }}</span>
+                                        @endif
+                                    </a></li>
+                                @endif
+                                
+                                @if(isset($availableApprovals['dept-head']))
+                                    <li><a class="dropdown-item" href="{{ route('approvals.dept-head') }}">
+                                        <i class="fas fa-user-tie"></i> Department Head
+                                        @php 
+                                            $deptPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval Department Head')->count() : 0;
+                                            $deptPercentage = 0;
+                                            if ($currentEmployee->jobLevel->code == 'DEPT' && $pendingPercentageCount > 0) {
+                                                $deptPercentage = $pendingPercentageCount;
+                                            }
+                                            $deptTotal = $deptPending + $deptPercentage;
+                                        @endphp
+                                        @if($deptTotal > 0)
+                                            <span class="badge bg-danger ms-1">{{ $deptTotal }}</span>
+                                        @endif
+                                    </a></li>
+                                @endif
 
-        {{-- ✅ PERBAIKAN: Step name yang benar untuk Sub Division Head --}}
-        @if(isset($availableApprovals['sub-div-head']))
-            <li><a class="dropdown-item" href="{{ route('approvals.sub-div-head') }}">
-                <i class="fas fa-user-cog"></i> Sub Division Head
-                @php $subdivPending = $pendingApprovals->where('step_name', 'Approval Sub Division Head')->count(); @endphp
-                @if($subdivPending > 0)
-                    <span class="badge bg-danger ms-1">{{ $subdivPending }}</span>
-                @endif
-            </a></li>
-        @endif
-        
-        @if(isset($availableApprovals['div-head']))
-            <li><a class="dropdown-item" href="{{ route('approvals.div-head') }}">
-                <i class="fas fa-user-graduate"></i> Division Head
-                @php $divPending = $pendingApprovals->where('step_name', 'Approval Division Head')->count(); @endphp
-                @if($divPending > 0)
-                    <span class="badge bg-danger ms-1">{{ $divPending }}</span>
-                @endif
-            </a></li>
-        @endif
-        
-        @if(isset($availableApprovals['hrd']))
-            <li><a class="dropdown-item" href="{{ route('approvals.hrd') }}">
-                <i class="fas fa-user-shield"></i> HRD
-                @php $hrdPending = $pendingApprovals->where('step_name', 'Approval HRD')->count(); @endphp
-                @if($hrdPending > 0)
-                    <span class="badge bg-danger ms-1">{{ $hrdPending }}</span>
-                @endif
-            </a></li>
-        @endif
-        
-        @if(empty($availableApprovals))
-            <li><span class="dropdown-item text-muted">
-                <i class="fas fa-info-circle"></i> Tidak ada approval tersedia
-            </span></li>
-        @endif
-    </ul>
-</li>
-@endif
+                                @if(isset($availableApprovals['sub-div-head']))
+                                    <li><a class="dropdown-item" href="{{ route('approvals.sub-div-head') }}">
+                                        <i class="fas fa-user-cog"></i> Sub Division Head
+                                        @php 
+                                            $subdivPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval Sub Division Head')->count() : 0;
+                                            $subdivPercentage = 0;
+                                            if ($currentEmployee->jobLevel->code == 'SUBDIV' && $pendingPercentageCount > 0) {
+                                                $subdivPercentage = $pendingPercentageCount;
+                                            }
+                                            $subdivTotal = $subdivPending + $subdivPercentage;
+                                        @endphp
+                                        @if($subdivTotal > 0)
+                                            <span class="badge bg-danger ms-1">{{ $subdivTotal }}</span>
+                                        @endif
+                                    </a></li>
+                                @endif
+                                
+                                @if(isset($availableApprovals['div-head']))
+                                    <li><a class="dropdown-item" href="{{ route('approvals.div-head') }}">
+                                        <i class="fas fa-user-graduate"></i> Division Head
+                                        @php 
+                                            $divPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval Division Head')->count() : 0;
+                                            $divPercentage = 0;
+                                            if ($currentEmployee->jobLevel->code == 'DIV' && $pendingPercentageCount > 0) {
+                                                $divPercentage = $pendingPercentageCount;
+                                            }
+                                            $divTotal = $divPending + $divPercentage;
+                                        @endphp
+                                        @if($divTotal > 0)
+                                            <span class="badge bg-danger ms-1">{{ $divTotal }}</span>
+                                        @endif
+                                    </a></li>
+                                @endif
+                                
+                                @if(isset($availableApprovals['hrd']))
+                                    <li><a class="dropdown-item" href="{{ route('approvals.hrd') }}">
+                                        <i class="fas fa-user-shield"></i> HRD
+                                        @php 
+                                            $hrdPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval HRD')->count() : 0;
+                                            $hrdPercentage = 0;
+                                            if ($currentEmployee->jobLevel->code == 'HRD' && $pendingPercentageCount > 0) {
+                                                $hrdPercentage = $pendingPercentageCount;
+                                            }
+                                            $hrdTotal = $hrdPending + $hrdPercentage;
+                                        @endphp
+                                        @if($hrdTotal > 0)
+                                            <span class="badge bg-danger ms-1">{{ $hrdTotal }}</span>
+                                        @endif
+                                    </a></li>
+                                @endif
+                                
+                                @if(empty($availableApprovals))
+                                    <li><span class="dropdown-item text-muted">
+                                        <i class="fas fa-info-circle"></i> Tidak ada approval tersedia
+                                    </span></li>
+                                @endif
+                            </ul>
+                        </li>
+                        @endif
                     </ul>
                 </div>
             </nav>
