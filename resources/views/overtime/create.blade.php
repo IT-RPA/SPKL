@@ -198,14 +198,14 @@
 @push('scripts')
 <script>
 let detailIndex = 0;
-let allEmployees = @json($employees); // ✅ Sudah filtered dari controller
+let allEmployees = @json($employees);
 
 $(document).ready(function() {
     // Initialize select2 for first employee select
     $('.employee-select').select2({
         placeholder: 'Pilih Karyawan',
         width: '100%',
-        templateResult: formatEmployeeOption, // ✅ Format dengan level info
+        templateResult: formatEmployeeOption,
         templateSelection: formatEmployeeSelection
     });
 
@@ -214,16 +214,14 @@ $(document).ready(function() {
         width: '100%'
     });
 
-    // Department change handler (tidak perlu update lagi karena sudah filtered)
+    // Department change handler
     $('#department_id').on('change', function() {
         const departmentId = $(this).val();
         
-        // Reset pengaju dan hide alert
         $('#employee_id').val('').trigger('change');
         $('#flowJobAlert').hide();
         $('#submitBtn').prop('disabled', false);
         
-        // ✅ PERBAIKAN: Update employee options dengan data yang sudah difilter
         updateEmployeeOptionsForAll();
     });
 
@@ -254,7 +252,6 @@ $(document).ready(function() {
             return false;
         }
 
-        // VALIDASI: Semua tipe lembur harus diisi
         let allTypesFilled = true;
         $('.overtime-type-select').each(function() {
             if (!$(this).val()) {
@@ -273,12 +270,49 @@ $(document).ready(function() {
             return false;
         }
 
-        // ✅ VALIDASI TAMBAHAN: Cek apakah ada karyawan level tinggi yang dipilih
         validateHierarchyBeforeSubmit(e);
+    });
+
+    // *** FITUR BARU AUTO-FILL JAM ***
+    // Event listener untuk update jam otomatis ketika detail pertama berubah
+    $(document).on('change', '.detail-row:first-child input[name*="[start_time]"]', function() {
+        const newStartTime = $(this).val();
+        if (newStartTime) {
+            $('.detail-row:not(:first-child) input[name*="[start_time]"]').each(function() {
+                $(this).val(newStartTime);
+            });
+            console.log(`Updated all start times to: ${newStartTime}`);
+        }
+    });
+    
+    $(document).on('change', '.detail-row:first-child input[name*="[end_time]"]', function() {
+        const newEndTime = $(this).val();
+        if (newEndTime) {
+            $('.detail-row:not(:first-child) input[name*="[end_time]"]').each(function() {
+                $(this).val(newEndTime);
+            });
+            console.log(`Updated all end times to: ${newEndTime}`);
+        }
+    });
+    
+    // Tambahkan tombol sync setelah DOM ready
+    setTimeout(addSyncTimeButton, 500);
+
+    // Event delegation untuk handling dynamic elements
+    $(document).on('change', '.overtime-type-select', function() {
+        const detailRow = $(this).closest('.detail-row');
+        const allRows = $('.detail-row');
+        const currentIndex = allRows.index(detailRow);
+        
+        console.log(`Event delegation: overtime type changed for index ${currentIndex}`);
+        toggleOvertimeType(this, currentIndex);
+    });
+    
+    $(document).on('change', '.qty-plan', function() {
+        toggleActual(this);
     });
 });
 
-// ✅ FUNGSI BARU: Format option dengan info level
 function formatEmployeeOption(option) {
     if (!option.id) return option.text;
     
@@ -297,7 +331,6 @@ function formatEmployeeSelection(option) {
     return option.text;
 }
 
-// ✅ FUNGSI BARU: Validasi hierarki sebelum submit
 function validateHierarchyBeforeSubmit(e) {
     let hasViolation = false;
     let violations = [];
@@ -307,10 +340,7 @@ function validateHierarchyBeforeSubmit(e) {
         if (selectedEmployeeId) {
             const selectedOption = $(this).find('option:selected');
             const employeeLevel = selectedOption.data('level') || 'N/A';
-            const employeeName = selectedOption.text().split(' - ')[0]; // Ambil nama saja
-            
-            // Bisa ditambahkan logic validasi tambahan di sini jika diperlukan
-            // Untuk sekarang, karena sudah difilter di backend, tidak perlu validasi tambahan
+            const employeeName = selectedOption.text().split(' - ')[0];
         }
     });
 
@@ -376,16 +406,13 @@ function checkFlowJobEligibility(employeeId, departmentId) {
     });
 }
 
-// ✅ PERBAIKAN: Update employee options untuk semua dropdown
 function updateEmployeeOptionsForAll() {
     $('.employee-select').each(function() {
         const currentValue = $(this).val();
         const $select = $(this);
         
-        // Clear existing options
         $select.empty().append('<option value="">Pilih Karyawan</option>');
         
-        // Add filtered employees
         allEmployees.forEach(emp => {
             const selected = currentValue == emp.id ? 'selected' : '';
             const levelName = emp.job_level ? emp.job_level.name : 'N/A';
@@ -400,14 +427,97 @@ function updateEmployeeOptionsForAll() {
             `);
         });
         
-        // Reinitialize select2
         $select.trigger('change');
     });
 }
 
-// PERBAIKAN UTAMA: Fungsi addDetail() yang benar
+// *** FITUR BARU AUTO-FILL JAM - FUNGSI PENDUKUNG ***
+function copyTimeFromFirstDetail(newDetail) {
+    const firstDetail = document.querySelector('.detail-row');
+    if (firstDetail) {
+        const firstStartTime = firstDetail.querySelector('input[name*="[start_time]"]');
+        const firstEndTime = firstDetail.querySelector('input[name*="[end_time]"]');
+        
+        const newStartTime = newDetail.querySelector('input[name*="[start_time]"]');
+        const newEndTime = newDetail.querySelector('input[name*="[end_time]"]');
+        
+        if (firstStartTime && firstEndTime && newStartTime && newEndTime && firstStartTime.value && firstEndTime.value) {
+            newStartTime.value = firstStartTime.value;
+            newEndTime.value = firstEndTime.value;
+            
+            console.log(`Auto-filled time: ${firstStartTime.value} - ${firstEndTime.value}`);
+            
+            // Tampilkan notifikasi
+            showTimeAutoFillNotification();
+        }
+    }
+}
+
+function showTimeAutoFillNotification() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            icon: 'info',
+            title: 'Jam Lembur Otomatis Terisi',
+            text: 'Jam mulai dan jam selesai telah diisi sesuai detail pertama. Anda bisa mengubahnya jika diperlukan.',
+            timer: 3000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+    }
+}
+
+function addSyncTimeButton() {
+    if ($('#syncTimeBtn').length === 0) {
+        const syncButton = `
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-info btn-sm" id="syncTimeBtn" onclick="syncAllTimes()">
+                    <i class="fas fa-sync"></i> Samakan Semua Jam dengan Detail Pertama
+                </button>
+                <small class="text-muted">
+                    <i class="fas fa-lightbulb"></i> 
+                    Jam akan otomatis terisi saat menambah detail baru
+                </small>
+            </div>
+        `;
+        
+        $('.btn-success:contains("Tambah Detail")').closest('.mb-3').before(syncButton);
+    }
+}
+
+function syncAllTimes() {
+    const firstStartTime = $('.detail-row:first-child input[name*="[start_time]"]').val();
+    const firstEndTime = $('.detail-row:first-child input[name*="[end_time]"]').val();
+    
+    if (!firstStartTime || !firstEndTime) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Jam Belum Diisi',
+            text: 'Silakan isi jam mulai dan jam selesai pada detail pertama terlebih dahulu.',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
+    
+    $('.detail-row:not(:first-child)').each(function() {
+        $(this).find('input[name*="[start_time]"]').val(firstStartTime);
+        $(this).find('input[name*="[end_time]"]').val(firstEndTime);
+    });
+    
+    Swal.fire({
+        icon: 'success',
+        title: 'Jam Berhasil Disamakan',
+        text: `Semua detail sekarang menggunakan jam ${firstStartTime} - ${firstEndTime}`,
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+    });
+}
+
+// FUNGSI addDetail() DENGAN INTEGRASI AUTO-FILL
 function addDetail() {
-    detailIndex++; // Increment global counter
+    detailIndex++;
     const container = document.getElementById('detailContainer');
     const firstDetail = container.querySelector('.detail-row');
     
@@ -420,27 +530,22 @@ function addDetail() {
     
     console.log(`Adding detail with index: ${detailIndex}`);
     
-    // Update SEMUA name attributes dengan index yang benar
     newDetail.querySelectorAll('[name]').forEach(input => {
         const oldName = input.name;
-        // Perbaiki regex untuk menangani berbagai format index
         const newName = oldName.replace(/\[(\d+)\]/g, `[${detailIndex}]`);
         input.name = newName;
         console.log(`Updated name: ${oldName} -> ${newName}`);
     });
     
-    // Update SEMUA IDs dengan pattern yang lebih spesifik
     newDetail.querySelectorAll('[id]').forEach(element => {
         if (element.id) {
             const oldId = element.id;
-            // Ganti angka di akhir ID dengan index baru
             const newId = oldId.replace(/\d+$/, detailIndex);
             element.id = newId;
             console.log(`Updated ID: ${oldId} -> ${newId}`);
         }
     });
     
-    // PERBAIKAN KUNCI: Update onchange attribute dengan index yang benar
     const overtimeTypeSelect = newDetail.querySelector('.overtime-type-select');
     if (overtimeTypeSelect) {
         overtimeTypeSelect.setAttribute('onchange', `toggleOvertimeType(this, ${detailIndex})`);
@@ -448,46 +553,39 @@ function addDetail() {
         console.log(`Set onchange: toggleOvertimeType(this, ${detailIndex})`);
     }
     
-    // Update onchange untuk qty plan
     const qtyPlanInput = newDetail.querySelector('.qty-plan');
     if (qtyPlanInput) {
         qtyPlanInput.setAttribute('onchange', 'toggleActual(this)');
     }
     
-    // Reset ke kondisi awal SEBELUM di-append
     resetDetailToInitialState(newDetail);
     
-    // Append ke container
     container.appendChild(newDetail);
     
-    // Initialize select2 untuk dropdown baru SETELAH di-append
+    // *** FITUR AUTO-FILL JAM TERINTEGRASI ***
+    copyTimeFromFirstDetail(newDetail);
+    
     initializeNewDetailSelects(newDetail);
-
-    // Update employee options jika department sudah dipilih
     updateNewDetailEmployeeOptions(newDetail);
     
     console.log(`Detail added successfully with index: ${detailIndex}`);
 }
 
 function resetDetailToInitialState(detailElement) {
-    // Destroy select2 yang ada sebelum reset
     $(detailElement).find('.select2-container').remove();
     $(detailElement).find('select').removeClass('select2-hidden-accessible');
     
-    // Reset semua select ke pilihan kosong
     detailElement.querySelectorAll('select').forEach(select => {
         select.selectedIndex = 0;
         select.value = '';
         $(select).removeClass('select2-hidden-accessible');
     });
     
-    // Reset semua input text/number/textarea
     detailElement.querySelectorAll('input:not([type="button"]), textarea').forEach(input => {
         input.value = '';
         input.removeAttribute('style');
     });
     
-    // Reset qty plan ke disabled
     const qtyPlan = detailElement.querySelector('.qty-plan');
     if (qtyPlan) {
         qtyPlan.disabled = true;
@@ -495,20 +593,17 @@ function resetDetailToInitialState(detailElement) {
         qtyPlan.value = '';
     }
     
-    // Reset qty actual ke disabled
     const qtyActual = detailElement.querySelector('.qty-actual');
     if (qtyActual) {
         qtyActual.disabled = true;
         qtyActual.value = '';
     }
     
-    // Hide percentage info
     const percentageInfo = detailElement.querySelector('.percentage-info');
     if (percentageInfo) {
         percentageInfo.style.display = 'none';
     }
     
-    // Reset overtime type select
     const overtimeTypeSelect = detailElement.querySelector('.overtime-type-select');
     if (overtimeTypeSelect) {
         overtimeTypeSelect.value = '';
@@ -517,7 +612,6 @@ function resetDetailToInitialState(detailElement) {
 }
 
 function initializeNewDetailSelects(detailElement) {
-    // Tunggu sebentar untuk memastikan DOM sudah ter-update
     setTimeout(function() {
         const employeeSelect = detailElement.querySelector('.employee-select');
         if (employeeSelect && !$(employeeSelect).hasClass('select2-hidden-accessible')) {
@@ -558,7 +652,6 @@ function updateNewDetailEmployeeOptions(detailElement) {
 function removeDetail(button) {
     const detailRows = document.querySelectorAll('.detail-row');
     if (detailRows.length > 1) {
-        // Destroy select2 sebelum remove
         const rowToRemove = button.closest('.detail-row');
         $(rowToRemove).find('select').each(function() {
             if ($(this).hasClass('select2-hidden-accessible')) {
@@ -584,21 +677,18 @@ function toggleActual(planInput) {
         actualInput.disabled = true;
         actualInput.value = '';
     } else {
-        actualInput.disabled = true; // Tetap disabled, akan diisi setelah approve
+        actualInput.disabled = true;
     }
 }
 
-// PERBAIKAN UTAMA: Fungsi toggleOvertimeType dengan fallback yang lebih baik
 function toggleOvertimeType(selectElement, index) {
     const overtimeType = selectElement.value;
     
     console.log(`toggleOvertimeType called with index: ${index}, type: ${overtimeType}`);
     
-    // Cari elemen dengan berbagai cara fallback
     let qtySection = document.getElementById(`qtySection${index}`);
     let percentageInfo = document.getElementById(`percentageInfo${index}`);
     
-    // Fallback: jika tidak ditemukan berdasarkan ID, cari berdasarkan posisi
     if (!qtySection || !percentageInfo) {
         const detailRow = selectElement.closest('.detail-row');
         if (detailRow) {
@@ -630,7 +720,6 @@ function toggleOvertimeType(selectElement, index) {
         qtyPlanInput: qtyPlanInput ? 'OK' : 'MISSING'
     });
     
-    // Reset state terlebih dahulu
     qtyPlanInput.disabled = true;
     qtyPlanInput.required = false;
     qtyPlanInput.value = '';
@@ -656,28 +745,8 @@ function toggleOvertimeType(selectElement, index) {
         percentageVisible: percentageInfo.style.display
     });
 }
-
-// ✅ TAMBAHAN: Event delegation untuk handling dynamic elements
-$(document).ready(function() {
-    // Event delegation untuk select overtime type yang dinamis
-    $(document).on('change', '.overtime-type-select', function() {
-        const detailRow = $(this).closest('.detail-row');
-        const allRows = $('.detail-row');
-        const currentIndex = allRows.index(detailRow);
-        
-        console.log(`Event delegation: overtime type changed for index ${currentIndex}`);
-        toggleOvertimeType(this, currentIndex);
-    });
-    
-    // Event delegation untuk qty plan
-    $(document).on('change', '.qty-plan', function() {
-        toggleActual(this);
-    });
-});
-
 </script>
 
-{{-- SweetAlert2 CDN --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 @endpush
 @endsection
