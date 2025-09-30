@@ -289,6 +289,76 @@ table.dataTable tbody td {
         font-size: 0.775rem;
     }
 }
+.select2-container--default .select2-selection--single {
+    border: 1px solid #dee2e6 !important;
+    border-radius: 0.375rem !important;
+    height: 38px !important;
+    padding: 0.375rem 0.75rem !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    line-height: 1.5 !important;
+    color: #212529 !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px !important;
+    right: 8px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #6c757d !important;
+}
+
+/* Dropdown styling */
+.select2-container--default .select2-dropdown {
+    border: 1px solid #dee2e6 !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1px solid #dee2e6 !important;
+    border-radius: 0.375rem !important;
+    padding: 0.375rem 0.75rem !important;
+}
+
+/* Hover dan Selected states */
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #0d6efd !important;
+    color: white !important;
+}
+
+.select2-container--default .select2-results__option[aria-selected=true] {
+    background-color: #e7f1ff !important;
+    color: #0d6efd !important;
+}
+
+/* Focus state */
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+/* Invalid state untuk validation */
+.is-invalid ~ .select2-container--default .select2-selection--single {
+    border-color: #dc3545 !important;
+}
+
+.is-invalid ~ .select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+}
+
+/* Width 100% */
+.select2-container {
+    width: 100% !important;
+}
     </style>
 </head>
 <body>

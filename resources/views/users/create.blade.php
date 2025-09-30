@@ -63,7 +63,7 @@
                 <div class="col-md-4">
                     <div class="mb-3">
                         <label for="role_id" class="form-label">Role</label>
-                        <select class="form-select @error('role_id') is-invalid @enderror" 
+                        <select class="form-select select2 @error('role_id') is-invalid @enderror" 
                                 id="role_id" name="role_id" required>
                             <option value="">Pilih Role</option>
                             @foreach($roles as $role)
@@ -81,7 +81,7 @@
                 <div class="col-md-4">
                     <div class="mb-3">
                         <label for="department_id" class="form-label">Department</label>
-                        <select class="form-select @error('department_id') is-invalid @enderror" 
+                        <select class="form-select select2 @error('department_id') is-invalid @enderror" 
                                 id="department_id" name="department_id" required>
                             <option value="">Pilih Department</option>
                             @foreach($departments as $department)
@@ -99,7 +99,7 @@
                 <div class="col-md-4">
                     <div class="mb-3">
                         <label for="job_level_id" class="form-label">Job Level</label>
-                        <select class="form-select @error('job_level_id') is-invalid @enderror" 
+                        <select class="form-select select2 @error('job_level_id') is-invalid @enderror" 
                                 id="job_level_id" name="job_level_id" required>
                             <option value="">Pilih Job Level</option>
                             @foreach($jobLevels as $jobLevel)
@@ -123,3 +123,20 @@
     </div>
 </div>
 @endsection
+
+
+
+@push('scripts')
+<script>
+    $(document).ready(function() {
+        // Inisialisasi Select2 untuk semua select dengan class select2
+        $('.select2').select2({
+            width: '100%',
+            placeholder: function() {
+                return $(this).find('option:first').text();
+            },
+            allowClear: true
+        });
+    });
+</script>
+@endpush
