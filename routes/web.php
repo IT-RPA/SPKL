@@ -68,6 +68,8 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/approve/{approval}', [ApprovalController::class, 'approve'])->name('approve');
         Route::put('/reject/{approval}', [ApprovalController::class, 'reject'])->name('reject');
     });
+
     Route::get('/approvals/detail/{approval}', [ApprovalController::class, 'overtimeDetail'])->name('approvals.detail');
-    
+    Route::get('/api/employees/search', [UserController::class, 'searchEmployees'])->name('api.employees.search');
+    Route::get('/api/employees/{employee}', [UserController::class, 'getEmployeeData'])->name('api.employees.get');
 }); 
