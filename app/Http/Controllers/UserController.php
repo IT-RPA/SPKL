@@ -41,6 +41,7 @@ class UserController extends Controller
     {
         $request->validate([
             'employee_id' => 'required|unique:users',
+            'username' => 'required|string|unique:users',
             'name' => 'required',
             'email' => 'required|email|unique:users',
             'password' => 'required|min:8',
@@ -52,6 +53,7 @@ class UserController extends Controller
         DB::transaction(function () use ($request) {
             $user = User::create([
                 'employee_id' => $request->employee_id,
+                'username' => $request->username,
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
@@ -89,6 +91,7 @@ class UserController extends Controller
     {
         $request->validate([
             'employee_id' => 'required|unique:users,employee_id,' . $user->id,
+            'username' => 'required|string|unique:users,username,' . $user->id,
             'name' => 'required',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'role_id' => 'required|exists:roles,id',
@@ -97,7 +100,7 @@ class UserController extends Controller
         ]);
 
         DB::transaction(function () use ($request, $user) {
-            $data = $request->only(['employee_id', 'name', 'email', 'role_id', 'department_id', 'job_level_id']);
+            $data = $request->only(['employee_id', 'username', 'name', 'email', 'role_id', 'department_id', 'job_level_id']);
             
             if ($request->filled('password')) {
                 $data['password'] = Hash::make($request->password);

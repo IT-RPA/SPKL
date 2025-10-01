@@ -12,8 +12,8 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'employee_id', 'name', 'email', 'password', 'role_id', 
-        'department_id', 'job_level_id', 'is_active'  // ✅ Ganti 'level' dengan 'job_level_id'
+        'employee_id', 'username','name', 'email', 'password', 'role_id', 
+        'department_id', 'job_level_id', 'is_active'  
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -31,7 +31,7 @@ class User extends Authenticatable
 
     public function employee()
     {
-        return $this->hasOne(Employee::class, 'email', 'email'); // ✅ Link by email
+        return $this->hasOne(Employee::class, 'email', 'email'); 
     }
 
     public function department()

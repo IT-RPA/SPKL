@@ -23,6 +23,17 @@
                         @enderror
                     </div>
                 </div>
+
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control @error('username') is-invalid @enderror" 
+                            id="username" name="username" value="{{ old('username', $user->username) }}" required>
+                        @error('username')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
                 
                 <div class="col-md-6">
                     <div class="mb-3">

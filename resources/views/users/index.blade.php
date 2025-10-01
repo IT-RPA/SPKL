@@ -13,11 +13,11 @@
                 <thead>
                     <tr>
                         <th>Employee ID</th>
+                        <th>Username</th>
                         <th>Nama</th>
                         <th>Email</th>
                         <th>Role</th>
                         <th>Department</th>
-                        <th>Level</th>
                         <th>Status</th>
                         <th>Aksi</th>
                     </tr>
@@ -26,15 +26,13 @@
                     @forelse($users as $user)
                     <tr>
                         <td>{{ $user->employee_id }}</td>
+                        <td>{{ $user->username }}</td>
                         <td>{{ $user->name }}</td>
                         <td>{{ $user->email }}</td>
                         <td>
                             <span class="badge bg-info">{{ $user->role->display_name ?? '-' }}</span>
                         </td>
                         <td>{{ $user->department->name ?? '-' }}</td>
-                        <td>
-                            <span class="badge bg-secondary">{{ ucfirst(str_replace('_', ' ', $user->level)) }}</span>
-                        </td>
                         <td>
                             <span class="badge bg-{{ $user->is_active ? 'success' : 'danger' }}">
                                 {{ $user->is_active ? 'Active' : 'Inactive' }}

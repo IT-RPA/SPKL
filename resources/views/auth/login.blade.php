@@ -265,28 +265,28 @@
                         <form method="POST" action="{{ route('login') }}">
                             @csrf
                             
-                            <!-- Email Field -->
-                            <div class="form-group">
-                                <label for="email" class="form-label">
-                                    <i class="fas fa-envelope"></i>
-                                    Email Address
-                                </label>
-                                <div class="input-group">
-                                    <input type="email" 
-                                           class="form-control @error('email') is-invalid @enderror" 
-                                           id="email" 
-                                           name="email" 
-                                           value="{{ old('email') }}" 
-                                           placeholder="Masukkan email Anda"
-                                           required>
-                                    <i class="fas fa-at input-icon"></i>
-                                </div>
-                                @error('email')
-                                    <div class="invalid-feedback">
-                                        <i class="fas fa-times-circle me-1"></i>
-                                        {{ $message }}
-                                    </div>
-                                @enderror
+                            <!-- Username Field -->
+                                <div class="form-group">
+                                        <label for="username" class="form-label">
+                                            <i class="fas fa-user"></i>
+                                            Username
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="text" 
+                                                class="form-control @error('username') is-invalid @enderror" 
+                                                id="username" 
+                                                name="username" 
+                                                value="{{ old('username') }}" 
+                                                placeholder="Masukkan username Anda"
+                                                required>
+                                            <i class="fas fa-user input-icon"></i>
+                                        </div>
+                                        @error('username')
+                                            <div class="invalid-feedback">
+                                                <i class="fas fa-times-circle me-1"></i>
+                                                {{ $message }}
+                                            </div>
+                                        @enderror
                             </div>
                             
                             <!-- Password Field -->

@@ -15,7 +15,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => 'required|email',
+            'username' => 'required|string',  // ✅ GANTI dari 'email'
             'password' => 'required',
         ]);
 
@@ -25,8 +25,8 @@ class AuthController extends Controller
         }
 
         return back()->withErrors([
-            'email' => 'Email atau password salah.',
-        ]);
+            'username' => 'Username atau password salah.',  // ✅ GANTI pesan error
+        ])->withInput($request->only('username'));
     }
 
     public function logout(Request $request)
