@@ -128,7 +128,6 @@
     </div>
 </div>
 @endsection
-
 @push('scripts')
 <script>
     $(document).ready(function() {
@@ -179,13 +178,10 @@
                         $('#department').val(data.department);
                         $('#job_level').val(data.job_level);
                         
-                        // Auto-generate username dari nama (opsional)
-                        if (!$('#username').val()) {
-                            const username = data.name.toLowerCase()
-                                .replace(/\s+/g, '.')
-                                .replace(/[^a-z0-9.]/g, '');
-                            $('#username').val(username);
-                        }
+                        const username = data.name.toLowerCase()
+                            .replace(/\s+/g, '.')
+                            .replace(/[^a-z0-9.]/g, '');
+                        $('#username').val(username);
                         
                         // Enable submit button
                         $('#submitBtn').prop('disabled', false);
@@ -193,7 +189,7 @@
                     error: function() {
                         alert('Gagal mengambil data employee');
                         // Clear fields
-                        $('#name, #email, #department, #job_level').val('');
+                        $('#name, #email, #department, #job_level, #username').val('');
                         $('#submitBtn').prop('disabled', true);
                     }
                 });
