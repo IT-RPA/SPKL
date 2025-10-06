@@ -149,6 +149,7 @@ public function overtimeDetail(OvertimeApproval $approval)
         'requesterEmployee.jobLevel', 
         'department', 
         'details.employee', 
+        'details.processType',
         'approvals.approverEmployee.jobLevel'
     ])->find($approval->overtime_request_id);
 
@@ -230,7 +231,7 @@ public function overtimeDetail(OvertimeApproval $approval)
                 'start_time' => $detail->start_time,
                 'end_time' => $detail->end_time,
                 'work_priority' => $detail->work_priority,
-                'work_process' => $detail->work_process,
+                'work_process' => $detail->processType->name ?? '-',
                 'overtime_type' => $detail->overtime_type ?? 'quantitative',
                 'qty_plan' => $detail->qty_plan,
                 'qty_actual' => $detail->qty_actual,

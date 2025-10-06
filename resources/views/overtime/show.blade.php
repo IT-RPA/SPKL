@@ -210,7 +210,7 @@
                         </div>
                         <div class="col-md-6">
                             <strong>Proses:</strong><br>
-                            <p class="mb-0">{{ $detail->work_process }}</p>
+                            <p class="mb-0">{{ $detail->processType->name ?? $detail->work_process }}</p>
                         </div>
                     </div>
                     
@@ -235,27 +235,23 @@
         @else
             -
         @endif
-    </div>
-@else
-    <div class="col-md-3">
-        <strong>Persentase Realisasi:</strong><br>
-        @if($detail->percentage_realization !== null)
-            <span class="badge bg-success">{{ $detail->percentage_realization }}%</span>
-        @elseif($overtime->canInputPercentage(Auth::id()) && $detail->canInputPercentageNow())
-            <span class="badge bg-info">Siap diisi</span>
-        @else
-            <span class="badge bg-warning">Menunggu</span>
-        @endif
-    </div>
-    <div class="col-md-3">
-        <strong>Status:</strong><br>
-        <span class="badge bg-info">Kualitatif</span>
-    </div>
-@endif
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Keterangan:</strong><br>
-                            {{ $detail->notes ?? '-' }}
+                         </div>
+                            @else
+                                <div class="col-md-3">
+                                    <strong>Persentase Realisasi:</strong><br>
+                                    @if($detail->percentage_realization !== null)
+                                        <span class="badge bg-success">{{ $detail->percentage_realization }}%</span>
+                                    @elseif($overtime->canInputPercentage(Auth::id()) && $detail->canInputPercentageNow())
+                                        <span class="badge bg-info">Siap diisi</span>
+                                    @else
+                                        <span class="badge bg-warning">Menunggu</span>
+                                    @endif
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Status:</strong><br>
+                                    <span class="badge bg-info">Kualitatif</span>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
