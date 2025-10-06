@@ -472,6 +472,13 @@ table.dataTable tbody td {
                             </a>
                         </li>
 
+                        <div class="menu-header">Planning</div>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('planning.index') }}">
+                                <i class="fas fa-calendar-alt"></i> Planning Lembur
+                            </a>
+                        </li>
+
                         <!-- Report -->
                          <div class="menu-header">Report</div>
                             <li class="nav-item">

@@ -36,8 +36,9 @@
                                     <th>Urutan Step</th>
                                     <th>Nama Step</th>
                                     <th>Level Jabatan</th>
+                                    <th>Applies To</th>
                                     <th>Status</th>
-                                     @if(Auth::user()->hasPermission('edit-flow-jobs') || Auth::user()->hasPermission('delete-flow-jobs'))
+                                    @if(Auth::user()->hasPermission('edit-flow-jobs') || Auth::user()->hasPermission('delete-flow-jobs'))
                                     <th>Aksi</th>
                                     @endif
                                 </tr>
@@ -47,29 +48,38 @@
                                 @foreach($groupedFlows as $departmentName => $flows)
                                 @foreach($flows as $index => $flowJob)
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $loop->parent->iteration }}.{{ $loop->iteration }}</td>
+                                    <td>{{ $departmentName }}</td>
                                     <td>
-                                        {{ $departmentName }}
-                                    </td>
-                                    <td>
-                                        <span class="badge text-dark">Step {{ $flowJob->step_order }}</span>
+                                        <span class="badge bg-secondary">Step {{ $flowJob->step_order }}</span>
                                     </td>
                                     <td>{{ $flowJob->step_name }}</td>
                                     <td>{{ $flowJob->jobLevel->name }}</td>
                                     <td>
-                                        <span class="badge {{$flowJob->is_active ? 'text-dark' : 'text-danger' }}">
+                                        @if($flowJob->applies_to === 'planned')
+                                            <span class="badge bg-primary">Planned</span>
+                                        @elseif($flowJob->applies_to === 'unplanned')
+                                            <span class="badge bg-warning text-dark">Unplanned</span>
+                                        @else
+                                            <span class="badge bg-info">Both</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span class="badge {{ $flowJob->is_active ? 'bg-success' : 'bg-danger' }}">
                                             {{ $flowJob->is_active ? 'Aktif' : 'Nonaktif' }}
                                         </span>
                                     </td>
+                                    @if(Auth::user()->hasPermission('edit-flow-jobs') || Auth::user()->hasPermission('delete-flow-jobs'))
                                     <td>
-                                          <div class="btn-group" role="group">
-                                             @permission('edit-flow-jobs')
+                                        <div class="btn-group" role="group">
+                                            @permission('edit-flow-jobs')
                                             <button type="button" class="btn btn-sm btn-warning edit-btn"
                                                 data-id="{{ $flowJob->id }}"
                                                 data-department_id="{{ $flowJob->department_id }}"
                                                 data-job_level_id="{{ $flowJob->job_level_id }}"
                                                 data-step_order="{{ $flowJob->step_order }}"
                                                 data-step_name="{{ $flowJob->step_name }}"
+                                                data-applies_to="{{ $flowJob->applies_to }}"
                                                 data-is_active="{{ $flowJob->is_active }}">
                                                 <i class="fas fa-edit"></i>
                                             </button>
@@ -84,6 +94,7 @@
                                             @endpermission
                                         </div>
                                     </td>
+                                    @endif
                                 </tr>
                                 @endforeach
                                 @endforeach
@@ -123,15 +134,15 @@
 
                     <div class="mb-3">
                         <label for="step_order" class="form-label">Urutan Step</label>
-                        <input type="number" class="form-control" id="step_order" name="step_order" required min="1">
-                        <small class="form-text text-muted">Urutan step dalam flow approval (1, 2, 3, dst.)</small>
+                        <input type="number" class="form-control" id="step_order" name="step_order" required min="0">
+                        <small class="form-text text-muted">Urutan step dalam flow (0 untuk pengajuan, 1,2,3 untuk approval)</small>
                         <div class="invalid-feedback"></div>
                     </div>
 
                     <div class="mb-3">
                         <label for="step_name" class="form-label">Nama Step</label>
                         <input type="text" class="form-control" id="step_name" name="step_name" required maxlength="255">
-                        <small class="form-text text-muted">Contoh: Pengajuan, Approval Sect Head, Approval Dept Head, dst.</small>
+                        <small class="form-text text-muted">Contoh: Pengajuan, Approval Section Head, Approval Dept Head</small>
                         <div class="invalid-feedback"></div>
                     </div>
 
@@ -143,6 +154,17 @@
                             <option value="{{ $jobLevel->id }}">{{ $jobLevel->name }}</option>
                             @endforeach
                         </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="applies_to" class="form-label">Applies To</label>
+                        <select class="form-control" id="applies_to" name="applies_to" required>
+                            <option value="both">Both (Planning & Unplanned)</option>
+                            <option value="planned">Planned Only</option>
+                            <option value="unplanned">Unplanned Only</option>
+                        </select>
+                        <small class="form-text text-muted">Tentukan flow ini untuk planned, unplanned, atau keduanya</small>
                         <div class="invalid-feedback"></div>
                     </div>
 
@@ -169,10 +191,8 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Variable untuk tracking apakah ini mode edit atau tambah
     let isEditMode = false;
 
-    // DataTable initialization dengan bahasa Indonesia tanpa CORS
     var table = $('#flowJobTable').DataTable({
         responsive: true,
         language: {
@@ -180,8 +200,6 @@ $(document).ready(function() {
             "sInfo": "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
             "sInfoEmpty": "Menampilkan 0 sampai 0 dari 0 entri",
             "sInfoFiltered": "(disaring dari _MAX_ entri keseluruhan)",
-            "sInfoPostFix": "",
-            "sInfoThousands": ".",
             "sLengthMenu": "Tampilkan _MENU_ entri",
             "sLoadingRecords": "Sedang memuat...",
             "sProcessing": "Sedang memproses...",
@@ -192,61 +210,44 @@ $(document).ready(function() {
                 "sLast": "Terakhir",
                 "sNext": "Selanjutnya",
                 "sPrevious": "Sebelumnya"
-            },
-            "oAria": {
-                "sSortAscending": ": aktifkan untuk mengurutkan kolom naik",
-                "sSortDescending": ": aktifkan untuk mengurutkan kolom turun"
             }
         },
-        order: [
-            [1, 'asc'],
-            [2, 'asc']
-        ] // Sort by department then step_order
+        order: [[1, 'asc'], [2, 'asc']]
     });
 
-    // Department filter
     $('#departmentFilter').on('change', function() {
         var selectedDepartment = this.value;
-        if (selectedDepartment === '') {
-            table.column(1).search('').draw();
-        } else {
-            table.column(1).search(selectedDepartment).draw();
-        }
+        table.column(1).search(selectedDepartment).draw();
     });
     
     @permission('create-flow-jobs')
-    // Reset modal hanya ketika bukan mode edit
     $('#flowJobModal').on('show.bs.modal', function() {
         if (!isEditMode) {
             resetForm();
         }
-        // Reset flag setelah modal ditampilkan
         isEditMode = false;
     });
 
-    // Fungsi untuk reset form
     function resetForm() {
         $('#flowJobForm')[0].reset();
         $('#flow_job_id').val('');
         $('#flowJobModalLabel').text('Tambah Flow Job');
         $('.form-control').removeClass('is-invalid');
         $('.invalid-feedback').text('');
-        $('#is_active').prop('checked', true); // Set default checked
+        $('#is_active').prop('checked', true);
+        $('#applies_to').val('both');
     }
 
-    // Button tambah flow job - set flag untuk mode tambah
     $('button[data-bs-target="#flowJobModal"]').on('click', function() {
         isEditMode = false;
     });
     @endpermission
 
     @permission('edit-flow-jobs')
-    // Edit button click - set flag untuk mode edit
     $(document).on('click', '.edit-btn', function(e) {
         e.preventDefault();
         e.stopPropagation();
         
-        // Set flag bahwa ini mode edit
         isEditMode = true;
         
         const id = $(this).data('id');
@@ -254,28 +255,26 @@ $(document).ready(function() {
         const jobLevelId = $(this).data('job_level_id');
         const stepOrder = $(this).data('step_order');
         const stepName = $(this).data('step_name');
+        const appliesTo = $(this).data('applies_to');
         const isActive = $(this).data('is_active');
 
-        // Clear validasi error terlebih dahulu
         $('.form-control').removeClass('is-invalid');
         $('.invalid-feedback').text('');
         
-        // Isi data untuk edit
         $('#flow_job_id').val(id);
         $('#department_id').val(departmentId);
         $('#job_level_id').val(jobLevelId);
         $('#step_order').val(stepOrder);
         $('#step_name').val(stepName);
+        $('#applies_to').val(appliesTo);
         $('#is_active').prop('checked', Boolean(Number(isActive)));
         $('#flowJobModalLabel').text('Edit Flow Job');
         
-        // Tampilkan modal
         $('#flowJobModal').modal('show');
     });
     @endpermission
 
     @if(Auth::user()->hasPermission('create-flow-jobs') || Auth::user()->hasPermission('edit-flow-jobs'))
-    // Form submission
     $('#flowJobForm').on('submit', function(e) {
         e.preventDefault();
 
@@ -288,7 +287,6 @@ $(document).ready(function() {
             formData.append('_method', 'PUT');
         }
 
-        // Reset error states
         $('.form-control').removeClass('is-invalid');
         $('.invalid-feedback').text('');
 
@@ -302,7 +300,6 @@ $(document).ready(function() {
                 if (response.success) {
                     $('#flowJobModal').modal('hide');
                     
-                    // Show success message
                     Swal.fire({
                         icon: 'success',
                         title: 'Berhasil!',
@@ -336,7 +333,6 @@ $(document).ready(function() {
     @endif
 
     @permission('delete-flow-jobs')
-    // Delete button click
     $(document).on('click', '.delete-btn', function(e) {
         e.preventDefault();
         e.stopPropagation();

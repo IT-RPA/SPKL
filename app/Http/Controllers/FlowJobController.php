@@ -11,7 +11,6 @@ class FlowJobController extends Controller
 {
     public function __construct()
     {
-        // ✅ PERBAIKAN: Gunakan middleware yang sudah terdaftar di Kernel
         $this->middleware('check.permission:view-flow-jobs')->only(['index', 'show']);
         $this->middleware('check.permission:create-flow-jobs')->only(['create', 'store']);
         $this->middleware('check.permission:edit-flow-jobs')->only(['edit', 'update']);
@@ -20,7 +19,12 @@ class FlowJobController extends Controller
 
     public function index()
     {
-        $flowJobs = FlowJob::with(['department', 'jobLevel'])->orderBy('department_id')->orderBy('step_order')->get();
+        $flowJobs = FlowJob::with(['department', 'jobLevel'])
+            ->orderBy('department_id')
+            ->orderBy('applies_to')
+            ->orderBy('step_order')
+            ->get();
+            
         $departments = Department::where('is_active', true)->get();
         $jobLevels = JobLevel::where('is_active', true)->orderBy('level_order')->get();
         
@@ -32,25 +36,27 @@ class FlowJobController extends Controller
         $request->validate([
             'department_id' => 'required|exists:departments,id',
             'job_level_id' => 'required|exists:job_levels,id',
-            'step_order' => 'required|integer|min:1',
-            'step_name' => 'required|string|max:255'
+            'step_order' => 'required|integer|min:0',
+            'step_name' => 'required|string|max:255',
+            'applies_to' => 'required|in:planned,unplanned,both',
         ]);
 
-        // Check if step_order already exists for this department
+        // Check if step_order already exists for this department and applies_to
         $exists = FlowJob::where('department_id', $request->department_id)
                          ->where('step_order', $request->step_order)
+                         ->where('applies_to', $request->applies_to)
                          ->exists();
 
         if ($exists) {
             return response()->json([
                 'success' => false,
-                'message' => 'Urutan step sudah ada untuk departemen ini!'
+                'message' => 'Urutan step dengan applies_to ini sudah ada untuk departemen ini!'
             ], 400);
         }
 
         $data = $request->all();
-        // Handle checkbox - jika tidak dicentang, set ke false (0)
         $data['is_active'] = $request->has('is_active') ? 1 : 0;
+        $data['approver_employee_id'] = null; // Default null, bisa diisi manual nanti
 
         FlowJob::create($data);
 
@@ -65,25 +71,26 @@ class FlowJobController extends Controller
         $request->validate([
             'department_id' => 'required|exists:departments,id',
             'job_level_id' => 'required|exists:job_levels,id',
-            'step_order' => 'required|integer|min:1',
-            'step_name' => 'required|string|max:255'
+            'step_order' => 'required|integer|min:0',
+            'step_name' => 'required|string|max:255',
+            'applies_to' => 'required|in:planned,unplanned,both',
         ]);
 
-        // Check if step_order already exists for this department (except current record)
+        // Check if step_order already exists (except current record)
         $exists = FlowJob::where('department_id', $request->department_id)
                          ->where('step_order', $request->step_order)
+                         ->where('applies_to', $request->applies_to)
                          ->where('id', '!=', $flowJob->id)
                          ->exists();
 
         if ($exists) {
             return response()->json([
                 'success' => false,
-                'message' => 'Urutan step sudah ada untuk departemen ini!'
+                'message' => 'Urutan step dengan applies_to ini sudah ada untuk departemen ini!'
             ], 400);
         }
 
         $data = $request->all();
-        // Handle checkbox - jika tidak dicentang, set ke false (0)
         $data['is_active'] = $request->has('is_active') ? 1 : 0;
 
         $flowJob->update($data);

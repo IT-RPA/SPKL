@@ -11,19 +11,17 @@ return new class extends Migration
         Schema::create('overtime_requests', function (Blueprint $table) {
             $table->id();
             $table->string('request_number')->unique();
-            $table->foreignId('requester_id')->constrained('users');
-
-            // kolom baru untuk relasi ke employees
-            $table->foreignId('requester_employee_id')
-                ->nullable()
-                ->constrained('employees')
-                ->onDelete('cascade');
-
-            // requester_level sekarang pakai string
+            $table->foreignId('requester_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('requester_employee_id')->nullable()->constrained('employees')->onDelete('cascade');
             $table->string('requester_level');
-
             $table->date('date');
-            $table->foreignId('department_id')->constrained();
+            $table->foreignId('department_id')->constrained()->onDelete('cascade');
+            
+            // ✅ PLANNING INTEGRATION
+            $table->enum('overtime_category', ['planned', 'unplanned'])->default('unplanned')
+                  ->comment('planned=dari planning, unplanned=lembur spontan');
+            $table->foreignId('planning_id')->nullable()->constrained('overtime_plannings')->onDelete('set null');
+            
             $table->enum('status', [
                 'pending',
                 'approved_sect',
@@ -32,10 +30,11 @@ return new class extends Migration
                 'approved_subdiv',
                 'approved_div',
                 'approved_hrd',
-                'approved',
+                'approved',    // Semua approval selesai, bisa input data
                 'rejected',
-                'completed'
+                'completed'    // Data actual/percentage sudah lengkap
             ])->default('pending');
+            
             $table->string('status_color')->default('yellow');
             $table->text('rejection_reason')->nullable();
             $table->timestamps();

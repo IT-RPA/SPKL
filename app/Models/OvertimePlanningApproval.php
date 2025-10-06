@@ -1,39 +1,37 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class FlowJob extends Model
+class OvertimePlanningApproval extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'department_id',
-        'job_level_id',
+        'planning_id',
         'approver_employee_id',
+        'approver_level',
         'step_order',
         'step_name',
-        'applies_to',
-        'is_active'
+        'status',
+        'notes',
+        'approved_at'
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'approved_at' => 'datetime',
         'step_order' => 'integer'
     ];
 
-    public function department()
+    // ===== RELATIONSHIPS =====
+    
+    public function planning()
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsTo(OvertimePlanning::class, 'planning_id');
     }
 
-    public function jobLevel()
-    {
-        return $this->belongsTo(JobLevel::class);
-    }
-
-    // ✅ TAMBAH RELASI INI
     public function approverEmployee()
     {
         return $this->belongsTo(Employee::class, 'approver_employee_id');

@@ -16,7 +16,7 @@ class MasterDataSeeder extends Seeder
     public function run()
     {
         // =======================
-        // 1. PERMISSIONS
+        // 1. PERMISSIONS (TAMBAHAN UNTUK PLANNING)
         // =======================
         $permissions = [
             ['name' => 'view-users', 'display_name' => 'View Users'],
@@ -52,6 +52,13 @@ class MasterDataSeeder extends Seeder
             ['name' => 'create-flow-jobs', 'display_name' => 'Create Flow Jobs'],
             ['name' => 'edit-flow-jobs', 'display_name' => 'Edit Flow Jobs'],
             ['name' => 'delete-flow-jobs', 'display_name' => 'Delete Flow Jobs'],
+            
+            // ✅ TAMBAHAN PERMISSION PLANNING
+            ['name' => 'view-planning', 'display_name' => 'View Planning'],
+            ['name' => 'create-planning', 'display_name' => 'Create Planning'],
+            ['name' => 'edit-planning', 'display_name' => 'Edit Planning'],
+            ['name' => 'delete-planning', 'display_name' => 'Delete Planning'],
+            ['name' => 'approve-planning', 'display_name' => 'Approve Planning'],
         ];
 
         foreach ($permissions as $permission) {
@@ -81,6 +88,9 @@ class MasterDataSeeder extends Seeder
             'create-overtime',
             'approve-overtime',
             'view-employees',
+            'view-planning',
+            'create-planning',      // ✅ Manager bisa buat planning
+            'approve-planning',     // ✅ Manager bisa approve planning
         ])->get();
         $managerRole->permissions()->attach($managerPermissions);
 
@@ -93,6 +103,7 @@ class MasterDataSeeder extends Seeder
         $staffPermissions = Permission::whereIn('name', [
             'view-overtime',
             'create-overtime',
+            'view-planning',        // ✅ Staff bisa lihat planning
         ])->get();
         $staffRole->permissions()->attach($staffPermissions);
 
@@ -155,7 +166,7 @@ class MasterDataSeeder extends Seeder
                 'email' => 'john.doe@company.com',
                 'dept' => $prodDept->id, 
                 'level' => $foreman->id,
-                'role' => $staffRole->id  // Staff
+                'role' => $staffRole->id
             ],
             // Produksi - Manager (Section Head = Manager Role)
             [
@@ -165,7 +176,7 @@ class MasterDataSeeder extends Seeder
                 'email' => 'jane.smith@company.com',
                 'dept' => $prodDept->id, 
                 'level' => $sectHead->id,
-                'role' => $managerRole->id  // Manager
+                'role' => $managerRole->id
             ],
             // Produksi - Manager (Dept Head = Manager Role)
             [
@@ -175,7 +186,7 @@ class MasterDataSeeder extends Seeder
                 'email' => 'mike.johnson@company.com',
                 'dept' => $prodDept->id, 
                 'level' => $deptHead->id,
-                'role' => $managerRole->id  // Manager
+                'role' => $managerRole->id
             ],
 
             // IT - Staff (Foreman = Staff Role)
@@ -186,7 +197,7 @@ class MasterDataSeeder extends Seeder
                 'email' => 'david.brown@company.com',
                 'dept' => $itDept->id, 
                 'level' => $foreman->id,
-                'role' => $staffRole->id  // Staff
+                'role' => $staffRole->id
             ],
 
             // Division Head - Admin (berlaku untuk semua departemen)
@@ -197,7 +208,7 @@ class MasterDataSeeder extends Seeder
                 'email' => 'sarah.wilson@company.com',
                 'dept' => $hrdDept->id, 
                 'level' => $divHead->id,
-                'role' => $adminRole->id  // Admin
+                'role' => $adminRole->id
             ],
 
             // HRD Manager - Admin
@@ -208,7 +219,7 @@ class MasterDataSeeder extends Seeder
                 'email' => 'robert.miller@company.com',
                 'dept' => $hrdDept->id, 
                 'level' => $hrdManagerL->id,
-                'role' => $adminRole->id  // Admin
+                'role' => $adminRole->id
             ],
 
             // Finance Dept Head - Manager
@@ -219,7 +230,7 @@ class MasterDataSeeder extends Seeder
                 'email' => 'emily.taylor@company.com',
                 'dept' => $finDept->id, 
                 'level' => $deptHead->id,
-                'role' => $managerRole->id  // Manager
+                'role' => $managerRole->id
             ],
 
             // Staff Produksi - Staff Role
@@ -230,7 +241,7 @@ class MasterDataSeeder extends Seeder
                 'email' => 'tom.staff1@company.com',
                 'dept' => $prodDept->id, 
                 'level' => $staff->id,
-                'role' => $staffRole->id  // Staff
+                'role' => $staffRole->id
             ],
             // Staff IT - Staff Role
             [
@@ -240,26 +251,24 @@ class MasterDataSeeder extends Seeder
                 'email' => 'amy.staff2@company.com',
                 'dept' => $itDept->id, 
                 'level' => $staff->id,
-                'role' => $staffRole->id  // Staff
+                'role' => $staffRole->id
             ],
         ];
 
         foreach ($userData as $data) {
-            // Buat User dengan role yang sesuai
             User::create([
                 'employee_id'   => $data['id'],
                 'username'      => $data['username'],
                 'name'          => $data['name'],
                 'email'         => $data['email'],
                 'password'      => Hash::make('password123'),
-                'role_id'       => $data['role'],  // Role sesuai job level
+                'role_id'       => $data['role'],
                 'department_id' => $data['dept'],
                 'job_level_id'  => $data['level'],
                 'is_active'     => true,
                 'email_verified_at' => now(),
             ]);
 
-            // Buat Employee yang sinkron
             Employee::create([
                 'employee_id'   => $data['id'],
                 'name'          => $data['name'],
@@ -271,7 +280,7 @@ class MasterDataSeeder extends Seeder
         }
 
         // =======================
-        // 6. FLOW JOBS
+        // 6. FLOW JOBS (DENGAN APPLIES_TO)
         // =======================
         $prodSectHead = Employee::where('employee_id', 'PROD002')->first();
         $prodDeptHead = Employee::where('employee_id', 'PROD003')->first();
@@ -279,43 +288,84 @@ class MasterDataSeeder extends Seeder
         $hrdManager   = Employee::where('employee_id', 'HRD002')->first();
         $finDeptHead  = Employee::where('employee_id', 'FIN002')->first();
 
-        $flowJobs = [
-            // Produksi Flow
-            ['dept' => $prodDept->id, 'level' => $foreman->id,     'approver' => null,              'order' => 1, 'name' => 'Pengajuan'],
-            ['dept' => $prodDept->id, 'level' => $sectHead->id,    'approver' => $prodSectHead->id, 'order' => 2, 'name' => 'Approval Section Head'],
-            ['dept' => $prodDept->id, 'level' => $subDeptHead->id, 'approver' => null,              'order' => 3, 'name' => 'Approval Sub Department Head'],
-            ['dept' => $prodDept->id, 'level' => $deptHead->id,    'approver' => $prodDeptHead->id, 'order' => 4, 'name' => 'Approval Department Head'],
-            ['dept' => $prodDept->id, 'level' => $subdivHead->id,  'approver' => null,              'order' => 5, 'name' => 'Approval Sub Division Head'],
-            ['dept' => $prodDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 6, 'name' => 'Approval Division Head'],
-            ['dept' => $prodDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,   'order' => 7, 'name' => 'Approval HRD'],
+        // ✅ FLOW UNTUK PLANNING (sampai Dept Head saja)
+        $planningFlows = [
+            // Produksi - Planning Flow
+            ['dept' => $prodDept->id, 'level' => $foreman->id,      'approver' => null,              'order' => 0, 'name' => 'Pengajuan', 'applies' => 'planned'],
+            ['dept' => $prodDept->id, 'level' => $sectHead->id,    'approver' => $prodSectHead->id, 'order' => 1, 'name' => 'Approval Section Head', 'applies' => 'planned'],
+            ['dept' => $prodDept->id, 'level' => $subDeptHead->id, 'approver' => null,              'order' => 2, 'name' => 'Approval Sub Department Head', 'applies' => 'planned'],
+            ['dept' => $prodDept->id, 'level' => $deptHead->id,    'approver' => $prodDeptHead->id, 'order' => 3, 'name' => 'Approval Department Head', 'applies' => 'planned'],
 
-            // IT Flow
-            ['dept' => $itDept->id, 'level' => $foreman->id,     'approver' => null,              'order' => 1, 'name' => 'Pengajuan'],
-            ['dept' => $itDept->id, 'level' => $subdivHead->id,  'approver' => null,              'order' => 2, 'name' => 'Approval Sub Division Head'],
-            ['dept' => $itDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 3, 'name' => 'Approval Division Head'],
-            ['dept' => $itDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,   'order' => 4, 'name' => 'Approval HRD'],
+            // IT - Planning Flow
+            ['dept' => $itDept->id, 'level' => $foreman->id,     'approver' => null,              'order' => 0, 'name' => 'Pengajuan', 'applies' => 'planned'],
+            ['dept' => $itDept->id, 'level' => $subdivHead->id,  'approver' => null,              'order' => 1, 'name' => 'Approval Sub Division Head', 'applies' => 'planned'],
+            ['dept' => $itDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head', 'applies' => 'planned'],
 
-            // Finance Flow
-            ['dept' => $finDept->id, 'level' => $deptHead->id,    'approver' => $finDeptHead->id,  'order' => 1, 'name' => 'Pengajuan'],
-            ['dept' => $finDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head'],
-            ['dept' => $finDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,   'order' => 3, 'name' => 'Approval HRD'],
+            // Finance - Planning Flow
+            ['dept' => $finDept->id, 'level' => $foreman->id,   'approver' => null,              'order' => 0, 'name' => 'Pengajuan', 'applies' => 'planned'],
+            ['dept' => $finDept->id, 'level' => $deptHead->id,  'approver' => $finDeptHead->id,  'order' => 1, 'name' => 'Approval Department Head', 'applies' => 'planned'],
+            ['dept' => $finDept->id, 'level' => $divHead->id,   'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head', 'applies' => 'planned'],
             
-            // HRD Flow
-            ['dept' => $hrdDept->id, 'level' => $hrdManagerL->id, 'approver' => null,              'order' => 1, 'name' => 'Pengajuan'],
-            ['dept' => $hrdDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head'],
+            // HRD - Planning Flow
+            ['dept' => $hrdDept->id, 'level' => $hrdManagerL->id, 'approver' => null,              'order' => 0, 'name' => 'Pengajuan', 'applies' => 'planned'],
+            ['dept' => $hrdDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 1, 'name' => 'Approval Division Head', 'applies' => 'planned'],
         ];
 
-        foreach ($flowJobs as $flow) {
+        // ✅ FLOW UNTUK UNPLANNED OVERTIME (lengkap sampai HRD)
+        $unplannedFlows = [
+            // Produksi - Unplanned Flow (lengkap)
+            ['dept' => $prodDept->id, 'level' => $foreman->id,     'approver' => null,              'order' => 1, 'name' => 'Pengajuan', 'applies' => 'unplanned'],
+            ['dept' => $prodDept->id, 'level' => $sectHead->id,    'approver' => $prodSectHead->id, 'order' => 2, 'name' => 'Approval Section Head', 'applies' => 'unplanned'],
+            ['dept' => $prodDept->id, 'level' => $subDeptHead->id, 'approver' => null,              'order' => 3, 'name' => 'Approval Sub Department Head', 'applies' => 'unplanned'],
+            ['dept' => $prodDept->id, 'level' => $deptHead->id,    'approver' => $prodDeptHead->id, 'order' => 4, 'name' => 'Approval Department Head', 'applies' => 'unplanned'],
+            ['dept' => $prodDept->id, 'level' => $subdivHead->id,  'approver' => null,              'order' => 5, 'name' => 'Approval Sub Division Head', 'applies' => 'unplanned'],
+            ['dept' => $prodDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 6, 'name' => 'Approval Division Head', 'applies' => 'unplanned'],
+            ['dept' => $prodDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,   'order' => 7, 'name' => 'Approval HRD', 'applies' => 'unplanned'],
+
+            // IT - Unplanned Flow
+            ['dept' => $itDept->id, 'level' => $foreman->id,     'approver' => null,              'order' => 1, 'name' => 'Pengajuan', 'applies' => 'unplanned'],
+            ['dept' => $itDept->id, 'level' => $subdivHead->id,  'approver' => null,              'order' => 2, 'name' => 'Approval Sub Division Head', 'applies' => 'unplanned'],
+            ['dept' => $itDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 3, 'name' => 'Approval Division Head', 'applies' => 'unplanned'],
+            ['dept' => $itDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,   'order' => 4, 'name' => 'Approval HRD', 'applies' => 'unplanned'],
+
+            // Finance - Unplanned Flow
+            ['dept' => $finDept->id, 'level' => $deptHead->id,    'approver' => $finDeptHead->id,  'order' => 1, 'name' => 'Pengajuan', 'applies' => 'unplanned'],
+            ['dept' => $finDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head', 'applies' => 'unplanned'],
+            ['dept' => $finDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,   'order' => 3, 'name' => 'Approval HRD', 'applies' => 'unplanned'],
+            
+            // HRD - Unplanned Flow
+            ['dept' => $hrdDept->id, 'level' => $hrdManagerL->id, 'approver' => null,              'order' => 1, 'name' => 'Pengajuan', 'applies' => 'unplanned'],
+            ['dept' => $hrdDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head', 'applies' => 'unplanned'],
+        ];
+
+        // Insert Planning Flows
+        foreach ($planningFlows as $flow) {
             FlowJob::create([
                 'department_id'        => $flow['dept'],
                 'job_level_id'         => $flow['level'],
                 'approver_employee_id' => $flow['approver'],
                 'step_order'           => $flow['order'],
                 'step_name'            => $flow['name'],
+                'applies_to'           => $flow['applies'], // ✅ PENTING: planned
                 'is_active'            => true,
             ]);
         }
 
-        $this->command->info('Master data, roles, and permissions seeded successfully!');
+        // Insert Unplanned Flows
+        foreach ($unplannedFlows as $flow) {
+            FlowJob::create([
+                'department_id'        => $flow['dept'],
+                'job_level_id'         => $flow['level'],
+                'approver_employee_id' => $flow['approver'],
+                'step_order'           => $flow['order'],
+                'step_name'            => $flow['name'],
+                'applies_to'           => $flow['applies'], // ✅ PENTING: unplanned
+                'is_active'            => true,
+            ]);
+        }
+
+        $this->command->info('✅ Master data with Planning flows seeded successfully!');
+        $this->command->info('📋 Planning Permission added to Manager role');
+        $this->command->info('🔄 Flow Jobs created with applies_to field');
     }
-}   
+}

@@ -90,6 +90,38 @@
     </div>
 </div>
 
+@if($overtime->overtime_category === 'planned' && $overtime->planning)
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="alert alert-success">
+            <h6><i class="fas fa-calendar-check"></i> Menggunakan Planning Lembur</h6>
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>No. Planning:</strong><br>
+                    <a href="{{ route('planning.show', $overtime->planning->id) }}" target="_blank">
+                        {{ $overtime->planning->planning_number }}
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <strong>Tanggal Planning:</strong><br>
+                    {{ $overtime->planning->planned_date->format('d/m/Y') }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Jam Planning:</strong><br>
+                    {{ $overtime->planning->planned_start_time }} - {{ $overtime->planning->planned_end_time }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Status Planning:</strong><br>
+                    <span class="badge bg-{{ $overtime->planning->status == 'approved' ? 'success' : 'secondary' }}">
+                        {{ ucfirst($overtime->planning->status) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 {{-- Detail Lembur Card --}}
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">

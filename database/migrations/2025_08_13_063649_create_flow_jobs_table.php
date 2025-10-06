@@ -6,30 +6,25 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
         Schema::create('flow_jobs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('department_id')->constrained()->onDelete('cascade');
             $table->foreignId('job_level_id')->constrained()->onDelete('cascade');
-
-            // kolom baru langsung ditaruh di sini
-            $table->foreignId('approver_employee_id')
-                  ->nullable()
-                  ->constrained('employees')
-                  ->onDelete('cascade');
-
-            $table->integer('step_order'); // urutan step dalam flow
-            $table->string('step_name');   // nama step (misal: Pengajuan, Approval 1, dst)
+            $table->foreignId('approver_employee_id')->nullable()->constrained('employees')->onDelete('cascade');
+            $table->integer('step_order');
+            $table->string('step_name');
+            $table->enum('applies_to', ['planned', 'unplanned', 'both'])->default('both')
+                  ->comment('planned=planning lembur, unplanned=overtime biasa, both=keduanya');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-
-            // Pastikan tidak ada duplikat step_order dalam satu department
-            $table->unique(['department_id', 'step_order']);
+            
+            $table->unique(['department_id', 'step_order', 'applies_to'], 'unique_dept_step_applies');
         });
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('flow_jobs');
     }
