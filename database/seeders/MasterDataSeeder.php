@@ -52,13 +52,15 @@ class MasterDataSeeder extends Seeder
             ['name' => 'create-flow-jobs', 'display_name' => 'Create Flow Jobs'],
             ['name' => 'edit-flow-jobs', 'display_name' => 'Edit Flow Jobs'],
             ['name' => 'delete-flow-jobs', 'display_name' => 'Delete Flow Jobs'],
-            
-            // ✅ TAMBAHAN PERMISSION PLANNING
             ['name' => 'view-planning', 'display_name' => 'View Planning'],
             ['name' => 'create-planning', 'display_name' => 'Create Planning'],
             ['name' => 'edit-planning', 'display_name' => 'Edit Planning'],
             ['name' => 'delete-planning', 'display_name' => 'Delete Planning'],
             ['name' => 'approve-planning', 'display_name' => 'Approve Planning'],
+            ['name' => 'view-process-types', 'display_name' => 'View Process Types'],
+            ['name' => 'create-process-types', 'display_name' => 'Create Process Types'],
+            ['name' => 'edit-process-types', 'display_name' => 'Edit Process Types'],
+            ['name' => 'delete-process-types', 'display_name' => 'Delete Process Types'],
         ];
 
         foreach ($permissions as $permission) {

@@ -460,6 +460,12 @@ table.dataTable tbody td {
                                     <i class="fas fa-stream"></i> Flow Job
                                 </a></li>
                                 @endpermission
+
+                                @permission('view-process-types')
+                                <li><a class="dropdown-item" href="{{ route('process-types.index') }}">
+                                    <i class="fas fa-cogs"></i> Tipe Proses
+                                </a></li>
+                                @endpermission
                             </ul>
                         </li>
                         @endif

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->time('start_time');
             $table->time('end_time');
             $table->text('work_priority');
-            $table->text('work_process');
+            $table->foreignId('process_type_id')->nullable()->constrained('process_types')->onDelete('set null');
             $table->enum('overtime_type', ['quantitative', 'qualitative'])->default('quantitative');
             $table->integer('qty_plan')->nullable();
             $table->integer('qty_actual')->nullable();

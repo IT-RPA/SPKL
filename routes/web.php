@@ -7,11 +7,12 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\OvertimeController;
-use App\Http\Controllers\PlanningOvertimeController; // ✅ BARU
+use App\Http\Controllers\PlanningOvertimeController; 
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\JobLevelController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\ProcessTypeController;
 use App\Http\Controllers\FlowJobController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
@@ -79,7 +80,9 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/approve/{approval}', [ApprovalController::class, 'approve'])->name('approve');
         Route::put('/reject/{approval}', [ApprovalController::class, 'reject'])->name('reject');
     });
-    
+    // Process Types
+    Route::resource('process-types', ProcessTypeController::class)->middleware('auth');
+
     Route::get('/approvals/detail/{approval}', [ApprovalController::class, 'overtimeDetail'])->name('approvals.detail');
     Route::get('/api/employees/search', [UserController::class, 'searchEmployees'])->name('api.employees.search');
     Route::get('/api/employees/{employee}', [UserController::class, 'getEmployeeData'])->name('api.employees.get');

@@ -152,23 +152,23 @@
                             <label class="form-label">Jam Selesai</label>
                             <input type="time" class="form-control end-time-input" name="details[0][end_time]" required>
                         </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Keterangan</label>
-                            <textarea class="form-control" name="details[0][notes]" rows="1"></textarea>
-                        </div>
                     </div>
                     
                     <div class="row mt-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Prioritas Pekerjaan</label>
-                            <textarea class="form-control" name="details[0][work_priority]" rows="2" required></textarea>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Proses</label>
-                            <textarea class="form-control" name="details[0][work_process]" rows="2" required></textarea>
-                        </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Prioritas Pekerjaan</label>
+                                <textarea class="form-control" name="details[0][work_priority]" rows="2" required></textarea>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Proses</label>
+                                <select class="form-select process-type-select" name="details[0][process_type_id]" required>
+                                    <option value="">Pilih Tipe Proses</option>
+                                    @foreach($processTypes as $type)
+                                        <option value="{{ $type->id }}">{{ $type->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                     </div>
                     
                     <div class="row mt-3">

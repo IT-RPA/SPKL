@@ -9,6 +9,7 @@ use App\Models\OvertimePlanning; // ✅ TAMBAHAN
 use App\Models\Employee;
 use App\Models\Department;
 use App\Models\FlowJob;
+use App\Models\ProcessType; // ✅ TAMBAHAN
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -71,8 +72,10 @@ class OvertimeController extends Controller
             ->get();
         
         $currentEmployeeData = $currentEmployee;
+
+         $processTypes = ProcessType::where('is_active', true)->orderBy('code')->get();
         
-        return view('overtime.create', compact('employees', 'departments', 'currentEmployeeData', 'eligibleRequesters'));
+        return view('overtime.create', compact('employees', 'departments', 'currentEmployeeData', 'eligibleRequesters', 'processTypes'));
     }
 
     // ✅ FUNGSI BARU: Check available planning untuk tanggal & department tertentu
@@ -177,7 +180,7 @@ class OvertimeController extends Controller
             'details.*.start_time' => 'required',
             'details.*.end_time' => 'required',
             'details.*.work_priority' => 'required',
-            'details.*.work_process' => 'required',
+            'details.*.process_type_id' => 'required|exists:process_types,id',
             'details.*.overtime_type' => 'required|in:quantitative,qualitative',
             'details.*.qty_plan' => 'required_if:details.*.overtime_type,quantitative|nullable|integer|min:1',
         ]);
@@ -250,7 +253,7 @@ class OvertimeController extends Controller
                     'start_time' => $detail['start_time'],
                     'end_time' => $detail['end_time'],
                     'work_priority' => $detail['work_priority'],
-                    'work_process' => $detail['work_process'],
+                    'process_type_id' => $detail['process_type_id'],
                     'overtime_type' => $detail['overtime_type'],
                     'qty_plan' => $detail['overtime_type'] === 'quantitative' ? $detail['qty_plan'] : null,
                     'qty_actual' => null,
@@ -605,7 +608,7 @@ class OvertimeController extends Controller
             'details.*.start_time' => 'required',
             'details.*.end_time' => 'required',
             'details.*.work_priority' => 'required',
-            'details.*.work_process' => 'required',
+            'details.*.process_type_id' => 'required|exists:process_types,id',
         ]);
 
         $currentUser = Auth::user();
@@ -633,7 +636,7 @@ class OvertimeController extends Controller
                     'start_time' => $detail['start_time'],
                     'end_time' => $detail['end_time'],
                     'work_priority' => $detail['work_priority'],
-                    'work_process' => $detail['work_process'],
+                    'process_type_id' => $detail['process_type_id'],
                     'qty_plan' => $detail['qty_plan'] ?? null,
                     'notes' => $detail['notes'] ?? null,
                 ]);

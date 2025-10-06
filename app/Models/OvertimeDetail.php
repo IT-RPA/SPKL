@@ -17,7 +17,7 @@ class OvertimeDetail extends Model
         'start_time',
         'end_time',
         'work_priority',
-        'work_process',
+        'process_type_id',
         'overtime_type',
         'qty_plan',
         'qty_actual',
@@ -32,6 +32,11 @@ class OvertimeDetail extends Model
         'is_actual_enabled' => 'boolean',
         'percentage_realization' => 'decimal:2'
     ];
+
+    public function processType()
+{
+    return $this->belongsTo(ProcessType::class, 'process_type_id');
+}
 
 public function overtimeRequest()
 {
