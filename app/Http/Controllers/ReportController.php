@@ -27,6 +27,9 @@ class ReportController extends Controller
         // Build query untuk overtime leaderboard
         $query = Employee::with(['department', 'jobLevel'])
             ->whereHas('overtimeDetails', function ($q) use ($startDate, $endDate, $status_filter) {
+                // ✅ TAMBAHAN: Exclude rejected details
+                $q->where('is_rejected', false);
+                
                 $q->whereHas('overtimeRequest', function ($subQ) use ($startDate, $endDate, $status_filter) {
                     // Filter berdasarkan status
                     if ($status_filter === 'completed') {
@@ -56,6 +59,8 @@ class ReportController extends Controller
         // Get employees dengan total overtime hours
         $employees = $query->get()->map(function ($employee) use ($startDate, $endDate, $status_filter) {
             $overtimeDetailsQuery = $employee->overtimeDetails()
+                // ✅ TAMBAHAN: Exclude rejected details
+                ->where('is_rejected', false)
                 ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $status_filter) {
                     // Filter berdasarkan status
                     if ($status_filter === 'completed') {
@@ -134,8 +139,10 @@ class ReportController extends Controller
 
         $details = OvertimeDetail::with(['overtimeRequest' => function($q) {
                 $q->select('id', 'request_number', 'date', 'status');
-            }])
+            }, 'processType']) // ✅ TAMBAHAN: Include processType
             ->where('employee_id', $employeeId)
+            // ✅ TAMBAHAN: Exclude rejected details
+            ->where('is_rejected', false)
             ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $status_filter) {
                 // Filter berdasarkan status
                 if ($status_filter === 'completed') {
@@ -169,7 +176,7 @@ class ReportController extends Controller
                     'duration_minutes' => $duration,
                     'formatted_duration' => $this->formatMinutesToHours($duration),
                     'work_priority' => $detail->work_priority,
-                    'work_process' => $detail->work_process,
+                    'work_process' => $detail->processType ? $detail->processType->name : $detail->work_process,
                     'status' => $detail->overtimeRequest->status
                 ];
             });
@@ -190,6 +197,9 @@ class ReportController extends Controller
         // Get the same data as index method
         $query = Employee::with(['department', 'jobLevel'])
             ->whereHas('overtimeDetails', function ($q) use ($startDate, $endDate, $status_filter) {
+                // ✅ TAMBAHAN: Exclude rejected details
+                $q->where('is_rejected', false);
+                
                 $q->whereHas('overtimeRequest', function ($subQ) use ($startDate, $endDate, $status_filter) {
                     // Filter berdasarkan status
                     if ($status_filter === 'completed') {
@@ -216,6 +226,8 @@ class ReportController extends Controller
 
         $employees = $query->get()->map(function ($employee) use ($startDate, $endDate, $status_filter) {
             $overtimeDetailsQuery = $employee->overtimeDetails()
+                // ✅ TAMBAHAN: Exclude rejected details
+                ->where('is_rejected', false)
                 ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $status_filter) {
                     // Filter berdasarkan status
                     if ($status_filter === 'completed') {
@@ -294,17 +306,19 @@ class ReportController extends Controller
         $sheet->setCellValue('A1', 'LAPORAN LEADERBOARD LEMBUR');
         $sheet->setCellValue('A2', 'Periode: ' . $periodText);
         $sheet->setCellValue('A3', 'Status: ' . $statusText);
+        // ✅ TAMBAHAN: Note tentang rejected details
+        $sheet->setCellValue('A4', 'Catatan: Detail lembur yang ditolak (rejected) tidak dihitung dalam laporan ini');
 
-        // Set headers
+        // Set headers (row 6 sekarang karena ada note di row 4)
         $headers = ['No', 'ID Karyawan', 'Nama Karyawan', 'Department', 'Level Jabatan', 'Total Jam', 'Total Pengajuan'];
         $col = 'A';
         foreach ($headers as $header) {
-            $sheet->setCellValue($col . '5', $header);
+            $sheet->setCellValue($col . '6', $header);
             $col++;
         }
 
-        // Fill data
-        $row = 6;
+        // Fill data (mulai dari row 7)
+        $row = 7;
         $no = 1;
         foreach ($employees as $employee) {
             $sheet->setCellValue('A' . $row, $no++);
@@ -356,17 +370,23 @@ class ReportController extends Controller
         $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(12);
         $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        // Header styling
-        $sheet->getStyle('A5:G5')->getFont()->setBold(true);
-        $sheet->getStyle('A5:G5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('D9EAD3');
-        $sheet->getStyle('A5:G5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        // ✅ TAMBAHAN: Note styling
+        $sheet->mergeCells('A4:G4');
+        $sheet->getStyle('A4')->getFont()->setItalic(true)->setSize(10);
+        $sheet->getStyle('A4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A4')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF9C4');
+
+        // Header styling (row 6 sekarang)
+        $sheet->getStyle('A6:G6')->getFont()->setBold(true);
+        $sheet->getStyle('A6:G6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('D9EAD3');
+        $sheet->getStyle('A6:G6')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Data styling
-        $sheet->getStyle('A5:G' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('A6:G' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 
         // Auto size columns
         foreach (range('A', 'G') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
     }
-}
+}   

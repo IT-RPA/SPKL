@@ -15,6 +15,7 @@
     @php
         $hasPercentageReady = $overtime->details()
             ->where('overtime_type', 'qualitative')
+            ->where('is_rejected', false)
             ->get()
             ->filter(function($detail) {
                 try {
@@ -126,8 +127,7 @@
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Detail Karyawan Lembur</h5>
-        {{-- ✅ PERBAIKAN: Button update actual hanya muncul jika status 'act' --}}
-        @if(isset($canInputActual) && $canInputActual && $overtime->details()->whereNotNull('qty_plan')->whereNull('qty_actual')->count() > 0)
+        @if(isset($canInputActual) && $canInputActual && $overtime->details()->whereNotNull('qty_plan')->whereNull('qty_actual')->where('is_rejected', false)->count() > 0)
             <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#updateActualModal">
                 <i class="fas fa-edit"></i> Update Qty Actual
             </button>
@@ -176,22 +176,38 @@
             </div>
         </form>
 
-        {{-- Display Mode (Default) --}}
-        <div id="displayMode">
-            @foreach($overtime->details as $index => $detail)
-                <div class="border rounded p-3 mb-3 {{ $loop->last ? 'mb-0' : '' }}">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <strong>Karyawan:</strong><br>
-                            {{ $detail->employee->name }} - {{ $detail->employee->employee_id }}
-                        </div>
-
-                        <div class="col-md-3">
-    <strong>Tipe:</strong><br>
-    <span class="badge bg-{{ $detail->overtime_type == 'quantitative' ? 'primary' : 'info' }}">
-        {{ ucfirst($detail->overtime_type) }}
-    </span>
-</div>
+{{-- Display Mode (Default) --}}
+<div id="displayMode">
+    @foreach($overtime->details as $index => $detail)
+        <div class="border rounded p-3 mb-3 {{ $loop->last ? 'mb-0' : '' }} {{ $detail->is_rejected ? 'bg-light border-danger' : '' }}">
+            {{-- ✅ TAMBAHAN: Badge rejected --}}
+            @if($detail->is_rejected)
+                <div class="alert alert-danger mb-3">
+                    <i class="fas fa-times-circle"></i>
+                    <strong>Detail Ditolak</strong>
+                    <br><small><strong>Alasan:</strong> {{ $detail->rejection_reason }}</small>
+                    <br><small><strong>Ditolak oleh:</strong> {{ $detail->rejectedBy->name ?? '-' }} 
+                    pada {{ $detail->rejected_at ? $detail->rejected_at->format('d/m/Y H:i') : '-' }}</small>
+                </div>
+            @endif
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>Karyawan:</strong><br>
+                    {{ $detail->employee->name }} - {{ $detail->employee->employee_id }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Tipe:</strong><br>
+                    <span class="badge bg-{{ $detail->overtime_type == 'quantitative' ? 'primary' : 'info' }}">
+                        {{ ucfirst($detail->overtime_type) }}
+                    </span>
+                    {{-- ✅ TAMBAHAN: Badge rejected --}}
+                    @if($detail->is_rejected)
+                        <span class="badge bg-danger ms-1">
+                            <i class="fas fa-ban"></i> DITOLAK
+                        </span>
+                    @endif
+                </div>
 
                         <div class="col-md-3">
                             <strong>Jam Mulai:</strong><br>
@@ -216,25 +232,25 @@
                     
                     <div class="row mt-3">
                         @if($detail->overtime_type == 'quantitative')
-    <div class="col-md-3">
-        <strong>Qty Plan:</strong><br>
-        {{ $detail->qty_plan ?? '-' }}
-    </div>
-    <div class="col-md-3">
-        <strong>Qty Actual:</strong><br>
-        @if($detail->qty_plan)
-            @if(isset($canInputActual) && $canInputActual)
-                <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-info' }}">
-                    {{ $detail->qty_actual ?? 'Siap diisi' }}
-                </span>
-            @else
-                <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-warning' }}">
-                    {{ $detail->qty_actual ?? 'Menunggu approval' }}
-                </span>
-            @endif
-        @else
-            -
-        @endif
+                        <div class="col-md-3">
+                            <strong>Qty Plan:</strong><br>
+                            {{ $detail->qty_plan ?? '-' }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Qty Actual:</strong><br>
+                            @if($detail->qty_plan)
+                                @if(isset($canInputActual) && $canInputActual)
+                                    <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-info' }}">
+                                        {{ $detail->qty_actual ?? 'Siap diisi' }}
+                                    </span>
+                                @else
+                                    <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-warning' }}">
+                                        {{ $detail->qty_actual ?? 'Menunggu approval' }}
+                                    </span>
+                                @endif
+                            @else
+                                -
+                            @endif
                          </div>
                             @else
                                 <div class="col-md-3">
@@ -340,52 +356,71 @@
                         Silakan isi persentase realisasi sesuai dengan hasil kerja lembur kualitatif yang telah dilaksanakan.
                     </div>
                     
-                    @foreach($overtime->details->where('overtime_type', 'qualitative') as $detail)
-                    @if($detail->canInputPercentageNow())
-                    <div class="border rounded p-3 mb-3">
-                        <h6>{{ $detail->employee->name }} - {{ $detail->employee->employee_id }}</h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <label class="form-label">Jam Lembur</label>
-                                <div class="form-control-plaintext">{{ $detail->start_time }} - {{ $detail->end_time }}</div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Persentase Realisasi (%) <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control" 
-                                           name="details[{{ $detail->id }}][percentage_realization]" 
-                                           value="{{ $detail->percentage_realization }}" 
-                                           min="0" max="100" step="0.01"
-                                           placeholder="0-100" required>
-                                    <span class="input-group-text">%</span>
+                    @php
+                        // ✅ FILTER: Exclude rejected details
+                        $qualitativeDetails = $overtime->details
+                            ->where('overtime_type', 'qualitative')
+                            ->where('is_rejected', false);
+                    @endphp
+                    
+                    @if($qualitativeDetails->count() == 0)
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle"></i>
+                            Tidak ada detail kualitatif yang valid untuk diisi persentase.
+                            @if($overtime->details()->where('overtime_type', 'qualitative')->where('is_rejected', true)->count() > 0)
+                                <br><small>Beberapa detail kualitatif telah ditolak oleh approver.</small>
+                            @endif
+                        </div>
+                    @else
+                        @foreach($qualitativeDetails as $detail)
+                        @if($detail->canInputPercentageNow())
+                        <div class="border rounded p-3 mb-3">
+                            <h6>{{ $detail->employee->name }} - {{ $detail->employee->employee_id }}</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label">Jam Lembur</label>
+                                    <div class="form-control-plaintext">{{ $detail->start_time }} - {{ $detail->end_time }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Persentase Realisasi (%) <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" 
+                                               name="details[{{ $detail->id }}][percentage_realization]" 
+                                               value="{{ $detail->percentage_realization }}" 
+                                               min="0" max="100" step="0.01"
+                                               placeholder="0-100" required>
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Tipe</label>
+                                    <div class="form-control-plaintext">
+                                        <span class="badge bg-info">Kualitatif</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Tipe</label>
-                                <div class="form-control-plaintext">
-                                    <span class="badge bg-info">Kualitatif</span>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">Prioritas Pekerjaan</label>
+                                    <p class="form-control-plaintext small">{{ $detail->work_priority }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Proses</label>
+                                    <p class="form-control-plaintext small">{{ $detail->processType->name ?? $detail->work_process }}</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="row mt-2">
-                            <div class="col-md-6">
-                                <label class="form-label">Prioritas Pekerjaan</label>
-                                <p class="form-control-plaintext small">{{ $detail->work_priority }}</p>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Proses</label>
-                                <p class="form-control-plaintext small">{{ $detail->work_process }}</p>
-                            </div>
-                        </div>
-                    </div>
+                        @endif
+                        @endforeach
                     @endif
-                    @endforeach
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save"></i> Simpan Persentase
-                    </button>
+                    @if($qualitativeDetails->count() > 0)
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Simpan Persentase
+                        </button>
+                    @endif
                 </div>
             </form>
         </div>
@@ -394,8 +429,8 @@
 @endif
 
 
-{{-- ✅ PERBAIKAN: Modal Update Actual hanya untuk status 'act' --}}
-@if(isset($canInputActual) && $canInputActual && $overtime->details()->whereNotNull('qty_plan')->whereNull('qty_actual')->count() > 0)
+{{-- ✅ Modal Update Actual - EXCLUDE REJECTED DETAILS --}}
+@if(isset($canInputActual) && $canInputActual && $overtime->details()->whereNotNull('qty_plan')->whereNull('qty_actual')->where('is_rejected', false)->count() > 0)
 <div class="modal fade" id="updateActualModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -414,35 +449,54 @@
                         Silakan isi qty actual sesuai dengan hasil kerja lembur yang telah dilaksanakan.
                     </div>
                     
-                    @foreach($overtime->details->where('qty_plan', '!=', null) as $detail)
-                    <div class="border rounded p-3 mb-3">
-                        <h6>{{ $detail->employee->name }} - {{ $detail->employee->employee_id }}</h6>
-                        <div class="row">
-                            <div class="col-md-3">
-                                <label class="form-label">Qty Plan</label>
-                                <input type="number" class="form-control" value="{{ $detail->qty_plan }}" readonly>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Qty Actual <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" 
-                                       name="details[{{ $detail->id }}][qty_actual]" 
-                                       value="{{ $detail->qty_actual }}" 
-                                       min="0"
-                                       placeholder="Masukkan qty actual" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Proses</label>
-                                <p class="form-control-plaintext">{{ $detail->work_process }}</p>
+                    @php
+                        // ✅ FILTER: Exclude rejected details
+                        $quantitativeDetails = $overtime->details
+                            ->where('qty_plan', '!=', null)
+                            ->where('is_rejected', false);
+                    @endphp
+                    
+                    @if($quantitativeDetails->count() == 0)
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle"></i>
+                            Tidak ada detail kuantitatif yang valid untuk diisi qty actual.
+                            @if($overtime->details()->whereNotNull('qty_plan')->where('is_rejected', true)->count() > 0)
+                                <br><small>Beberapa detail kuantitatif telah ditolak oleh approver.</small>
+                            @endif
+                        </div>
+                    @else
+                        @foreach($quantitativeDetails as $detail)
+                        <div class="border rounded p-3 mb-3">
+                            <h6>{{ $detail->employee->name }} - {{ $detail->employee->employee_id }}</h6>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label class="form-label">Qty Plan</label>
+                                    <input type="number" class="form-control" value="{{ $detail->qty_plan }}" readonly>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Qty Actual <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" 
+                                           name="details[{{ $detail->id }}][qty_actual]" 
+                                           value="{{ $detail->qty_actual }}" 
+                                           min="0"
+                                           placeholder="Masukkan qty actual" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Proses</label>
+                                    <p class="form-control-plaintext">{{ $detail->processType->name ?? $detail->work_process }}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    @endforeach
+                        @endforeach
+                    @endif
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save"></i> Update Qty Actual
-                    </button>
+                    @if($quantitativeDetails->count() > 0)
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Update Qty Actual
+                        </button>
+                    @endif
                 </div>
             </form>
         </div>

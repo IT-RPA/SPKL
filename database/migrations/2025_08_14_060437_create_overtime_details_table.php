@@ -11,8 +11,6 @@ return new class extends Migration
         Schema::create('overtime_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('overtime_request_id')->constrained()->onDelete('cascade');
-
-            // ubah foreign key employee_id ke tabel employees
             $table->foreignId('employee_id')
                 ->constrained('employees')
                 ->onDelete('cascade');
@@ -27,6 +25,10 @@ return new class extends Migration
             $table->boolean('can_input_percentage')->default(false);
             $table->text('notes')->nullable();
             $table->boolean('is_actual_enabled')->default(false);
+            $table->boolean('is_rejected')->default(false);
+            $table->text('rejection_reason')->nullable();
+            $table->foreignId('rejected_by')->nullable()->constrained('employees')->onDelete('set null');
+            $table->timestamp('rejected_at')->nullable();
             $table->timestamps();
         });
     }

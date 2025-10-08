@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\OvertimeRequest;
 use App\Models\OvertimeApproval;
 use App\Models\Employee;
+use App\Models\OvertimeDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -150,6 +151,7 @@ public function overtimeDetail(OvertimeApproval $approval)
         'department', 
         'details.employee', 
         'details.processType',
+        'details.rejectedBy',
         'approvals.approverEmployee.jobLevel'
     ])->find($approval->overtime_request_id);
 
@@ -238,6 +240,10 @@ public function overtimeDetail(OvertimeApproval $approval)
                 'percentage_realization' => $detail->percentage_realization,
                 'can_input_percentage_now' => $canInputNow,
                 'notes' => $detail->notes,
+                'is_rejected' => $detail->is_rejected ?? false,
+                'rejection_reason' => $detail->rejection_reason,
+                'rejected_by_name' => $detail->rejectedBy ? $detail->rejectedBy->name : null,
+                'rejected_at' => $detail->rejected_at ? $detail->rejected_at->format('d/m/Y H:i') : null,
             ];
         }),
     ];
@@ -307,5 +313,109 @@ public function overtimeDetail(OvertimeApproval $approval)
         }
 
         return $combinedData->sortByDesc('created_at');
+    }
+
+    public function rejectDetail(Request $request, $detailId)
+    {
+        $request->validate([
+            'reason' => 'required|string|min:10',
+        ], [
+            'reason.required' => 'Alasan penolakan harus diisi',
+            'reason.min' => 'Alasan penolakan minimal 10 karakter'
+        ]);
+
+        $detail = OvertimeDetail::findOrFail($detailId);
+        $currentEmployee = Employee::where('email', Auth::user()->email)->first();
+        
+        if (!$currentEmployee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data karyawan tidak ditemukan'
+            ], 403);
+        }
+
+        // Cek apakah user ini approver dari overtime request ini
+        $overtimeRequest = $detail->overtimeRequest;
+        $currentApproval = $overtimeRequest->approvals()
+            ->where('approver_employee_id', $currentEmployee->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$currentApproval) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak berwenang untuk menolak detail ini'
+            ], 403);
+        }
+
+        // Cek apakah ini giliran user untuk approve
+        $previousPendingExists = OvertimeApproval::where('overtime_request_id', $overtimeRequest->id)
+            ->where('step_order', '<', $currentApproval->step_order)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($previousPendingExists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Belum giliran Anda untuk memproses approval ini'
+            ], 403);
+        }
+
+        // Update detail dengan status rejected
+        $detail->update([
+            'is_rejected' => true,
+            'rejection_reason' => $request->reason,
+            'rejected_by' => $currentEmployee->id,
+            'rejected_at' => now(),
+        ]);
+
+        \Log::info("Detail rejected - Detail ID: {$detail->id}, Employee: {$detail->employee->name}, Rejected by: {$currentEmployee->name}");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail berhasil ditolak',
+            'detail_id' => $detail->id
+        ]);
+    }
+
+    public function unrejectDetail($detailId)
+    {
+        $detail = OvertimeDetail::findOrFail($detailId);
+        $currentEmployee = Employee::where('email', Auth::user()->email)->first();
+        
+        if (!$currentEmployee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data karyawan tidak ditemukan'
+            ], 403);
+        }
+
+        $overtimeRequest = $detail->overtimeRequest;
+        $isApprover = $overtimeRequest->approvals()
+            ->where('approver_employee_id', $currentEmployee->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        if (!$isApprover && $detail->rejected_by !== $currentEmployee->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak berwenang untuk membatalkan penolakan ini'
+            ], 403);
+        }
+
+        $detail->update([
+            'is_rejected' => false,
+            'rejection_reason' => null,
+            'rejected_by' => null,
+            'rejected_at' => null,
+        ]);
+
+        \Log::info("Detail unreject - Detail ID: {$detail->id}, Employee: {$detail->employee->name}");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Penolakan berhasil dibatalkan',
+            'detail_id' => $detail->id
+        ]);
     }
 }

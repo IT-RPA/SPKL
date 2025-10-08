@@ -68,87 +68,86 @@ class OvertimeRequest extends Model
     }
 
    public function canInputPercentage($currentUserId)
-    {
-        try {
-            \Log::info("=== DEBUG canInputPercentage START ===");
-            \Log::info("Current User ID: {$currentUserId}");
-            \Log::info("Overtime Request ID: {$this->id}");
-            \Log::info("Overtime Status: {$this->status}");
+{
+    try {
+        \Log::info("=== DEBUG canInputPercentage START ===");
+        \Log::info("Current User ID: {$currentUserId}");
+        \Log::info("Overtime Request ID: {$this->id}");
+        \Log::info("Overtime Status: {$this->status}");
+        
+        $currentUser = User::find($currentUserId);
+        if (!$currentUser) {
+            \Log::error("User not found with ID: {$currentUserId}");
+            return false;
+        }
+
+        $currentEmployee = Employee::with('jobLevel')
+            ->where('email', $currentUser->email)
+            ->first();
+        if (!$currentEmployee) {
+            \Log::error("Employee not found for email: {$currentUser->email}");
+            return false;
+        }
+        \Log::info("Current Employee: {$currentEmployee->name} (Level: {$currentEmployee->jobLevel->name})");
+
+        $requesterEmployee = $this->requesterEmployee()->with('jobLevel')->first();
+        if (!$requesterEmployee) {
+            \Log::error("Requester employee not found");
+            return false;
+        }
+        \Log::info("Requester Employee: {$requesterEmployee->name} (Level: {$requesterEmployee->jobLevel->name})");
+
+        $currentJobOrder   = $currentEmployee->jobLevel->level_order ?? 0;
+        $requesterJobOrder = $requesterEmployee->jobLevel->level_order ?? 0;
+        \Log::info("Job Order - Current: {$currentJobOrder}, Requester: {$requesterJobOrder}");
+
+        // Bisa input jika status 'approved' atau 'completed'
+        $statusOk = in_array($this->status, ['approved', 'completed']);
+        \Log::info("Status OK for input: " . ($statusOk ? 'YES' : 'NO'));
+
+        if (!$statusOk) {
+            \Log::info("FAILED: Status not ready for percentage input");
+            return false;
+        }
+
+        // Cek apakah user ini approver di request ini
+        $isApprover = $this->approvals()
+            ->where('approver_employee_id', $currentEmployee->id)
+            ->whereIn('status', ['approved', 'pending'])
+            ->exists();
             
-            $currentUser = User::find($currentUserId);
-            if (!$currentUser) {
-                \Log::error("User not found with ID: {$currentUserId}");
-                return false;
-            }
+        \Log::info("Is Approver: " . ($isApprover ? 'YES' : 'NO'));
 
-            $currentEmployee = Employee::with('jobLevel')
-                ->where('email', $currentUser->email)
-                ->first();
-            if (!$currentEmployee) {
-                \Log::error("Employee not found for email: {$currentUser->email}");
-                return false;
-            }
-            \Log::info("Current Employee: {$currentEmployee->name} (Level: {$currentEmployee->jobLevel->name})");
-
-            $requesterEmployee = $this->requesterEmployee()->with('jobLevel')->first();
-            if (!$requesterEmployee) {
-                \Log::error("Requester employee not found");
-                return false;
-            }
-            \Log::info("Requester Employee: {$requesterEmployee->name} (Level: {$requesterEmployee->jobLevel->name})");
-
-            $currentJobOrder   = $currentEmployee->jobLevel->level_order ?? 0;
-            $requesterJobOrder = $requesterEmployee->jobLevel->level_order ?? 0;
-            \Log::info("Job Order - Current: {$currentJobOrder}, Requester: {$requesterJobOrder}");
-
-            // ✅ PERBAIKAN: Syarat status yang disederhanakan
-            // Bisa input jika status 'approved' atau 'completed'
-            $statusOk = in_array($this->status, ['approved', 'completed']);
-            \Log::info("Status OK for input: " . ($statusOk ? 'YES' : 'NO'));
-
-            if (!$statusOk) {
-                \Log::info("FAILED: Status not ready for percentage input");
-                return false;
-            }
-
-            // --- Cek apakah user ini approver di request ini ---
-            $isApprover = $this->approvals()
-                ->where('approver_employee_id', $currentEmployee->id)
-                ->whereIn('status', ['approved', 'pending'])
-                ->exists();
-                
-            \Log::info("Is Approver: " . ($isApprover ? 'YES' : 'NO'));
-
-            if (!$isApprover) {
-                \Log::info("FAILED: User is not an approver for this request");
-                return false;
-            }
-
-            // --- Cek ada detail kualitatif yang siap diisi ---
-            $readyDetails = $this->details->filter(function($d) {
+        if (!$isApprover) {
+            \Log::info("FAILED: User is not an approver for this request");
+            return false;
+        }
+        // ✅ TAMBAHAN: Cek ada detail kualitatif yang siap diisi DAN tidak di-reject
+        $readyDetails = $this->details
+            ->where('is_rejected', false) // ✅ TAMBAHAN
+            ->filter(function($d) {
                 return $d->isQualitative() && $d->canInputPercentageNow();
             });
 
-            \Log::info("Ready qualitative details count: " . $readyDetails->count());
+        \Log::info("Ready qualitative details count (not rejected): " . $readyDetails->count());
 
-            if ($readyDetails->isEmpty()) {
-                \Log::info("FAILED: No qualitative details ready for input");
-                return false;
-            }
-
-            // --- User boleh input kalau lebih tinggi dari requester atau dia memang approver ---
-            $canInput = ($currentJobOrder > $requesterJobOrder) || $isApprover;
-            
-            \Log::info("Final Result: " . ($canInput ? 'CAN INPUT' : 'CANNOT INPUT'));
-            \Log::info("=== DEBUG canInputPercentage END ===");
-            
-            return $canInput;
-            
-        } catch (\Exception $e) {
-            \Log::error("canInputPercentage Error: " . $e->getMessage());
+        if ($readyDetails->isEmpty()) {
+            \Log::info("FAILED: No qualitative details ready for input (or all rejected)");
             return false;
         }
+        // User boleh input kalau lebih tinggi dari requester atau dia memang approver
+        $canInput = ($currentJobOrder > $requesterJobOrder) || $isApprover;
+        
+        \Log::info("Final Result: " . ($canInput ? 'CAN INPUT' : 'CANNOT INPUT'));
+        \Log::info("=== DEBUG canInputPercentage END ===");
+        
+        return $canInput;
+        
+    } catch (\Exception $e) {
+        \Log::error("canInputPercentage Error: " . $e->getMessage());
+        return false;
     }
+}
 
     public function updatePercentagePermissions()
     {
@@ -305,6 +304,7 @@ class OvertimeRequest extends Model
         // Cek detail quantitative - apakah qty_actual sudah diisi semua
         $quantitativeIncomplete = $this->details()
             ->where('overtime_type', 'quantitative')
+            ->where('is_rejected', false)
             ->whereNotNull('qty_plan') // Yang ada qty_plan
             ->whereNull('qty_actual')   // Tapi qty_actual masih kosong
             ->exists();
@@ -317,6 +317,7 @@ class OvertimeRequest extends Model
         // Cek detail qualitative - apakah percentage_realization sudah diisi semua
         $qualitativeIncomplete = $this->details()
             ->where('overtime_type', 'qualitative')
+            ->where('is_rejected', false)
             ->whereNull('percentage_realization') // percentage_realization masih kosong
             ->exists();
         

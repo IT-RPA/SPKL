@@ -79,6 +79,8 @@ Route::middleware(['auth'])->group(function () {
         
         Route::put('/approve/{approval}', [ApprovalController::class, 'approve'])->name('approve');
         Route::put('/reject/{approval}', [ApprovalController::class, 'reject'])->name('reject');
+        Route::post('/detail/{detailId}/reject', [ApprovalController::class, 'rejectDetail'])->name('detail.reject');
+        Route::post('/detail/{detailId}/unreject', [ApprovalController::class, 'unrejectDetail'])->name('detail.unreject');
     });
     // Process Types
     Route::resource('process-types', ProcessTypeController::class)->middleware('auth');
