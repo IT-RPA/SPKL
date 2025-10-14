@@ -128,7 +128,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="department_id" class="form-label">Departemen</label>
-                                <select class="form-control" id="department_id" name="department_id" required>
+                                <select class="form-control select2" id="department_id" name="department_id" required>
                                     <option value="">Pilih Departemen</option>
                                     @foreach($departments as $department)
                                     <option value="{{ $department->id }}">{{ $department->name }}</option>
@@ -140,7 +140,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="job_level_id" class="form-label">Level Jabatan</label>
-                                <select class="form-control" id="job_level_id" name="job_level_id" required>
+                                <select class="form-control select2" id="job_level_id" name="job_level_id" required>
                                     <option value="">Pilih Level Jabatan</option>
                                     @foreach($jobLevels as $jobLevel)
                                     <option value="{{ $jobLevel->id }}">{{ $jobLevel->name }}</option>
@@ -175,13 +175,43 @@
 @endpermission
 @endsection
 
+@push('styles')
+<style>
+    /* Custom styling untuk Select2 agar sesuai dengan Bootstrap */
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 36px;
+        padding-left: 12px;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    
+    /* Styling untuk error state */
+    .select2-container--default.is-invalid .select2-selection--single {
+        border-color: #dc3545;
+    }
+    
+    /* Dropdown di dalam modal */
+    .select2-container {
+        width: 100% !important;
+    }
+</style>
+@endpush
+
 @push('scripts')
 <script>
 $(document).ready(function() {
     // Variable untuk tracking apakah ini mode edit atau tambah
     let isEditMode = false;
 
-    // DataTable initialization dengan bahasa Indonesia tanpa CORS
+    // DataTable initialization dengan bahasa Indonesia
     $('#employeeTable').DataTable({
         responsive: true,
         language: {
@@ -209,14 +239,41 @@ $(document).ready(function() {
         }
     });
 
+    // Initialize Select2 dengan konfigurasi khusus untuk modal
+    function initSelect2() {
+        $('.select2').select2({
+            dropdownParent: $('#employeeModal'),
+            placeholder: function() {
+                return $(this).find('option:first').text();
+            },
+            allowClear: true,
+            width: '100%',
+            language: {
+                noResults: function() {
+                    return "Tidak ada hasil yang ditemukan";
+                },
+                searching: function() {
+                    return "Mencari...";
+                }
+            }
+        });
+    }
+
     @permission('create-employees')
     // Reset modal hanya ketika bukan mode edit
     $('#employeeModal').on('show.bs.modal', function() {
         if (!isEditMode) {
             resetForm();
         }
+        // Initialize Select2 setiap kali modal dibuka
+        initSelect2();
         // Reset flag setelah modal ditampilkan
         isEditMode = false;
+    });
+
+    // Destroy Select2 saat modal ditutup untuk menghindari duplikasi
+    $('#employeeModal').on('hidden.bs.modal', function() {
+        $('.select2').select2('destroy');
     });
 
     // Fungsi untuk reset form
@@ -226,7 +283,11 @@ $(document).ready(function() {
         $('#employeeModalLabel').text('Tambah Karyawan');
         $('.form-control').removeClass('is-invalid');
         $('.invalid-feedback').text('');
-        $('#is_active').prop('checked', true); // Set default checked
+        $('#is_active').prop('checked', true);
+        
+        // Reset Select2
+        $('#department_id').val('').trigger('change');
+        $('#job_level_id').val('').trigger('change');
     }
 
     // Button tambah karyawan - set flag untuk mode tambah
@@ -261,10 +322,14 @@ $(document).ready(function() {
         $('#employee_id').val(employeeId);
         $('#name').val(name);
         $('#email').val(email);
-        $('#department_id').val(departmentId);
-        $('#job_level_id').val(jobLevelId);
         $('#is_active').prop('checked', Boolean(Number(isActive)));
         $('#employeeModalLabel').text('Edit Karyawan');
+        
+        // Set nilai Select2 - akan dijalankan setelah modal terbuka dan Select2 terinisialisasi
+        setTimeout(function() {
+            $('#department_id').val(departmentId).trigger('change');
+            $('#job_level_id').val(jobLevelId).trigger('change');
+        }, 100);
         
         // Tampilkan modal
         $('#employeeModal').modal('show');
@@ -287,6 +352,7 @@ $(document).ready(function() {
 
         // Reset error states
         $('.form-control').removeClass('is-invalid');
+        $('.select2-container').removeClass('is-invalid');
         $('.invalid-feedback').text('');
 
         $.ajax({
@@ -316,8 +382,15 @@ $(document).ready(function() {
                     const errors = xhr.responseJSON.errors;
                     
                     Object.keys(errors).forEach(function(key) {
-                        $(`#${key}`).addClass('is-invalid');
-                        $(`#${key}`).siblings('.invalid-feedback').text(errors[key][0]);
+                        const element = $(`#${key}`);
+                        element.addClass('is-invalid');
+                        
+                        // Tambahkan class is-invalid ke Select2 container juga
+                        if (element.hasClass('select2')) {
+                            element.next('.select2-container').addClass('is-invalid');
+                        }
+                        
+                        element.siblings('.invalid-feedback').text(errors[key][0]);
                     });
                 } else {
                     Swal.fire({

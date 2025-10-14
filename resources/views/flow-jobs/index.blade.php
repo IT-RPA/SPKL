@@ -19,7 +19,7 @@
                     <!-- Filter by Department -->
                     <div class="mb-3">
                         <label for="departmentFilter" class="form-label">Filter Departemen:</label>
-                        <select class="form-control" id="departmentFilter" style="width: 250px; display: inline-block;">
+                        <select class="form-control select2-filter" id="departmentFilter" style="width: 250px; display: inline-block;">
                             <option value="">Semua Departemen</option>
                             @foreach($departments as $department)
                             <option value="{{ $department->name }}">{{ $department->name }}</option>
@@ -123,7 +123,7 @@
 
                     <div class="mb-3">
                         <label for="department_id" class="form-label">Departemen</label>
-                        <select class="form-control" id="department_id" name="department_id" required>
+                        <select class="form-control select2-modal" id="department_id" name="department_id" required>
                             <option value="">Pilih Departemen</option>
                             @foreach($departments as $department)
                             <option value="{{ $department->id }}">{{ $department->name }}</option>
@@ -148,7 +148,7 @@
 
                     <div class="mb-3">
                         <label for="job_level_id" class="form-label">Level Jabatan</label>
-                        <select class="form-control" id="job_level_id" name="job_level_id" required>
+                        <select class="form-control select2-modal" id="job_level_id" name="job_level_id" required>
                             <option value="">Pilih Level Jabatan</option>
                             @foreach($jobLevels as $jobLevel)
                             <option value="{{ $jobLevel->id }}">{{ $jobLevel->name }}</option>
@@ -159,7 +159,7 @@
 
                     <div class="mb-3">
                         <label for="applies_to" class="form-label">Applies To</label>
-                        <select class="form-control" id="applies_to" name="applies_to" required>
+                        <select class="form-control select2-modal" id="applies_to" name="applies_to" required>
                             <option value="both">Both (Planning & Unplanned)</option>
                             <option value="planned">Planned Only</option>
                             <option value="unplanned">Unplanned Only</option>
@@ -188,11 +188,62 @@
 @endpermission
 @endsection
 
+@push('styles')
+<style>
+    /* Custom styling untuk Select2 agar sesuai dengan Bootstrap */
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 36px;
+        padding-left: 12px;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    
+    /* Styling untuk error state */
+    .select2-container--default.is-invalid .select2-selection--single {
+        border-color: #dc3545;
+    }
+    
+    /* Dropdown di dalam modal */
+    .select2-container {
+        width: 100% !important;
+    }
+    
+    /* Styling untuk filter select2 */
+    .select2-filter + .select2-container {
+        display: inline-block !important;
+    }
+</style>
+@endpush
+
 @push('scripts')
 <script>
 $(document).ready(function() {
     let isEditMode = false;
 
+    // Initialize Select2 untuk filter departemen (di luar modal)
+    $('.select2-filter').select2({
+        placeholder: 'Semua Departemen',
+        allowClear: true,
+        width: '250px',
+        language: {
+            noResults: function() {
+                return "Tidak ada hasil yang ditemukan";
+            },
+            searching: function() {
+                return "Mencari...";
+            }
+        }
+    });
+
+    // Initialize DataTable
     var table = $('#flowJobTable').DataTable({
         responsive: true,
         language: {
@@ -215,17 +266,45 @@ $(document).ready(function() {
         order: [[1, 'asc'], [2, 'asc']]
     });
 
+    // Filter departemen dengan Select2
     $('#departmentFilter').on('change', function() {
         var selectedDepartment = this.value;
         table.column(1).search(selectedDepartment).draw();
     });
+
+    // Initialize Select2 untuk modal
+    function initModalSelect2() {
+        $('.select2-modal').select2({
+            dropdownParent: $('#flowJobModal'),
+            placeholder: function() {
+                return $(this).find('option:first').text();
+            },
+            allowClear: true,
+            width: '100%',
+            language: {
+                noResults: function() {
+                    return "Tidak ada hasil yang ditemukan";
+                },
+                searching: function() {
+                    return "Mencari...";
+                }
+            }
+        });
+    }
     
     @permission('create-flow-jobs')
     $('#flowJobModal').on('show.bs.modal', function() {
         if (!isEditMode) {
             resetForm();
         }
+        // Initialize Select2 setiap kali modal dibuka
+        initModalSelect2();
         isEditMode = false;
+    });
+
+    // Destroy Select2 saat modal ditutup
+    $('#flowJobModal').on('hidden.bs.modal', function() {
+        $('.select2-modal').select2('destroy');
     });
 
     function resetForm() {
@@ -235,7 +314,11 @@ $(document).ready(function() {
         $('.form-control').removeClass('is-invalid');
         $('.invalid-feedback').text('');
         $('#is_active').prop('checked', true);
-        $('#applies_to').val('both');
+        
+        // Reset Select2
+        $('#department_id').val('').trigger('change');
+        $('#job_level_id').val('').trigger('change');
+        $('#applies_to').val('both').trigger('change');
     }
 
     $('button[data-bs-target="#flowJobModal"]').on('click', function() {
@@ -262,13 +345,17 @@ $(document).ready(function() {
         $('.invalid-feedback').text('');
         
         $('#flow_job_id').val(id);
-        $('#department_id').val(departmentId);
-        $('#job_level_id').val(jobLevelId);
         $('#step_order').val(stepOrder);
         $('#step_name').val(stepName);
-        $('#applies_to').val(appliesTo);
         $('#is_active').prop('checked', Boolean(Number(isActive)));
         $('#flowJobModalLabel').text('Edit Flow Job');
+        
+        // Set nilai Select2 setelah modal terbuka
+        setTimeout(function() {
+            $('#department_id').val(departmentId).trigger('change');
+            $('#job_level_id').val(jobLevelId).trigger('change');
+            $('#applies_to').val(appliesTo).trigger('change');
+        }, 100);
         
         $('#flowJobModal').modal('show');
     });
@@ -288,6 +375,7 @@ $(document).ready(function() {
         }
 
         $('.form-control').removeClass('is-invalid');
+        $('.select2-container').removeClass('is-invalid');
         $('.invalid-feedback').text('');
 
         $.ajax({
@@ -316,8 +404,15 @@ $(document).ready(function() {
                     const errors = xhr.responseJSON.errors;
 
                     Object.keys(errors).forEach(function(key) {
-                        $(`#${key}`).addClass('is-invalid');
-                        $(`#${key}`).siblings('.invalid-feedback').text(errors[key][0]);
+                        const element = $(`#${key}`);
+                        element.addClass('is-invalid');
+                        
+                        // Tambahkan class is-invalid ke Select2 container juga
+                        if (element.hasClass('select2-modal')) {
+                            element.next('.select2-container').addClass('is-invalid');
+                        }
+                        
+                        element.siblings('.invalid-feedback').text(errors[key][0]);
                     });
                 } else {
                     const response = xhr.responseJSON;

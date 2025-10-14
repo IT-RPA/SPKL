@@ -1,5 +1,4 @@
 <?php
-// routes/web.php - COMPLETE VERSION
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -26,6 +25,8 @@ Route::redirect('/', '/login');
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/chart-data/daily', [DashboardController::class, 'getDailyChartData'])->name('dashboard.chart.daily');
+    Route::get('/dashboard/chart-data/monthly', [DashboardController::class, 'getMonthlyChartData'])->name('dashboard.chart.monthly');
     
     // User Management
     Route::resource('users', UserController::class);

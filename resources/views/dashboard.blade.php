@@ -32,22 +32,6 @@
         z-index: 2;
     }
     
-    .stats-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 80px;
-        height: 80px;
-        opacity: 0.1;
-        z-index: 1;
-    }
-    
-    .stats-card.bg-primary::before {
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zM4 18v-4h3v4h2v-7.5c0-.83.67-1.5 1.5-1.5S12 9.67 12 10.5V18h2v-6h3l1 4h2l-1-5h-3v-2.5c0-.83.67-1.5 1.5-1.5S19 7.67 19 8.5V10h2V8.5C21 6.57 19.43 5 17.5 5S14 6.57 14 8.5V10H9.5C7.57 10 6 11.57 6 13.5V18H4z"/></svg>') no-repeat center;
-        background-size: contain;
-    }
-    
     .stats-number {
         font-size: 2.5rem;
         font-weight: 700;
@@ -65,6 +49,30 @@
     .stats-icon {
         opacity: 0.8;
         filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+    
+    .chart-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+        margin-bottom: 30px;
+    }
+    
+    .chart-card .card-header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        border: none;
+        padding: 20px 30px;
+    }
+    
+    .chart-card .card-body {
+        padding: 30px;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 350px;
     }
     
     .welcome-card {
@@ -178,6 +186,34 @@
         color: white;
     }
     
+    /* Period Selector */
+    .period-selector {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .period-btn {
+        padding: 8px 20px;
+        border: 2px solid #e0e0e0;
+        background: white;
+        border-radius: 25px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .period-btn:hover {
+        border-color: #667eea;
+        color: #667eea;
+    }
+    
+    .period-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: transparent;
+    }
+    
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .dashboard-header {
@@ -189,12 +225,12 @@
             font-size: 2rem;
         }
         
-        .status-legend {
-            justify-content: center;
+        .chart-container {
+            height: 250px;
         }
         
-        .welcome-card .card-body {
-            padding: 20px;
+        .period-selector {
+            flex-direction: column;
         }
     }
     
@@ -272,6 +308,61 @@
                         <p class="stats-label">Completed Requests</p>
                     </div>
                     <i class="fas fa-check-circle fa-3x stats-icon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Chart Section --}}
+    <div class="row">
+        <!-- Daily Chart (Current Month) -->
+        <div class="col-lg-6">
+            <div class="card chart-card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            SPKL Per Hari (Bulan Ini)
+                        </h5>
+                        <select id="monthSelector" class="form-select form-select-sm" style="width: 150px; background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);">
+                            @for($i = 1; $i <= 12; $i++)
+                                <option value="{{ $i }}" {{ $i == date('n') ? 'selected' : '' }}>
+                                    {{ date('F', mktime(0, 0, 0, $i, 1)) }}
+                                </option>
+                            @endfor
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Chart (Current Year) -->
+        <div class="col-lg-6">
+            <div class="card chart-card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            SPKL Per Bulan (Tahun Ini)
+                        </h5>
+                        <select id="yearSelector" class="form-select form-select-sm" style="width: 120px; background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);">
+                            @for($i = date('Y') - 2; $i <= date('Y'); $i++)
+                                <option value="{{ $i }}" {{ $i == date('Y') ? 'selected' : '' }}>
+                                    {{ $i }}
+                                </option>
+                            @endfor
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -416,19 +507,211 @@
     </div>
 </div>
 
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Add smooth animations
+    // Animation untuk stats cards
     $('.stats-card').each(function(index) {
         $(this).delay(100 * index).fadeIn(500);
     });
     
-    // Status badge tooltip
-    $('.status-badge').tooltip({
-        placement: 'top',
-        trigger: 'hover'
+    // Initialize charts
+    let dailyChart = null;
+    let monthlyChart = null;
+
+    // Load daily chart
+    function loadDailyChart(month, year) {
+        $.ajax({
+            url: '/dashboard/chart-data/daily',
+            method: 'GET',
+            data: { month: month, year: year },
+            success: function(response) {
+                updateDailyChart(response);
+            }
+        });
+    }
+
+    // Load monthly chart
+    function loadMonthlyChart(year) {
+        $.ajax({
+            url: '/dashboard/chart-data/monthly',
+            method: 'GET',
+            data: { year: year },
+            success: function(response) {
+                updateMonthlyChart(response);
+            }
+        });
+    }
+
+    // Update daily chart
+    function updateDailyChart(data) {
+        const ctx = document.getElementById('dailyChart').getContext('2d');
+        
+        if (dailyChart) {
+            dailyChart.destroy();
+        }
+
+        dailyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Jumlah SPKL',
+                    data: data.values,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        padding: 12,
+                        titleFont: {
+                            size: 14
+                        },
+                        bodyFont: {
+                            size: 13
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+    }
+
+    // Update monthly chart
+    function updateMonthlyChart(data) {
+        const ctx = document.getElementById('monthlyChart').getContext('2d');
+        
+        if (monthlyChart) {
+            monthlyChart.destroy();
+        }
+
+        monthlyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Jumlah SPKL',
+                    data: data.values,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(153, 102, 255, 0.7)',
+                        'rgba(255, 159, 64, 0.7)',
+                        'rgba(199, 199, 199, 0.7)',
+                        'rgba(83, 102, 255, 0.7)',
+                        'rgba(255, 99, 255, 0.7)',
+                        'rgba(99, 255, 132, 0.7)',
+                        'rgba(255, 195, 0, 0.7)',
+                        'rgba(99, 195, 255, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(199, 199, 199, 1)',
+                        'rgba(83, 102, 255, 1)',
+                        'rgba(255, 99, 255, 1)',
+                        'rgba(99, 255, 132, 1)',
+                        'rgba(255, 195, 0, 1)',
+                        'rgba(99, 195, 255, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        padding: 12,
+                        titleFont: {
+                            size: 14
+                        },
+                        bodyFont: {
+                            size: 13
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Event listeners untuk selectors
+    $('#monthSelector').on('change', function() {
+        const month = $(this).val();
+        const year = $('#yearSelector').val() || {{ date('Y') }};
+        loadDailyChart(month, year);
     });
+
+    $('#yearSelector').on('change', function() {
+        const year = $(this).val();
+        const month = $('#monthSelector').val() || {{ date('n') }};
+        loadDailyChart(month, year);
+        loadMonthlyChart(year);
+    });
+
+    // Load initial data
+    loadDailyChart({{ date('n') }}, {{ date('Y') }});
+    loadMonthlyChart({{ date('Y') }});
 });
 </script>
+@endpush
 
 @endsection
