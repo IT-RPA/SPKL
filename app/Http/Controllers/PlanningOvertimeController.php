@@ -28,11 +28,15 @@ class PlanningOvertimeController extends Controller
                 ->with('error', 'Data karyawan tidak ditemukan.');
         }
 
-        // Ambil planning sesuai department employee
-        $plannings = OvertimePlanning::with(['department', 'creator', 'approvals.approverEmployee'])
-            ->where('department_id', $currentEmployee->department_id)
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        // ✅ ADMIN bisa lihat semua planning, yang lain hanya department sendiri
+        $query = OvertimePlanning::with(['department', 'creator', 'approvals.approverEmployee'])
+            ->orderBy('created_at', 'desc');
+
+        if ($currentUser->role->name !== 'admin') {
+            $query->where('department_id', $currentEmployee->department_id);
+        }
+
+        $plannings = $query->paginate(10);
 
         return view('planning.index', compact('plannings', 'currentEmployee'));
     }
@@ -54,19 +58,48 @@ class PlanningOvertimeController extends Controller
                 ->with('error', 'Data karyawan tidak ditemukan.');
         }
 
-        // ✅ VALIDASI: Hanya Dept Head ke atas yang boleh buat planning
-        $minLevelOrder = 40; // Misalnya Dept Head level_order = 40
-        if ($currentEmployee->jobLevel->level_order > $minLevelOrder) {
-            return redirect()->route('planning.index')
-                ->with('error', 'Hanya Department Head ke atas yang dapat membuat planning lembur.');
+        // ✅ VALIDASI: Admin bisa buat untuk semua dept, Manager/Staff hanya dept sendiri
+        $isAdmin = $currentUser->role->name === 'admin';
+        
+        if (!$isAdmin) {
+            // Non-admin: Hanya Dept Head ke atas yang boleh buat planning
+            $minLevelOrder = 4; // Department Head level_order = 4
+            if ($currentEmployee->jobLevel->level_order > $minLevelOrder) {
+                return redirect()->route('planning.index')
+                    ->with('error', 'Hanya Department Head ke atas yang dapat membuat planning lembur.');
+            }
         }
 
-        // Ambil department milik employee
-        $departments = Department::where('id', $currentEmployee->department_id)
-            ->where('is_active', true)
-            ->get();
+        // ✅ ADMIN: bisa pilih semua department | Non-Admin: hanya department sendiri
+        $departments = $isAdmin 
+            ? Department::where('is_active', true)->orderBy('name')->get()
+            : Department::where('id', $currentEmployee->department_id)
+                        ->where('is_active', true)
+                        ->get();
 
-        return view('planning.create', compact('currentEmployee', 'departments'));
+        // ✅ Ambil approval levels untuk dropdown admin (per department)
+        $approvalLevelsByDept = [];
+        if ($isAdmin) {
+            foreach ($departments as $dept) {
+                $flowJobs = FlowJob::with('jobLevel')
+                    ->where('department_id', $dept->id)
+                    ->where('is_active', true)
+                    ->whereIn('applies_to', ['planned', 'both'])
+                    ->where('step_order', '>', 0) // Skip step 0 (pengajuan)
+                    ->orderBy('step_order')
+                    ->get();
+                
+                $approvalLevelsByDept[$dept->id] = $flowJobs->map(function($flow) {
+                    return [
+                        'job_level_id' => $flow->job_level_id,
+                        'step_order' => $flow->step_order,
+                        'level_name' => $flow->jobLevel->name,
+                    ];
+                });
+            }
+        }
+
+        return view('planning.create', compact('currentEmployee', 'departments', 'isAdmin', 'approvalLevelsByDept'));
     }
 
     /**
@@ -86,7 +119,7 @@ class PlanningOvertimeController extends Controller
                 ->with('error', 'Data karyawan tidak ditemukan.');
         }
 
-        $request->validate([
+        $validationRules = [
             'department_id' => 'required|exists:departments,id',
             'planned_date' => 'required|date|after_or_equal:today',
             'max_employees' => 'required|integer|min:1|max:100',
@@ -94,20 +127,29 @@ class PlanningOvertimeController extends Controller
             'planned_end_time' => 'required|after:planned_start_time',
             'work_description' => 'required|string|max:1000',
             'reason' => 'required|string|max:1000',
-        ], [
+        ];
+
+        // ✅ Admin wajib pilih start approval level
+        $isAdmin = $currentUser->role->name === 'admin';
+        if ($isAdmin) {
+            $validationRules['start_approval_level_id'] = 'required|exists:job_levels,id';
+        }
+
+        $request->validate($validationRules, [
             'planned_date.after_or_equal' => 'Tanggal planning tidak boleh di masa lalu',
             'planned_end_time.after' => 'Jam selesai harus lebih besar dari jam mulai',
             'max_employees.max' => 'Maksimal kuota adalah 100 orang',
+            'start_approval_level_id.required' => 'Silakan pilih mulai approval dari level mana',
         ]);
 
-        // Validasi department
-        if ($currentEmployee->department_id != $request->department_id) {
+        // ✅ VALIDASI: Admin boleh untuk semua dept, non-admin hanya dept sendiri
+        if (!$isAdmin && $currentEmployee->department_id != $request->department_id) {
             return redirect()->route('planning.create')
                 ->with('error', 'Anda hanya dapat membuat planning untuk departemen Anda sendiri.')
                 ->withInput();
         }
 
-        DB::transaction(function () use ($request, $currentEmployee) {
+        DB::transaction(function () use ($request, $currentEmployee, $isAdmin) {
             // Generate planning number
             $planningNumber = OvertimePlanning::generatePlanningNumber($request->planned_date);
             
@@ -130,7 +172,11 @@ class PlanningOvertimeController extends Controller
             \Log::info("Planning created: {$planning->planning_number} by {$currentEmployee->name}");
 
             // Create approval flow
-            $this->createPlanningApprovalFlow($planning, $currentEmployee);
+            if ($isAdmin) {
+                $this->createPlanningApprovalFlowForAdmin($planning, $request->start_approval_level_id);
+            } else {
+                $this->createPlanningApprovalFlow($planning, $currentEmployee);
+            }
             
             // Update status
             $planning->updateStatusBasedOnApprovals();
@@ -259,11 +305,72 @@ class PlanningOvertimeController extends Controller
     }
 
     /**
-     * Create approval flow untuk planning
+     * Create approval flow untuk planning (ADMIN - Flexible Start)
+     */
+    private function createPlanningApprovalFlowForAdmin(OvertimePlanning $planning, $startApprovalLevelId)
+    {
+        \Log::info("=== CREATE PLANNING APPROVAL FLOW FOR ADMIN ===");
+        \Log::info("Planning ID: {$planning->id}, Department: {$planning->department_id}");
+        \Log::info("Start Approval Level ID: {$startApprovalLevelId}");
+
+        // Ambil flow job untuk planning (applies_to = 'planned' atau 'both')
+        $flowJobs = FlowJob::with('jobLevel')
+            ->where('department_id', $planning->department_id)
+            ->where('is_active', true)
+            ->whereIn('applies_to', ['planned', 'both'])
+            ->orderBy('step_order')
+            ->get();
+
+        \Log::info("Found " . $flowJobs->count() . " flow jobs for planning");
+
+        // Cari step_order dari level yang dipilih admin
+        $startFlowJob = $flowJobs->where('job_level_id', $startApprovalLevelId)->first();
+        
+        if (!$startFlowJob) {
+            \Log::error("Flow job tidak ditemukan untuk level yang dipilih admin");
+            throw new \Exception('Flow job tidak ditemukan untuk level approval yang dipilih');
+        }
+
+        \Log::info("Start from: {$startFlowJob->step_name}, Step Order: {$startFlowJob->step_order}");
+
+        // ✅ FIX: Gunakan >= untuk INCLUDE level yang dipilih sebagai approver pertama
+        $nextFlowJobs = $flowJobs->where('step_order', '>=', $startFlowJob->step_order);
+        
+        \Log::info("Creating " . $nextFlowJobs->count() . " approval steps (starting from {$startFlowJob->step_name})");
+
+        foreach ($nextFlowJobs as $flowJob) {
+            $approver = $this->findApproverForFlowJob($flowJob, $planning->department_id);
+
+            if ($approver) {
+                try {
+                    $approvalRecord = OvertimePlanningApproval::create([
+                        'planning_id' => $planning->id,
+                        'approver_employee_id' => $approver->id,
+                        'approver_level' => $flowJob->jobLevel->code,
+                        'step_order' => $flowJob->step_order,
+                        'step_name' => $flowJob->step_name,
+                        'status' => 'pending',
+                    ]);
+                    
+                    \Log::info("✅ Created approval ID {$approvalRecord->id} for {$flowJob->step_name} - Approver: {$approver->name}");
+                    
+                } catch (\Exception $e) {
+                    \Log::error("❌ Failed to create approval for {$flowJob->step_name}: " . $e->getMessage());
+                }
+            } else {
+                \Log::warning("⚠️ Approver not found for step: {$flowJob->step_name}, Job Level: {$flowJob->jobLevel->code}");
+            }
+        }
+        
+        \Log::info("=== END CREATE PLANNING APPROVAL FLOW FOR ADMIN ===");
+    }
+
+    /**
+     * Create approval flow untuk planning (NON-ADMIN - Auto by Position)
      */
     private function createPlanningApprovalFlow(OvertimePlanning $planning, Employee $requester)
     {
-        \Log::info("=== CREATE PLANNING APPROVAL FLOW DEBUG ===");
+        \Log::info("=== CREATE PLANNING APPROVAL FLOW (NON-ADMIN) ===");
         \Log::info("Planning ID: {$planning->id}, Department: {$planning->department_id}");
         \Log::info("Requester: {$requester->name}, Job Level: {$requester->jobLevel->code}");
 
@@ -316,7 +423,7 @@ class PlanningOvertimeController extends Controller
             }
         }
         
-        \Log::info("=== END CREATE PLANNING APPROVAL FLOW DEBUG ===");
+        \Log::info("=== END CREATE PLANNING APPROVAL FLOW (NON-ADMIN) ===");
     }
 
     /**

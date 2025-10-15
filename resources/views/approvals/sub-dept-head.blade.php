@@ -12,8 +12,9 @@
     
     if ($currentEmployee) {
         $pendingPercentageCount = \App\Models\OvertimeRequest::whereHas('details', function($query) {
-                $query->where('overtime_type', 'qualitative')
-                      ->whereNull('percentage_realization');
+                $query  ->where('overtime_type', 'qualitative')
+                        ->where('is_rejected', false) 
+                        ->whereNull('percentage_realization');
             })
             ->whereHas('approvals', function($query) use ($currentEmployee) {
                 $query->where('approver_employee_id', $currentEmployee->id)
@@ -77,7 +78,7 @@
                         </td>
                         <td>
                             @php
-                                $qualitativeDetails = $approval->overtimeRequest->details->where('overtime_type', 'qualitative');
+                                $qualitativeDetails = $approval->overtimeRequest->details->where('overtime_type', 'qualitative') ->where('is_rejected', false);
                                 $totalQualitative = $qualitativeDetails->count();
                                 $filledPercentage = $qualitativeDetails->whereNotNull('percentage_realization')->count();
                                 $needsPercentage = $totalQualitative - $filledPercentage;
@@ -182,7 +183,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
                 <div id="approvalButtons" style="display: none;">
                     <button type="button" class="btn btn-danger me-2" onclick="showRejectModal()">
-                        <i class="fas fa-times"></i> Reject
+                        <i class="fas fa-times"></i> Reject All
                     </button>
                     <button type="button" class="btn btn-success" onclick="approveRequest()">
                         <i class="fas fa-check"></i> Approve
@@ -214,12 +215,12 @@
     </div>
 </div>
 
-<!-- Reject Modal -->
+<!-- Reject Modal (Reject All) -->
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Alasan Penolakan</h5>
+                <h5 class="modal-title">Alasan Penolakan Keseluruhan</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -235,7 +236,47 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                 <button type="button" class="btn btn-danger" onclick="submitReject()">
-                    <i class="fas fa-times"></i> Tolak
+                    <i class="fas fa-times"></i> Tolak Semua
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Detail Modal (Reject Per-Orang) -->
+<div class="modal fade" id="rejectDetailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-times"></i> Tolak Karyawan Lembur
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Anda akan menolak karyawan: <strong id="rejectDetailEmployeeName"></strong>
+                </div>
+                <form id="rejectDetailForm">
+                    <div class="mb-3">
+                        <label for="detailRejectionReason" class="form-label">
+                            Alasan Penolakan <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control" 
+                                  id="detailRejectionReason" 
+                                  rows="4" 
+                                  required 
+                                  minlength="10"
+                                  placeholder="Masukkan alasan penolakan minimal 10 karakter..."></textarea>
+                        <small class="text-muted">Minimal 10 karakter</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-danger" onclick="submitRejectDetail()">
+                    <i class="fas fa-user-times"></i> Tolak Karyawan Ini
                 </button>
             </div>
         </div>
@@ -269,6 +310,7 @@
 let currentApprovalId = null;
 let currentOvertimeId = null;
 let deleteOvertimeId = null;
+let currentDetailId = null; // ✅ UNTUK REJECT PER-ORANG
 
 $(document).ready(function() {
     $('#approvalsTable').DataTable({
@@ -413,59 +455,71 @@ function generateDetailContent(data) {
 
     let percentageFormHtml = '';
     const canInputPercentage = data.can_input_percentage === true || data.can_input_percentage === 'true' || data.can_input_percentage === 1;
-    const hasQualitativeDetails = data.details && data.details.some(detail => detail.overtime_type === 'qualitative');
+
+    // ✅ PERBAIKAN: Filter hanya qualitative yang TIDAK di-reject
+    const hasQualitativeDetails = data.details && data.details.some(detail => 
+        detail.overtime_type === 'qualitative' && !detail.is_rejected
+    );
+
     const hasPercentageInputReady = data.details && data.details.some(detail => 
-        detail.overtime_type === 'qualitative' && detail.can_input_percentage_now === true
+        detail.overtime_type === 'qualitative' && 
+        detail.can_input_percentage_now === true &&
+        !detail.is_rejected // ✅ TAMBAHAN
     );
 
     if (canInputPercentage && hasQualitativeDetails && hasPercentageInputReady) {
+        // ✅ PERBAIKAN: Filter rejected details
         const qualitativeDetails = data.details.filter(detail => 
-            detail.overtime_type === 'qualitative' && detail.can_input_percentage_now === true
+            detail.overtime_type === 'qualitative' && 
+            detail.can_input_percentage_now === true &&
+            !detail.is_rejected // ✅ TAMBAHAN
         );
 
-        percentageFormHtml = `
-            <hr>
-            <div class="alert alert-success">
-                <i class="fas fa-percentage"></i>
-                <strong>Input Persentase Tersedia:</strong> Anda dapat mengisi persentase realisasi untuk lembur kualitatif.
-            </div>
-            <h6>Input Persentase Realisasi:</h6>
-            <form id="editPercentageForm">
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Nama</th>
-                                <th>Jam</th>
-                                <th>Prioritas</th>
-                                <th>Proses</th>
-                                <th>Persentase Realisasi (%)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${qualitativeDetails.map(detail => `
-                                <tr>
-                                    <td>${detail.employee_name}</td>
-                                    <td>${detail.start_time} - ${detail.end_time}</td>
-                                    <td>${detail.work_priority}</td>
-                                    <td>${detail.work_process}</td>
-                                    <td>
-                                        <input type="number" class="form-control form-control-sm" 
-                                               name="details[${detail.id}][percentage_realization]" 
-                                               value="${detail.percentage_realization || ''}" 
-                                               min="0" max="100" step="0.01"
-                                               placeholder="0-100%">
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+        if (qualitativeDetails.length > 0) {
+            percentageFormHtml = `
+                <hr>
+                <div class="alert alert-success">
+                    <i class="fas fa-percentage"></i>
+                    <strong>Input Persentase Tersedia:</strong> Anda dapat mengisi persentase realisasi untuk lembur kualitatif.
                 </div>
-                <button type="button" class="btn btn-success btn-sm" onclick="updatePercentage()">
-                    <i class="fas fa-percentage"></i> Update Persentase
-                </button>
-            </form>
-        `;
+                <h6>Input Persentase Realisasi:</h6>
+                <form id="editPercentageForm">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Nama</th>
+                                    <th>Jam</th>
+                                    <th>Prioritas</th>
+                                    <th>Proses</th>
+                                    <th>Persentase Realisasi (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${qualitativeDetails.map(detail => `
+                                    <tr>
+                                        <td>${detail.employee_name}</td>
+                                        <td>${detail.start_time} - ${detail.end_time}</td>
+                                        <td>${detail.work_priority}</td>
+                                        <td>${detail.work_process}</td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm" 
+                                                name="details[${detail.id}][percentage_realization]" 
+                                                value="${detail.percentage_realization || ''}" 
+                                                min="0" max="100" step="0.01"
+                                                placeholder="0-100%">
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="btn btn-success btn-sm" onclick="updatePercentage()">
+                        <i class="fas fa-percentage"></i> Update Persentase
+                    </button>
+                </form>
+            `;
+        }
     } else if (canInputPercentage && hasQualitativeDetails && !hasPercentageInputReady) {
         percentageFormHtml = `
             <hr>
@@ -475,15 +529,22 @@ function generateDetailContent(data) {
             </div>
         `;
     } else if (canInputPercentage && !hasQualitativeDetails) {
+        const allRejected = data.details && data.details.every(detail => 
+            detail.overtime_type !== 'qualitative' || detail.is_rejected
+        );
+        
         percentageFormHtml = `
             <hr>
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i>
-                <strong>Info:</strong> Tidak ada lembur kualitatif pada pengajuan ini.
+                <strong>Info:</strong> ${allRejected ? 'Semua lembur kualitatif telah ditolak.' : 'Tidak ada lembur kualitatif pada pengajuan ini.'}
             </div>
         `;
     }
 
+    // ✅ FITUR BARU: Detail Lembur dengan Tombol Reject Per-Orang
+    const canApprove = data.has_pending_approval || data.can_approve;
+    
     return `
         <div class="row">
             <div class="col-md-6">
@@ -494,11 +555,18 @@ function generateDetailContent(data) {
             <div class="col-md-6">
                 <p><strong>Tanggal:</strong> ${data.date}</p>
                 <p><strong>Departemen:</strong> ${data.department_name}</p>
-                <p><strong>Can Edit Time:</strong> <span class="badge bg-${canEditTime ? 'success' : 'secondary'}">${canEditTime ? 'Ya' : 'Tidak'}</span></p>
-                <p><strong>Can Input Percentage:</strong> <span class="badge bg-${canInputPercentage ? 'success' : 'secondary'}">${canInputPercentage ? 'Ya' : 'Tidak'}</span></p>
             </div>
         </div>
         <hr>
+        
+        ${canApprove ? `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Mode Approval:</strong> Anda dapat menolak individual karyawan dengan mengklik tombol "Reject" di sebelah kanan setiap detail. 
+                Jika tidak ada yang ditolak, klik tombol "Approve" di bawah untuk menyetujui semua.
+            </div>
+        ` : ''}
+        
         <h6>Detail Lembur:</h6>
         <div class="table-responsive">
             <table class="table table-sm table-bordered">
@@ -513,40 +581,80 @@ function generateDetailContent(data) {
                         <th>Qty Plan</th>
                         <th>Qty Act</th>
                         <th>Persentase</th>
-                        <th>Keterangan</th>
+                        <th>Status</th>
+                        ${canApprove ? '<th width="120px">Aksi</th>' : ''}
                     </tr>
                 </thead>
                 <tbody>
                     ${(data.details && data.details.length > 0) ? 
-                        data.details.map(detail => `
-                            <tr>
-                                <td>${detail.employee_name}</td>
-                                <td>${detail.employee_id}</td>
-                                <td>${detail.start_time} - ${detail.end_time}</td>
-                                <td>
-                                    <span class="badge bg-${detail.overtime_type === 'quantitative' ? 'primary' : 'info'}">
-                                        ${detail.overtime_type === 'quantitative' ? 'Kuantitatif' : 'Kualitatif'}
-                                    </span>
-                                </td>
-                                <td>${detail.work_priority}</td>
-                                <td>${detail.work_process}</td>
-                                <td>${detail.overtime_type === 'quantitative' ? (detail.qty_plan || '-') : '-'}</td>
-                                <td>${detail.overtime_type === 'quantitative' ? (detail.qty_actual || '-') : '-'}</td>
-                                <td>
-                                    ${detail.overtime_type === 'qualitative' ? 
-                                        (detail.percentage_realization !== null ? 
-                                            `<span class="badge bg-success">${detail.percentage_realization}%</span>` : 
-                                            (detail.can_input_percentage_now ? 
-                                                '<span class="badge bg-info">Siap diisi</span>' : 
-                                                '<span class="badge bg-warning">Menunggu</span>'
-                                            )
-                                        ) : '-'
-                                    }
-                                </td>
-                                <td>${detail.notes || '-'}</td>
-                            </tr>
-                        `).join('') :
-                        '<tr><td colspan="10" class="text-center">Tidak ada detail lembur</td></tr>'
+                        data.details.map(detail => {
+                            const isRejected = detail.is_rejected || false;
+                            const rejectionBadge = isRejected ? 
+                                `<span class="badge bg-danger" title="${detail.rejection_reason || ''}">
+                                    <i class="fas fa-times-circle"></i> Ditolak
+                                </span>` : 
+                                `<span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> Aktif
+                                </span>`;
+                            
+                            return `
+                                <tr class="${isRejected ? 'table-danger' : ''}" id="detail-row-${detail.id}">
+                                    <td>${detail.employee_name}</td>
+                                    <td>${detail.employee_id}</td>
+                                    <td>${detail.start_time} - ${detail.end_time}</td>
+                                    <td>
+                                        <span class="badge bg-${detail.overtime_type === 'quantitative' ? 'primary' : 'info'}">
+                                            ${detail.overtime_type === 'quantitative' ? 'Kuantitatif' : 'Kualitatif'}
+                                        </span>
+                                    </td>
+                                    <td><small>${detail.work_priority}</small></td>
+                                    <td><small>${detail.work_process}</small></td>
+                                    <td>${detail.overtime_type === 'quantitative' ? (detail.qty_plan || '-') : '-'}</td>
+                                    <td>${detail.overtime_type === 'quantitative' ? (detail.qty_actual || '-') : '-'}</td>
+                                    <td>
+                                        ${detail.overtime_type === 'qualitative' ? 
+                                            (detail.percentage_realization !== null ? 
+                                                `<span class="badge bg-success">${detail.percentage_realization}%</span>` : 
+                                                (detail.can_input_percentage_now ? 
+                                                    '<span class="badge bg-info">Siap diisi</span>' : 
+                                                    '<span class="badge bg-warning">Menunggu</span>'
+                                                )
+                                            ) : '-'
+                                        }
+                                    </td>
+                                    <td id="detail-status-${detail.id}">
+                                        ${rejectionBadge}
+                                        ${isRejected ? `
+                                            <br><small class="text-danger">
+                                                <strong>Alasan:</strong> ${detail.rejection_reason || '-'}
+                                            </small>
+                                            <br><small class="text-muted">
+                                                Oleh: ${detail.rejected_by_name || '-'} 
+                                                ${detail.rejected_at ? '(' + detail.rejected_at + ')' : ''}
+                                            </small>
+                                        ` : ''}
+                                    </td>
+                                    ${canApprove ? `
+                                        <td id="detail-action-${detail.id}">
+                                            ${!isRejected ? `
+                                                <button class="btn btn-danger btn-sm w-100" 
+                                                        onclick="showRejectDetailModal(${detail.id}, '${detail.employee_name}')"
+                                                        title="Tolak karyawan ini">
+                                                    <i class="fas fa-user-times"></i> Reject
+                                                </button>
+                                            ` : `
+                                                <button class="btn btn-success btn-sm w-100" 
+                                                        onclick="unrejectDetail(${detail.id})"
+                                                        title="Batalkan penolakan">
+                                                    <i class="fas fa-undo"></i> Unreject
+                                                </button>
+                                            `}
+                                        </td>
+                                    ` : ''}
+                                </tr>
+                            `;
+                        }).join('') :
+                        `<tr><td colspan="${canApprove ? '11' : '10'}" class="text-center">Tidak ada detail lembur</td></tr>`
                     }
                 </tbody>
             </table>
@@ -555,6 +663,113 @@ function generateDetailContent(data) {
         ${percentageFormHtml}
         ${approvalHistoryHtml}
     `;
+}
+
+// ✅ FUNGSI BARU: Show Modal Reject Detail
+function showRejectDetailModal(detailId, employeeName) {
+    currentDetailId = detailId;
+    document.getElementById('rejectDetailEmployeeName').textContent = employeeName;
+    document.getElementById('detailRejectionReason').value = '';
+    
+    new bootstrap.Modal(document.getElementById('rejectDetailModal')).show();
+}
+
+// ✅ FUNGSI BARU: Submit Reject Detail
+function submitRejectDetail() {
+    const reason = document.getElementById('detailRejectionReason').value.trim();
+    
+    if (reason.length < 10) {
+        alert('Alasan penolakan harus minimal 10 karakter');
+        return;
+    }
+    
+    const submitBtn = document.querySelector('#rejectDetailModal .btn-danger');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    submitBtn.disabled = true;
+    
+    fetch(`/approvals/detail/${currentDetailId}/reject`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ reason: reason })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('rejectDetailModal')).hide();
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Detail berhasil ditolak',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    // Reload detail modal
+                    showDetailModal(currentApprovalId, '');
+                });
+            } else {
+                alert('Detail berhasil ditolak');
+                showDetailModal(currentApprovalId, '');
+            }
+        } else {
+            alert('Gagal menolak detail: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan: ' + error.message);
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// ✅ FUNGSI BARU: Unreject Detail
+function unrejectDetail(detailId) {
+    if (!confirm('Apakah Anda yakin ingin membatalkan penolakan untuk karyawan ini?')) {
+        return;
+    }
+    
+    fetch(`/approvals/detail/${detailId}/unreject`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Penolakan berhasil dibatalkan',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    showDetailModal(currentApprovalId, '');
+                });
+            } else {
+                alert('Penolakan berhasil dibatalkan');
+                showDetailModal(currentApprovalId, '');
+            }
+        } else {
+            alert('Gagal membatalkan penolakan: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan: ' + error.message);
+    });
 }
 
 function updatePercentage() {
