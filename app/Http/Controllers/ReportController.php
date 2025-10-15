@@ -22,22 +22,27 @@ class ReportController extends Controller
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         $department_id = $request->get('department_id');
-        $status_filter = $request->get('status_filter', 'completed'); // Default ke completed
+        $category_filter = $request->get('category_filter', 'all'); // ✅ TAMBAHAN: Default 'all'
+        $status_filter = $request->get('status_filter', 'completed');
 
         // Build query untuk overtime leaderboard
         $query = Employee::with(['department', 'jobLevel'])
-            ->whereHas('overtimeDetails', function ($q) use ($startDate, $endDate, $status_filter) {
-                // ✅ TAMBAHAN: Exclude rejected details
+            ->whereHas('overtimeDetails', function ($q) use ($startDate, $endDate, $category_filter, $status_filter) {
                 $q->where('is_rejected', false);
                 
-                $q->whereHas('overtimeRequest', function ($subQ) use ($startDate, $endDate, $status_filter) {
+                $q->whereHas('overtimeRequest', function ($subQ) use ($startDate, $endDate, $category_filter, $status_filter) {
+                    // ✅ TAMBAHAN: Filter berdasarkan category
+                    if ($category_filter !== 'all') {
+                        $subQ->where('overtime_category', $category_filter);
+                    }
+                    
                     // Filter berdasarkan status
                     if ($status_filter === 'completed') {
                         $subQ->where('status', 'completed');
                     } elseif ($status_filter === 'in_progress') {
                         $subQ->whereIn('status', ['approved_sect', 'approved_subdept', 'approved_dept', 'approved_subdiv', 'approved_div', 'pending']);
                     } elseif ($status_filter === 'realisasi') {
-                        $subQ->where('status', 'approved'); // Status approved tapi belum isi data
+                        $subQ->where('status', 'approved');
                     } elseif ($status_filter === 'all') {
                         // Tidak ada filter status khusus
                     }
@@ -57,11 +62,15 @@ class ReportController extends Controller
         }
 
         // Get employees dengan total overtime hours
-        $employees = $query->get()->map(function ($employee) use ($startDate, $endDate, $status_filter) {
+        $employees = $query->get()->map(function ($employee) use ($startDate, $endDate, $category_filter, $status_filter) {
             $overtimeDetailsQuery = $employee->overtimeDetails()
-                // ✅ TAMBAHAN: Exclude rejected details
                 ->where('is_rejected', false)
-                ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $status_filter) {
+                ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $category_filter, $status_filter) {
+                    // ✅ TAMBAHAN: Filter berdasarkan category
+                    if ($category_filter !== 'all') {
+                        $q->where('overtime_category', $category_filter);
+                    }
+                    
                     // Filter berdasarkan status
                     if ($status_filter === 'completed') {
                         $q->where('status', 'completed');
@@ -106,7 +115,6 @@ class ReportController extends Controller
                 'formatted_time' => $this->formatMinutesToHours($totalMinutes)
             ];
         })->filter(function ($employee) {
-            // Hanya tampilkan yang punya jam lembur
             return $employee->total_hours > 0;
         })->sortByDesc('total_hours')->values();
 
@@ -125,6 +133,7 @@ class ReportController extends Controller
             'startDate', 
             'endDate', 
             'department_id',
+            'category_filter', // ✅ TAMBAHAN
             'status_filter'
         ));
     }
@@ -133,17 +142,22 @@ class ReportController extends Controller
     {
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
+        $category_filter = $request->get('category_filter', 'all'); // ✅ TAMBAHAN
         $status_filter = $request->get('status_filter', 'completed');
 
         $employee = Employee::with(['department', 'jobLevel'])->findOrFail($employeeId);
 
         $details = OvertimeDetail::with(['overtimeRequest' => function($q) {
-                $q->select('id', 'request_number', 'date', 'status');
-            }, 'processType']) // ✅ TAMBAHAN: Include processType
+                $q->select('id', 'request_number', 'date', 'status', 'overtime_category'); // ✅ TAMBAHAN: Include overtime_category
+            }, 'processType'])
             ->where('employee_id', $employeeId)
-            // ✅ TAMBAHAN: Exclude rejected details
             ->where('is_rejected', false)
-            ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $status_filter) {
+            ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $category_filter, $status_filter) {
+                // ✅ TAMBAHAN: Filter berdasarkan category
+                if ($category_filter !== 'all') {
+                    $q->where('overtime_category', $category_filter);
+                }
+                
                 // Filter berdasarkan status
                 if ($status_filter === 'completed') {
                     $q->where('status', 'completed');
@@ -170,6 +184,7 @@ class ReportController extends Controller
 
                 return [
                     'spk_number' => $detail->overtimeRequest->request_number,
+                    'category' => $detail->overtimeRequest->overtime_category, // ✅ TAMBAHAN
                     'date' => Carbon::parse($detail->overtimeRequest->date)->format('d/m/Y'),
                     'start_time' => $detail->start_time,
                     'end_time' => $detail->end_time,
@@ -192,15 +207,20 @@ class ReportController extends Controller
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         $department_id = $request->get('department_id');
+        $category_filter = $request->get('category_filter', 'all'); // ✅ TAMBAHAN
         $status_filter = $request->get('status_filter', 'completed');
 
         // Get the same data as index method
         $query = Employee::with(['department', 'jobLevel'])
-            ->whereHas('overtimeDetails', function ($q) use ($startDate, $endDate, $status_filter) {
-                // ✅ TAMBAHAN: Exclude rejected details
+            ->whereHas('overtimeDetails', function ($q) use ($startDate, $endDate, $category_filter, $status_filter) {
                 $q->where('is_rejected', false);
                 
-                $q->whereHas('overtimeRequest', function ($subQ) use ($startDate, $endDate, $status_filter) {
+                $q->whereHas('overtimeRequest', function ($subQ) use ($startDate, $endDate, $category_filter, $status_filter) {
+                    // ✅ TAMBAHAN: Filter berdasarkan category
+                    if ($category_filter !== 'all') {
+                        $subQ->where('overtime_category', $category_filter);
+                    }
+                    
                     // Filter berdasarkan status
                     if ($status_filter === 'completed') {
                         $subQ->where('status', 'completed');
@@ -224,11 +244,15 @@ class ReportController extends Controller
             $query->where('department_id', $department_id);
         }
 
-        $employees = $query->get()->map(function ($employee) use ($startDate, $endDate, $status_filter) {
+        $employees = $query->get()->map(function ($employee) use ($startDate, $endDate, $category_filter, $status_filter) {
             $overtimeDetailsQuery = $employee->overtimeDetails()
-                // ✅ TAMBAHAN: Exclude rejected details
                 ->where('is_rejected', false)
-                ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $status_filter) {
+                ->whereHas('overtimeRequest', function ($q) use ($startDate, $endDate, $category_filter, $status_filter) {
+                    // ✅ TAMBAHAN: Filter berdasarkan category
+                    if ($category_filter !== 'all') {
+                        $q->where('overtime_category', $category_filter);
+                    }
+                    
                     // Filter berdasarkan status
                     if ($status_filter === 'completed') {
                         $q->where('status', 'completed');
@@ -287,6 +311,19 @@ class ReportController extends Controller
             $periodText = 'Semua Periode';
         }
 
+        // ✅ TAMBAHAN: Category text
+        $categoryText = '';
+        switch ($category_filter) {
+            case 'planned':
+                $categoryText = 'Planning';
+                break;
+            case 'unplanned':
+                $categoryText = 'Unplanned';
+                break;
+            default:
+                $categoryText = 'Semua Jenis';
+        }
+
         $statusText = '';
         switch ($status_filter) {
             case 'completed':
@@ -305,20 +342,20 @@ class ReportController extends Controller
         $sheet->setTitle('Overtime Leaderboard');
         $sheet->setCellValue('A1', 'LAPORAN LEADERBOARD LEMBUR');
         $sheet->setCellValue('A2', 'Periode: ' . $periodText);
-        $sheet->setCellValue('A3', 'Status: ' . $statusText);
-        // ✅ TAMBAHAN: Note tentang rejected details
-        $sheet->setCellValue('A4', 'Catatan: Detail lembur yang ditolak (rejected) tidak dihitung dalam laporan ini');
+        $sheet->setCellValue('A3', 'Jenis Lembur: ' . $categoryText); // ✅ TAMBAHAN
+        $sheet->setCellValue('A4', 'Status: ' . $statusText);
+        $sheet->setCellValue('A5', 'Catatan: Detail lembur yang ditolak (rejected) tidak dihitung dalam laporan ini');
 
-        // Set headers (row 6 sekarang karena ada note di row 4)
+        // Set headers (row 7 sekarang)
         $headers = ['No', 'ID Karyawan', 'Nama Karyawan', 'Department', 'Level Jabatan', 'Total Jam', 'Total Pengajuan'];
         $col = 'A';
         foreach ($headers as $header) {
-            $sheet->setCellValue($col . '6', $header);
+            $sheet->setCellValue($col . '7', $header);
             $col++;
         }
 
-        // Fill data (mulai dari row 7)
-        $row = 7;
+        // Fill data (mulai dari row 8)
+        $row = 8;
         $no = 1;
         foreach ($employees as $employee) {
             $sheet->setCellValue('A' . $row, $no++);
@@ -336,7 +373,7 @@ class ReportController extends Controller
 
         // Save and download
         $writer = new Xlsx($spreadsheet);
-        $filename = 'overtime_leaderboard_' . $statusText . '_' . date('YmdHis') . '.xlsx';
+        $filename = 'overtime_leaderboard_' . $categoryText . '_' . $statusText . '_' . date('YmdHis') . '.xlsx';
         
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
@@ -365,28 +402,34 @@ class ReportController extends Controller
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        // Status styling
+        // ✅ TAMBAHAN: Category styling
         $sheet->mergeCells('A3:G3');
         $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(12);
         $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E3F2FD');
 
-        // ✅ TAMBAHAN: Note styling
+        // Status styling
         $sheet->mergeCells('A4:G4');
-        $sheet->getStyle('A4')->getFont()->setItalic(true)->setSize(10);
+        $sheet->getStyle('A4')->getFont()->setBold(true)->setSize(12);
         $sheet->getStyle('A4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('A4')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF9C4');
 
-        // Header styling (row 6 sekarang)
-        $sheet->getStyle('A6:G6')->getFont()->setBold(true);
-        $sheet->getStyle('A6:G6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('D9EAD3');
-        $sheet->getStyle('A6:G6')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        // Note styling
+        $sheet->mergeCells('A5:G5');
+        $sheet->getStyle('A5')->getFont()->setItalic(true)->setSize(10);
+        $sheet->getStyle('A5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF9C4');
+
+        // Header styling (row 7 sekarang)
+        $sheet->getStyle('A7:G7')->getFont()->setBold(true);
+        $sheet->getStyle('A7:G7')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('D9EAD3');
+        $sheet->getStyle('A7:G7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Data styling
-        $sheet->getStyle('A6:G' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('A7:G' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 
         // Auto size columns
         foreach (range('A', 'G') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
     }
-}   
+}

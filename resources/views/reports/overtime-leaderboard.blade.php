@@ -41,6 +41,21 @@
                                value="{{ $endDate }}">
                     </div>
                     
+                    <!-- ✅ TAMBAHAN: Category Filter -->
+                    <div class="col-md-2">
+                        <label for="category_filter" class="form-label">
+                            Jenis Lembur
+                            <i class="fas fa-info-circle text-info" 
+                               data-bs-toggle="tooltip" 
+                               title="Planning = Lembur terencana dengan planning | Unplanned = Lembur mendadak"></i>
+                        </label>
+                        <select name="category_filter" id="category_filter" class="form-select">
+                            <option value="all" {{ ($category_filter ?? 'all') == 'all' ? 'selected' : '' }}>Semua Jenis</option>
+                            <option value="planned" {{ ($category_filter ?? '') == 'planned' ? 'selected' : '' }}>Planning</option>
+                            <option value="unplanned" {{ ($category_filter ?? '') == 'unplanned' ? 'selected' : '' }}>Unplanned</option>
+                        </select>
+                    </div>
+                    
                     <!-- Status Filter -->
                     <div class="col-md-2">
                         <label for="status_filter" class="form-label">Status</label>
@@ -64,9 +79,11 @@
                             @endforeach
                         </select>
                     </div>
-                    
-                    <!-- Action Buttons -->
-                    <div class="col-md-2 d-flex align-items-end gap-2">
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="row mt-3">
+                    <div class="col-md-12 d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm">
                             <i class="fas fa-search"></i> Filter
                         </button>
@@ -74,7 +91,7 @@
                             <i class="fas fa-undo"></i> Reset
                         </a>
                         <button type="button" class="btn btn-success btn-sm" id="exportExcel">
-                            <i class="fas fa-file-excel"></i> Export
+                            <i class="fas fa-file-excel"></i> Export Excel
                         </button>
                     </div>
                 </div>
@@ -83,10 +100,11 @@
                 <div class="row mt-3">
                     <div class="col-12">
                         <small class="text-muted">
-                            <strong>Keterangan Status:</strong>
-                            <span class="badge bg-success ms-2">Completed</span> <em>Sudah diapprove semua & data lengkap</em> |
-                            <span class="badge bg-warning ms-2">In Progress</span> <em>Sedang proses approval</em> |
-                            <span class="badge bg-info ms-2">Realisasi</span> <em>Perlu input qty actual/persentase</em>
+                            <strong>Keterangan:</strong>
+                            <span class="badge bg-primary ms-2">Planning</span> <em>Lembur terencana dengan planning</em> |
+                            <span class="badge bg-warning ms-2">Unplanned</span> <em>Lembur mendadak tanpa planning</em> |
+                            <span class="badge bg-success ms-2">Completed</span> <em>Sudah diapprove & data lengkap</em> |
+                            <span class="badge bg-info ms-2">Realisasi</span> <em>Perlu input qty/persentase</em>
                         </small>
                     </div>
                 </div>
@@ -113,6 +131,15 @@
                                 @endif
                             </span>
                         @endif
+                        
+                        {{-- ✅ TAMBAHAN: Badge untuk Category Filter --}}
+                        <span class="badge {{ ($category_filter ?? 'all') == 'all' ? 'bg-secondary' : (($category_filter ?? '') == 'planned' ? 'bg-primary' : 'bg-warning') }}">
+                            <i class="fas fa-clipboard-list"></i> 
+                            Jenis: {{ 
+                                ($category_filter ?? 'all') == 'all' ? 'Semua' : 
+                                (($category_filter ?? '') == 'planned' ? 'Planning' : 'Unplanned') 
+                            }}
+                        </span>
                         
                         <span class="badge bg-secondary">
                             <i class="fas fa-tasks"></i> 
@@ -311,6 +338,7 @@
                         <thead class="table-dark">
                             <tr>
                                 <th>No. SPK</th>
+                                <th>Jenis</th>
                                 <th>Tanggal</th>
                                 <th>Jam Mulai</th>
                                 <th>Jam Selesai</th>
@@ -362,14 +390,21 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
     // Initialize custom table functionality
     initializeCustomTable();
     
-    // Export Excel functionality
+    // Export Excel functionality (✅ TAMBAHAN: Include category_filter)
     $('#exportExcel').click(function() {
         var params = new URLSearchParams();
         params.append('start_date', $('#start_date').val());
         params.append('end_date', $('#end_date').val());
+        params.append('category_filter', $('#category_filter').val());
         params.append('status_filter', $('#status_filter').val());
         params.append('department_id', $('#department_id').val());
         
@@ -573,11 +608,12 @@ function initializeCustomTable() {
 function showEmployeeDetails(employeeId) {
     const startDate = $('#start_date').val();
     const endDate = $('#end_date').val();
+    const categoryFilter = $('#category_filter').val(); // ✅ TAMBAHAN
     const statusFilter = $('#status_filter').val();
     
     // Show loading state
     $('#employeeInfo').html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>');
-    $('#detailsTableBody').html('<tr><td colspan="8" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>');
+    $('#detailsTableBody').html('<tr><td colspan="9" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>');
     $('#employeeDetailsModal').modal('show');
     
     $.ajax({
@@ -586,6 +622,7 @@ function showEmployeeDetails(employeeId) {
         data: { 
             start_date: startDate,
             end_date: endDate,
+            category_filter: categoryFilter, // ✅ TAMBAHAN
             status_filter: statusFilter
         },
         success: function(response) {
@@ -623,6 +660,14 @@ function showEmployeeDetails(employeeId) {
             let tableBody = '';
             if (response.details && response.details.length > 0) {
                 response.details.forEach(function(detail) {
+                    // ✅ TAMBAHAN: Badge untuk jenis lembur
+                    let categoryBadge = '';
+                    if (detail.category === 'planned') {
+                        categoryBadge = '<span class="badge bg-primary">Planning</span>';
+                    } else {
+                        categoryBadge = '<span class="badge bg-warning">Unplanned</span>';
+                    }
+                    
                     // Status badge
                     let statusBadge = '';
                     switch(detail.status) {
@@ -650,6 +695,7 @@ function showEmployeeDetails(employeeId) {
                     tableBody += `
                         <tr>
                             <td><span class="fw-bold text-primary">${detail.spk_number}</span></td>
+                            <td>${categoryBadge}</td>
                             <td>${detail.date}</td>
                             <td>${detail.start_time}</td>
                             <td>${detail.end_time}</td>
@@ -663,7 +709,7 @@ function showEmployeeDetails(employeeId) {
             } else {
                 tableBody = `
                     <tr>
-                        <td colspan="8" class="text-center text-muted">Tidak ada data lembur</td>
+                        <td colspan="9" class="text-center text-muted">Tidak ada data lembur</td>
                     </tr>
                 `;
             }
@@ -673,7 +719,7 @@ function showEmployeeDetails(employeeId) {
         error: function(xhr, status, error) {
             console.error('AJAX Error:', error);
             $('#employeeInfo').html('<div class="alert alert-danger">Gagal memuat informasi karyawan</div>');
-            $('#detailsTableBody').html('<tr><td colspan="8" class="text-center text-danger">Gagal memuat data</td></tr>');
+            $('#detailsTableBody').html('<tr><td colspan="9" class="text-center text-danger">Gagal memuat data</td></tr>');
             
             if (typeof Swal !== 'undefined') {
                 Swal.fire({

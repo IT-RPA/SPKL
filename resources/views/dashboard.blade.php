@@ -2,508 +2,467 @@
 
 @section('content')
 <style>
-    /* Custom Dashboard Styles */
+    /* Dashboard Specific Styles */
+    .dashboard-container {
+        padding: 0;
+    }
+    
     .dashboard-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        border-radius: 15px;
-        padding: 30px;
-        margin-bottom: 30px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-    
-    .stats-card {
-        border: none;
-        border-radius: 15px;
-        transition: all 0.3s ease;
-        overflow: hidden;
-        position: relative;
-        margin-bottom: 20px;
-    }
-    
-    .stats-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-    }
-    
-    .stats-card .card-body {
+        border-radius: 10px;
         padding: 25px;
-        position: relative;
-        z-index: 2;
+        margin-bottom: 25px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
     
-    .stats-number {
-        font-size: 2.5rem;
+    .dashboard-header h1 {
+        font-size: 1.8rem;
+        margin: 0 0 5px 0;
         font-weight: 700;
-        margin: 0;
-        line-height: 1;
     }
     
-    .stats-label {
-        font-size: 0.9rem;
+    .dashboard-header p {
         margin: 0;
         opacity: 0.9;
+        font-size: 0.95rem;
+    }
+    
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+    }
+    
+    .stat-card.blue { border-left: 4px solid #007bff; }
+    .stat-card.green { border-left: 4px solid #28a745; }
+    .stat-card.orange { border-left: 4px solid #fd7e14; }
+    .stat-card.cyan { border-left: 4px solid #17a2b8; }
+    
+    .stat-card .stat-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 3rem;
+        opacity: 0.1;
+    }
+    
+    .stat-card .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        color: #2c3e50;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin: 5px 0 0 0;
         font-weight: 500;
     }
     
-    .stats-icon {
-        opacity: 0.8;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    /* Charts */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        gap: 20px;
+        margin-bottom: 25px;
     }
     
-    .chart-card {
-        border: none;
-        border-radius: 15px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    .chart-box {
+        background: white;
+        border-radius: 10px;
         overflow: hidden;
-        margin-bottom: 30px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     }
     
-    .chart-card .card-header {
+    .chart-header {
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         color: white;
-        border: none;
-        padding: 20px 30px;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
-    .chart-card .card-body {
-        padding: 30px;
+    .chart-header.purple {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
     
-    .chart-container {
+    .chart-header h5 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .chart-header select {
+        background: white !important;
+        color: #333 !important;
+        border: none !important;
+        font-size: 0.85rem;
+        padding: 5px 10px;
+        border-radius: 5px;
+    }
+    
+    .chart-body {
+        padding: 20px;
+    }
+    
+    .chart-canvas {
         position: relative;
-        height: 350px;
+        height: 300px;
+        width: 100%;
     }
     
-    .welcome-card {
-        border: none;
-        border-radius: 15px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    /* Info Cards */
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 10px;
         overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     }
     
-    .welcome-card .card-header {
+    .info-header {
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         color: white;
-        border: none;
-        padding: 20px 30px;
-    }
-    
-    .welcome-card .card-body {
-        padding: 30px;
-    }
-    
-    .workflow-step {
-        background: #f8f9fa;
-        border-left: 4px solid #007bff;
-        padding: 15px 20px;
-        margin: 10px 0;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-    }
-    
-    .workflow-step:hover {
-        background: #e3f2fd;
-        border-left-color: #2196f3;
-        transform: translateX(5px);
-    }
-    
-    .status-legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 15px;
-    }
-    
-    .status-badge {
-        padding: 8px 15px;
-        border-radius: 25px;
-        font-size: 11px;
+        padding: 12px 15px;
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        transition: all 0.3s ease;
-        cursor: pointer;
+        font-size: 0.9rem;
     }
     
-    .status-badge:hover {
-        transform: scale(1.05);
-        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    .info-body {
+        padding: 15px;
     }
     
-    .requests-table {
-        border: none;
-        border-radius: 15px;
-        overflow: hidden;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-    }
-    
-    .requests-table .card-header {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        color: white;
-        border: none;
-        padding: 20px 30px;
-    }
-    
-    .requests-table .table {
-        margin: 0;
-    }
-    
-    .requests-table .table thead th {
-        background: #f8f9fa;
-        border: none;
-        font-weight: 600;
-        color: #495057;
-        padding: 15px 20px;
-    }
-    
-    .requests-table .table tbody td {
-        padding: 15px 20px;
-        border-top: 1px solid #f1f3f4;
-        vertical-align: middle;
-    }
-    
-    .requests-table .table tbody tr:hover {
-        background: rgba(74, 172, 254, 0.05);
-    }
-    
-    .detail-btn {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        border-radius: 20px;
-        padding: 8px 20px;
-        color: white;
-        font-size: 12px;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        transition: all 0.3s ease;
-    }
-    
-    .detail-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        color: white;
-    }
-    
-    /* Period Selector */
-    .period-selector {
+    .status-row {
         display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        margin: 5px 0;
+        background: #f8f9fa;
+        border-radius: 5px;
+        transition: background 0.3s ease;
     }
     
-    .period-btn {
-        padding: 8px 20px;
-        border: 2px solid #e0e0e0;
-        background: white;
-        border-radius: 25px;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        cursor: pointer;
+    .status-row:hover {
+        background: #e9ecef;
     }
     
-    .period-btn:hover {
-        border-color: #667eea;
-        color: #667eea;
+    .dept-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 10px;
+        margin: 5px 0;
+        background: #f8f9fa;
+        border-left: 3px solid #007bff;
+        border-radius: 3px;
     }
     
-    .period-btn.active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-color: transparent;
+    .alert-box {
+        padding: 10px 12px;
+        border-radius: 5px;
+        margin: 8px 0;
+        display: flex;
+        align-items: center;
+        font-size: 0.85rem;
     }
     
-    /* Responsive adjustments */
+    .alert-box i {
+        margin-right: 10px;
+        font-size: 1.2rem;
+    }
+    
+    /* Quick Links */
+    .quick-links {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+    
+    .quick-links h5 {
+        margin: 0 0 15px 0;
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    
+    .quick-links .btn {
+        margin: 5px;
+    }
+    
+    /* Responsive */
     @media (max-width: 768px) {
-        .dashboard-header {
-            padding: 20px;
-            text-align: center;
+        .stats-grid {
+            grid-template-columns: 1fr;
         }
         
-        .stats-number {
-            font-size: 2rem;
+        .charts-grid {
+            grid-template-columns: 1fr;
         }
         
-        .chart-container {
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .chart-canvas {
             height: 250px;
         }
-        
-        .period-selector {
-            flex-direction: column;
-        }
-    }
-    
-    /* Animation */
-    .fade-in {
-        animation: fadeIn 0.6s ease-in;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
     }
 </style>
 
-<div class="fade-in">
-    <!-- Dashboard Header -->
+<div class="dashboard-container">
+    <!-- Header -->
     <div class="dashboard-header">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-2">Dashboard SPK Lembur</h1>
-                <p class="mb-0 opacity-75">Sistem Pengelolaan Surat Perintah Kerja Lembur</p>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-chart-line"></i> Dashboard SPK Lembur</h1>
+                <p>Monitoring dan Analisis Sistem Lembur</p>
             </div>
-            <div class="col-md-4 text-end">
-                <div class="d-flex align-items-center justify-content-end">
-                    <i class="fas fa-calendar-alt me-2"></i>
-                    <span>{{ date('d F Y') }}</span>
+            <div>
+                <i class="fas fa-calendar-alt me-2"></i>
+                <span>{{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card blue">
+            <i class="fas fa-file-alt stat-icon"></i>
+            <h2 class="stat-number">{{ $totalSPKLThisMonth }}</h2>
+            <p class="stat-label">Total SPK Bulan Ini</p>
+        </div>
+        
+        <div class="stat-card green">
+            <i class="fas fa-calendar-check stat-icon"></i>
+            <h2 class="stat-number">{{ $activePlanning }}</h2>
+            <p class="stat-label">Planning Aktif</p>
+        </div>
+        
+        <div class="stat-card orange">
+            <i class="fas fa-hourglass-half stat-icon"></i>
+            <h2 class="stat-number">{{ $pendingMyApproval }}</h2>
+            <p class="stat-label">Menunggu Approval Saya</p>
+        </div>
+        
+        <div class="stat-card cyan">
+            <i class="fas fa-clock stat-icon"></i>
+            <h2 class="stat-number" style="font-size: 1.5rem;">{{ $totalHoursFormatted }}</h2>
+            <p class="stat-label">Total Jam Bulan Ini</p>
+        </div>
+    </div>
+
+    <!-- Charts Row 1: SPK -->
+    <div class="charts-grid">
+        <div class="chart-box">
+            <div class="chart-header">
+                <h5><i class="fas fa-chart-line me-2"></i>SPK Per Hari (Bulan Ini)</h5>
+                <select id="monthSelector" class="form-select-sm">
+                    @for($i = 1; $i <= 12; $i++)
+                        <option value="{{ $i }}" {{ $i == date('n') ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::create(null, $i, 1)->isoFormat('MMMM') }}
+                        </option>
+                    @endfor
+                </select>
+            </div>
+            <div class="chart-body">
+                <div class="chart-canvas">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-box">
+            <div class="chart-header">
+                <h5><i class="fas fa-chart-bar me-2"></i>SPK Per Bulan (Tahun Ini)</h5>
+                <select id="yearSelector" class="form-select-sm">
+                    @for($i = date('Y') - 2; $i <= date('Y'); $i++)
+                        <option value="{{ $i }}" {{ $i == date('Y') ? 'selected' : '' }}>
+                            {{ $i }}
+                        </option>
+                    @endfor
+                </select>
+            </div>
+            <div class="chart-body">
+                <div class="chart-canvas">
+                    <canvas id="monthlyChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Statistics Cards --}}
-    <div class="row">
-        <div class="col-lg-3 col-md-6 col-sm-6">
-            <div class="card stats-card bg-primary text-white">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <h2 class="stats-number">{{ $totalUsers }}</h2>
-                        <p class="stats-label">Total Users</p>
-                    </div>
-                    <i class="fas fa-users fa-3x stats-icon"></i>
+    <!-- Charts Row 2: Total Jam -->
+    <div class="charts-grid">
+        <div class="chart-box">
+            <div class="chart-header purple">
+                <h5><i class="fas fa-clock me-2"></i>Total Jam Per Hari (Bulan Ini)</h5>
+                <select id="monthSelectorHours" class="form-select-sm">
+                    @for($i = 1; $i <= 12; $i++)
+                        <option value="{{ $i }}" {{ $i == date('n') ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::create(null, $i, 1)->isoFormat('MMMM') }}
+                        </option>
+                    @endfor
+                </select>
+            </div>
+            <div class="chart-body">
+                <div class="chart-canvas">
+                    <canvas id="dailyHoursChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-3 col-md-6 col-sm-6">
-            <div class="card stats-card bg-info text-white">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <h2 class="stats-number">{{ $totalRequests }}</h2>
-                        <p class="stats-label">Total Requests</p>
-                    </div>
-                    <i class="fas fa-clock fa-3x stats-icon"></i>
-                </div>
+        <div class="chart-box">
+            <div class="chart-header purple">
+                <h5><i class="fas fa-chart-area me-2"></i>Total Jam Per Bulan (Tahun Ini)</h5>
+                <select id="yearSelectorHours" class="form-select-sm">
+                    @for($i = date('Y') - 2; $i <= date('Y'); $i++)
+                        <option value="{{ $i }}" {{ $i == date('Y') ? 'selected' : '' }}>
+                            {{ $i }}
+                        </option>
+                    @endfor
+                </select>
             </div>
-        </div>
-
-        <div class="col-lg-3 col-md-6 col-sm-6">
-            <div class="card stats-card bg-warning text-white">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <h2 class="stats-number">{{ $pendingRequests }}</h2>
-                        <p class="stats-label">Pending Requests</p>
-                    </div>
-                    <i class="fas fa-hourglass-half fa-3x stats-icon"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-3 col-md-6 col-sm-6">
-            <div class="card stats-card bg-success text-white">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <h2 class="stats-number">{{ $completedRequests }}</h2>
-                        <p class="stats-label">Completed Requests</p>
-                    </div>
-                    <i class="fas fa-check-circle fa-3x stats-icon"></i>
+            <div class="chart-body">
+                <div class="chart-canvas">
+                    <canvas id="monthlyHoursChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Chart Section --}}
-    <div class="row">
-        <!-- Daily Chart (Current Month) -->
-        <div class="col-lg-6">
-            <div class="card chart-card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-chart-line me-2"></i>
-                            SPKL Per Hari (Bulan Ini)
-                        </h5>
-                        <select id="monthSelector" class="form-select form-select-sm" style="width: 150px; background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);">
-                            @for($i = 1; $i <= 12; $i++)
-                                <option value="{{ $i }}" {{ $i == date('n') ? 'selected' : '' }}>
-                                    {{ date('F', mktime(0, 0, 0, $i, 1)) }}
-                                </option>
-                            @endfor
-                        </select>
-                    </div>
+    <!-- Info Cards -->
+    <div class="info-grid">
+        <!-- Status Breakdown -->
+        <div class="info-card">
+            <div class="info-header">
+                <i class="fas fa-chart-pie me-2"></i>Breakdown Status SPK
+            </div>
+            <div class="info-body">
+                <div class="status-row">
+                    <span><i class="fas fa-circle text-warning me-2"></i>In Progress</span>
+                    <span class="badge bg-warning">{{ $statusBreakdown['pending'] }}</span>
                 </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="dailyChart"></canvas>
-                    </div>
+                <div class="status-row">
+                    <span><i class="fas fa-circle text-info me-2"></i>Ready for Input</span>
+                    <span class="badge bg-info">{{ $statusBreakdown['approved'] }}</span>
+                </div>
+                <div class="status-row">
+                    <span><i class="fas fa-circle text-success me-2"></i>Completed</span>
+                    <span class="badge bg-success">{{ $statusBreakdown['completed'] }}</span>
+                </div>
+                <div class="status-row">
+                    <span><i class="fas fa-circle text-danger me-2"></i>Rejected</span>
+                    <span class="badge bg-danger">{{ $statusBreakdown['rejected'] }}</span>
                 </div>
             </div>
         </div>
 
-        <!-- Monthly Chart (Current Year) -->
-        <div class="col-lg-6">
-            <div class="card chart-card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-chart-bar me-2"></i>
-                            SPKL Per Bulan (Tahun Ini)
-                        </h5>
-                        <select id="yearSelector" class="form-select form-select-sm" style="width: 120px; background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);">
-                            @for($i = date('Y') - 2; $i <= date('Y'); $i++)
-                                <option value="{{ $i }}" {{ $i == date('Y') ? 'selected' : '' }}>
-                                    {{ $i }}
-                                </option>
-                            @endfor
-                        </select>
+        <!-- Top Departments -->
+        <div class="info-card">
+            <div class="info-header">
+                <i class="fas fa-building me-2"></i>Top 5 Department (Bulan Ini)
+            </div>
+            <div class="info-body">
+                @forelse($topDepartments as $dept)
+                    <div class="dept-row">
+                        <strong>{{ $dept['department'] }}</strong>
+                        <span class="badge bg-primary">{{ $dept['formatted_time'] }}</span>
                     </div>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="monthlyChart"></canvas>
+                @empty
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0 small">Belum ada data bulan ini</p>
                     </div>
-                </div>
+                @endforelse
             </div>
         </div>
-    </div>
 
-    {{-- Welcome Section --}}
-    <div class="row">
-        <div class="col-12">
-            <div class="card welcome-card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Sistem SPK Lembur - Alur Kerja & Status
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p class="lead">Sistem ini menggunakan alur approval berlapis untuk memastikan setiap pengajuan lembur disetujui oleh pihak yang berwenang.</p>
-                    
-                    <h6 class="mb-3">
-                        <i class="fas fa-route me-2 text-primary"></i>
-                        Alur Approval Berdasarkan Level:
-                    </h6>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="workflow-step">
-                                <strong>Foreman:</strong><br>
-                                Pengajuan → Sect Head → Dept Head → Div Head → HRD
-                            </div>
-                            <div class="workflow-step">
-                                <strong>Section Head:</strong><br>
-                                Pengajuan → Dept Head → Div Head → HRD
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="workflow-step">
-                                <strong>Department Head:</strong><br>
-                                Pengajuan → Div Head → HRD
-                            </div>
-                            <div class="workflow-step">
-                                <strong>Division Head:</strong><br>
-                                Pengajuan → HRD
-                            </div>
-                        </div>
+        <!-- Planning Alerts -->
+        <div class="info-card">
+            <div class="info-header">
+                <i class="fas fa-exclamation-triangle me-2"></i>Planning Perhatian
+            </div>
+            <div class="info-body">
+                @if($planningsNeedReminder > 0)
+                    <div class="alert-box alert-warning">
+                        <i class="fas fa-bell"></i>
+                        <span><strong>{{ $planningsNeedReminder }}</strong> planning H-7 perlu reminder</span>
                     </div>
+                @endif
 
-                    <h6 class="mt-4 mb-3">
-                        <i class="fas fa-palette me-2 text-primary"></i>
-                        Status Color Legend:
-                    </h6>
-                    <div class="status-legend">
-                        <span class="status-badge status-yellow">Pending (Kuning)</span>
-                        <span class="status-badge status-orange">Approved Sect Head (Orange)</span>
-                        <span class="status-badge status-blue">Approved Dept Head (Biru)</span>
-                        <span class="status-badge status-purple">Approved Div Head (Ungu)</span>
-                        <span class="status-badge status-green">Completed (Hijau)</span>
-                        <span class="status-badge status-red">With Qty Plan (Merah)</span>
-                        <span class="status-badge status-act">Ready for Actual Input (Act)</span>
-                        <span class="status-badge status-gray">Rejected (Abu-abu)</span>
+                @if($planningsExpired > 0)
+                    <div class="alert-box alert-danger">
+                        <i class="fas fa-calendar-times"></i>
+                        <span><strong>{{ $planningsExpired }}</strong> planning sudah expired</span>
                     </div>
+                @endif
+
+                @if($planningsPendingApproval > 0)
+                    <div class="alert-box alert-info">
+                        <i class="fas fa-hourglass-half"></i>
+                        <span><strong>{{ $planningsPendingApproval }}</strong> planning menunggu approval</span>
+                    </div>
+                @endif
+
+                @if($planningsNeedReminder == 0 && $planningsExpired == 0 && $planningsPendingApproval == 0)
+                    <div class="text-center text-success py-3">
+                        <i class="fas fa-check-circle fa-3x mb-2"></i>
+                        <p class="mb-0"><strong>Semua planning OK!</strong></p>
+                    </div>
+                @endif
+
+                <div class="text-center mt-3">
+                    <a href="{{ route('planning.index') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-calendar-alt me-1"></i>Lihat Planning
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Recent Requests Table --}}
-    <div class="row">
-        <div class="col-12">
-            <div class="card requests-table">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-list me-2"></i>
-                        Recent Overtime Requests
-                    </h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>
-                                        <i class="fas fa-user me-1"></i>
-                                        Requester Level
-                                    </th>
-                                    <th>
-                                        <i class="fas fa-flag me-1"></i>
-                                        Status
-                                    </th>
-                                    <th class="text-center">
-                                        <i class="fas fa-cog me-1"></i>
-                                        Action
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($requests as $request)
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-user-circle text-muted me-2"></i>
-                                                {{ ucfirst(str_replace('_', ' ', $request->requester_level)) }}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="status-badge status-{{ $request->status_color }}">
-                                                @if($request->status_color == 'act')
-                                                    Ready for Input
-                                                @else
-                                                    {{ ucfirst($request->status) }}
-                                                @endif
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <a href="{{ route('overtime.show', $request) }}" class="btn detail-btn">
-                                                <i class="fas fa-eye me-1"></i>
-                                                Detail
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="3" class="text-center py-5">
-                                            <div class="text-muted">
-                                                <i class="fas fa-inbox fa-3x mb-3 opacity-50"></i>
-                                                <p class="mb-0">Tidak ada data pengajuan</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    @if($requests->hasPages())
-                    <div class="d-flex justify-content-center p-3">
-                        {{ $requests->links() }}
-                    </div>
-                    @endif
-                </div>
-            </div>
-        </div>
+    <!-- Quick Links -->
+    <div class="quick-links">
+        <h5><i class="fas fa-link me-2"></i>Quick Access</h5>
+        <a href="{{ route('overtime.create') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus-circle"></i> Buat SPK
+        </a>
+        <a href="{{ route('overtime.index') }}" class="btn btn-info btn-sm">
+            <i class="fas fa-list"></i> Lihat SPK
+        </a>
+        <a href="{{ route('planning.index') }}" class="btn btn-success btn-sm">
+            <i class="fas fa-calendar-alt"></i> Planning
+        </a>
+        <a href="{{ route('reports.overtime-leaderboard') }}" class="btn btn-warning btn-sm">
+            <i class="fas fa-chart-bar"></i> Report
+        </a>
     </div>
 </div>
 
@@ -511,207 +470,162 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Animation untuk stats cards
-    $('.stats-card').each(function(index) {
-        $(this).delay(100 * index).fadeIn(500);
-    });
-    
-    // Initialize charts
-    let dailyChart = null;
-    let monthlyChart = null;
+    let dailyChart, monthlyChart, dailyHoursChart, monthlyHoursChart;
 
-    // Load daily chart
+    // Load functions
     function loadDailyChart(month, year) {
-        $.ajax({
-            url: '/dashboard/chart-data/daily',
-            method: 'GET',
-            data: { month: month, year: year },
-            success: function(response) {
-                updateDailyChart(response);
-            }
+        $.get('{{ route("dashboard.chart.daily") }}', { month, year }, function(data) {
+            updateDailyChart(data);
         });
     }
 
-    // Load monthly chart
     function loadMonthlyChart(year) {
-        $.ajax({
-            url: '/dashboard/chart-data/monthly',
-            method: 'GET',
-            data: { year: year },
-            success: function(response) {
-                updateMonthlyChart(response);
-            }
+        $.get('{{ route("dashboard.chart.monthly") }}', { year }, function(data) {
+            updateMonthlyChart(data);
         });
     }
 
-    // Update daily chart
-    function updateDailyChart(data) {
-        const ctx = document.getElementById('dailyChart').getContext('2d');
-        
-        if (dailyChart) {
-            dailyChart.destroy();
-        }
+    function loadDailyHoursChart(month, year) {
+        $.get('{{ route("dashboard.chart.daily-hours") }}', { month, year }, function(data) {
+            updateDailyHoursChart(data);
+        });
+    }
 
+    function loadMonthlyHoursChart(year) {
+        $.get('{{ route("dashboard.chart.monthly-hours") }}', { year }, function(data) {
+            updateMonthlyHoursChart(data);
+        });
+    }
+
+    // Update chart functions
+    function updateDailyChart(data) {
+        const ctx = document.getElementById('dailyChart');
+        if (!ctx) return;
+        
+        if (dailyChart) dailyChart.destroy();
         dailyChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: data.labels,
                 datasets: [{
-                    label: 'Jumlah SPKL',
+                    label: 'Jumlah SPK',
                     data: data.values,
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgb(79, 172, 254)',
+                    backgroundColor: 'rgba(79, 172, 254, 0.1)',
                     tension: 0.4,
-                    fill: true,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
+                    fill: true
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        padding: 12,
-                        titleFont: {
-                            size: 14
-                        },
-                        bodyFont: {
-                            size: 13
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                }
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
             }
         });
     }
 
-    // Update monthly chart
     function updateMonthlyChart(data) {
-        const ctx = document.getElementById('monthlyChart').getContext('2d');
+        const ctx = document.getElementById('monthlyChart');
+        if (!ctx) return;
         
-        if (monthlyChart) {
-            monthlyChart.destroy();
-        }
-
+        if (monthlyChart) monthlyChart.destroy();
         monthlyChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: data.labels,
                 datasets: [{
-                    label: 'Jumlah SPKL',
+                    label: 'Jumlah SPK',
                     data: data.values,
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 206, 86, 0.7)',
-                        'rgba(75, 192, 192, 0.7)',
-                        'rgba(153, 102, 255, 0.7)',
-                        'rgba(255, 159, 64, 0.7)',
-                        'rgba(199, 199, 199, 0.7)',
-                        'rgba(83, 102, 255, 0.7)',
-                        'rgba(255, 99, 255, 0.7)',
-                        'rgba(99, 255, 132, 0.7)',
-                        'rgba(255, 195, 0, 0.7)',
-                        'rgba(99, 195, 255, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)',
-                        'rgba(199, 199, 199, 1)',
-                        'rgba(83, 102, 255, 1)',
-                        'rgba(255, 99, 255, 1)',
-                        'rgba(99, 255, 132, 1)',
-                        'rgba(255, 195, 0, 1)',
-                        'rgba(99, 195, 255, 1)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 5
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        padding: 12,
-                        titleFont: {
-                            size: 14
-                        },
-                        bodyFont: {
-                            size: 13
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                }
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
             }
         });
     }
 
-    // Event listeners untuk selectors
-    $('#monthSelector').on('change', function() {
+    function updateDailyHoursChart(data) {
+        const ctx = document.getElementById('dailyHoursChart');
+        if (!ctx) return;
+        
+        if (dailyHoursChart) dailyHoursChart.destroy();
+        dailyHoursChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Total Jam',
+                    data: data.values,
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    function updateMonthlyHoursChart(data) {
+        const ctx = document.getElementById('monthlyHoursChart');
+        if (!ctx) return;
+        
+        if (monthlyHoursChart) monthlyHoursChart.destroy();
+        monthlyHoursChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Total Jam',
+                    data: data.values,
+                    borderColor: 'rgb(118, 75, 162)',
+                    backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    // Event listeners
+    $('#monthSelector, #monthSelectorHours').on('change', function() {
         const month = $(this).val();
-        const year = $('#yearSelector').val() || {{ date('Y') }};
-        loadDailyChart(month, year);
+        const year = $(this).attr('id').includes('Hours') ? $('#yearSelectorHours').val() : $('#yearSelector').val();
+        if ($(this).attr('id').includes('Hours')) {
+            loadDailyHoursChart(month, year);
+        } else {
+            loadDailyChart(month, year);
+        }
     });
 
-    $('#yearSelector').on('change', function() {
+    $('#yearSelector, #yearSelectorHours').on('change', function() {
         const year = $(this).val();
-        const month = $('#monthSelector').val() || {{ date('n') }};
-        loadDailyChart(month, year);
-        loadMonthlyChart(year);
+        if ($(this).attr('id').includes('Hours')) {
+            loadMonthlyHoursChart(year);
+        } else {
+            loadMonthlyChart(year);
+        }
     });
 
-    // Load initial data
+    // Initial load
     loadDailyChart({{ date('n') }}, {{ date('Y') }});
     loadMonthlyChart({{ date('Y') }});
+    loadDailyHoursChart({{ date('n') }}, {{ date('Y') }});
+    loadMonthlyHoursChart({{ date('Y') }});
 });
 </script>
 @endpush
-
 @endsection

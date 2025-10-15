@@ -27,6 +27,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/chart-data/daily', [DashboardController::class, 'getDailyChartData'])->name('dashboard.chart.daily');
     Route::get('/dashboard/chart-data/monthly', [DashboardController::class, 'getMonthlyChartData'])->name('dashboard.chart.monthly');
+    Route::get('/dashboard/chart-data/daily-hours', [DashboardController::class, 'getDailyHoursChartData'])->name('dashboard.chart.daily-hours');
+    Route::get('/dashboard/chart-data/monthly-hours', [DashboardController::class, 'getMonthlyHoursChartData'])->name('dashboard.chart.monthly-hours');
+    
     
     // User Management
     Route::resource('users', UserController::class);
