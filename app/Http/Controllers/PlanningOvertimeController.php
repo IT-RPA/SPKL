@@ -28,13 +28,22 @@ class PlanningOvertimeController extends Controller
                 ->with('error', 'Data karyawan tidak ditemukan.');
         }
 
-        // ✅ ADMIN bisa lihat semua planning, yang lain hanya department sendiri
+        // ✅ PERBAIKAN: Level tinggi (Sub Div, Div, HRD, Admin) bisa lihat semua planning
         $query = OvertimePlanning::with(['department', 'creator', 'approvals.approverEmployee'])
             ->orderBy('created_at', 'desc');
 
-        if ($currentUser->role->name !== 'admin') {
+        // ✅ Cek level jabatan untuk menentukan akses
+        $jobLevelCode = $currentEmployee->jobLevel->code ?? null;
+        $isAdmin = $currentUser->role->name === 'admin';
+        
+        // Level yang bisa lihat cross-department (Sub Div Head ke atas)
+        $crossDeptLevels = ['SUBDIV', 'DIV', 'HRD', 'ADMIN'];
+        
+        if (!$isAdmin && !in_array($jobLevelCode, $crossDeptLevels)) {
+            // Dept Head ke bawah: hanya bisa lihat planning department sendiri
             $query->where('department_id', $currentEmployee->department_id);
         }
+        // Admin dan level tinggi (Sub Div, Div, HRD): bisa lihat semua planning
 
         $plannings = $query->paginate(10);
 
@@ -191,10 +200,13 @@ class PlanningOvertimeController extends Controller
      */
     public function show(OvertimePlanning $planning)
     {
-        // Load relationships
+        // ✅ PERBAIKAN: Load semua relationship dengan proper ordering
         $planning->load([
             'department',
             'creator.jobLevel',
+            'approvals' => function($query) {
+                $query->orderBy('step_order', 'asc');
+            },
             'approvals.approverEmployee.jobLevel',
             'overtimeRequests.details.employee'
         ]);

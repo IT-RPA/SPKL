@@ -71,7 +71,6 @@ class MasterDataSeeder extends Seeder
         // 2. ROLES dengan PERMISSIONS
         // =======================
         
-        // ✅ ADMIN ROLE - Full Access (All Permissions)
         $adminRole = Role::create([
             'name' => 'admin',
             'display_name' => 'Administrator',
@@ -79,7 +78,6 @@ class MasterDataSeeder extends Seeder
         ]);
         $adminRole->permissions()->attach(Permission::all());
 
-        // ✅ MANAGER ROLE - Approval Rights (Section Head, Dept Head, Division Head)
         $managerRole = Role::create([
             'name' => 'manager',
             'display_name' => 'Manager',
@@ -96,7 +94,6 @@ class MasterDataSeeder extends Seeder
         ])->get();
         $managerRole->permissions()->attach($managerPermissions);
 
-        // ✅ STAFF ROLE - Basic Access
         $staffRole = Role::create([
             'name' => 'staff',
             'display_name' => 'Staff',
@@ -162,7 +159,6 @@ class MasterDataSeeder extends Seeder
         // 5. USERS + EMPLOYEES dengan Role yang sesuai
         // =======================
         $userData = [
-            // ✅ ADMINISTRATOR - Full Access untuk semua department
             [
                 'id' => 'ADMIN001', 
                 'username' => 'admin',
@@ -173,7 +169,6 @@ class MasterDataSeeder extends Seeder
                 'role' => $adminRole->id
             ],
 
-            // Produksi - Staff (Foreman)
             [
                 'id' => 'PROD001', 
                 'username' => 'john.doe',
@@ -183,7 +178,6 @@ class MasterDataSeeder extends Seeder
                 'level' => $foreman->id,
                 'role' => $staffRole->id
             ],
-            // Produksi - Manager (Section Head)
             [
                 'id' => 'PROD002', 
                 'username' => 'jane.smith',
@@ -193,7 +187,6 @@ class MasterDataSeeder extends Seeder
                 'level' => $sectHead->id,
                 'role' => $managerRole->id
             ],
-            // Produksi - Manager (Dept Head)
             [
                 'id' => 'PROD003', 
                 'username' => 'mike.johnson',
@@ -204,7 +197,6 @@ class MasterDataSeeder extends Seeder
                 'role' => $managerRole->id
             ],
 
-            // IT - Staff (Foreman)
             [
                 'id' => 'IT001', 
                 'username' => 'david.brown',
@@ -215,7 +207,6 @@ class MasterDataSeeder extends Seeder
                 'role' => $staffRole->id
             ],
 
-            // Division Head - Manager
             [
                 'id' => 'DIV999', 
                 'username' => 'sarah.wilson',
@@ -226,7 +217,6 @@ class MasterDataSeeder extends Seeder
                 'role' => $managerRole->id
             ],
 
-            // HRD Manager - Manager
             [
                 'id' => 'HRD002', 
                 'username' => 'robert.miller',
@@ -237,7 +227,6 @@ class MasterDataSeeder extends Seeder
                 'role' => $managerRole->id
             ],
 
-            // Finance Dept Head - Manager
             [
                 'id' => 'FIN002', 
                 'username' => 'emily.taylor',
@@ -248,7 +237,6 @@ class MasterDataSeeder extends Seeder
                 'role' => $managerRole->id
             ],
 
-            // Staff Produksi
             [
                 'id' => 'PROD005', 
                 'username' => 'tom.staff1',
@@ -258,7 +246,6 @@ class MasterDataSeeder extends Seeder
                 'level' => $staff->id,
                 'role' => $staffRole->id
             ],
-            // Staff IT
             [
                 'id' => 'IT003', 
                 'username' => 'amy.staff2',
@@ -295,7 +282,7 @@ class MasterDataSeeder extends Seeder
         }
 
         // =======================
-        // 6. FLOW JOBS (DENGAN APPLIES_TO)
+        // 6. FLOW JOBS (DENGAN STEP 1 = PENGAJUAN BOTH)
         // =======================
         $prodSectHead = Employee::where('employee_id', 'PROD002')->first();
         $prodDeptHead = Employee::where('employee_id', 'PROD003')->first();
@@ -303,68 +290,43 @@ class MasterDataSeeder extends Seeder
         $hrdManager   = Employee::where('employee_id', 'HRD002')->first();
         $finDeptHead  = Employee::where('employee_id', 'FIN002')->first();
 
-        // ✅ FLOW UNTUK PLANNING (sampai Dept Head saja, TANPA step Foreman & Admin)
-        $planningFlows = [
-            // Produksi - Planning Flow (mulai dari Section Head sebagai approver pertama)
-            ['dept' => $prodDept->id, 'level' => $sectHead->id,    'approver' => $prodSectHead->id, 'order' => 1, 'name' => 'Approval Section Head', 'applies' => 'planned'],
-            ['dept' => $prodDept->id, 'level' => $subDeptHead->id, 'approver' => null,              'order' => 2, 'name' => 'Approval Sub Department Head', 'applies' => 'planned'],
-            ['dept' => $prodDept->id, 'level' => $deptHead->id,    'approver' => $prodDeptHead->id, 'order' => 3, 'name' => 'Approval Department Head', 'applies' => 'planned'],
-
-            // IT - Planning Flow (mulai dari Sub Division Head)
-            ['dept' => $itDept->id, 'level' => $subdivHead->id,  'approver' => null,              'order' => 1, 'name' => 'Approval Sub Division Head', 'applies' => 'planned'],
-            ['dept' => $itDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head', 'applies' => 'planned'],
-
-            // Finance - Planning Flow (mulai dari Dept Head)
-            ['dept' => $finDept->id, 'level' => $deptHead->id,  'approver' => $finDeptHead->id,  'order' => 1, 'name' => 'Approval Department Head', 'applies' => 'planned'],
-            ['dept' => $finDept->id, 'level' => $divHead->id,   'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head', 'applies' => 'planned'],
+        $flowJobs = [
+            // ===== PRODUKSI =====
+            // Step 1-4: BOTH (sama untuk Planning & Unplanned)
+            ['dept' => $prodDept->id, 'level' => $foreman->id,     'approver' => null,              'order' => 1, 'name' => 'Pengajuan Laksanakan', 'applies' => 'both'],
+            ['dept' => $prodDept->id, 'level' => $sectHead->id,    'approver' => $prodSectHead->id, 'order' => 2, 'name' => 'Approval Section Head', 'applies' => 'both'],
+            ['dept' => $prodDept->id, 'level' => $subDeptHead->id, 'approver' => null,              'order' => 3, 'name' => 'Approval Sub Department Head', 'applies' => 'both'],
+            ['dept' => $prodDept->id, 'level' => $deptHead->id,    'approver' => $prodDeptHead->id, 'order' => 4, 'name' => 'Approval Department Head', 'applies' => 'both'],
             
-            // HRD - Planning Flow (mulai dari HRD Manager)
-            ['dept' => $hrdDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,   'order' => 1, 'name' => 'Approval HRD Manager', 'applies' => 'planned'],
-            ['dept' => $hrdDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head', 'applies' => 'planned'],
-        ];
-
-        // ✅ FLOW UNTUK UNPLANNED OVERTIME (lengkap sampai HRD)
-        $unplannedFlows = [
-            // Produksi - Unplanned Flow (lengkap)
-            ['dept' => $prodDept->id, 'level' => $foreman->id,     'approver' => null,              'order' => 1, 'name' => 'Pengajuan', 'applies' => 'unplanned'],
-            ['dept' => $prodDept->id, 'level' => $sectHead->id,    'approver' => $prodSectHead->id, 'order' => 2, 'name' => 'Approval Section Head', 'applies' => 'unplanned'],
-            ['dept' => $prodDept->id, 'level' => $subDeptHead->id, 'approver' => null,              'order' => 3, 'name' => 'Approval Sub Department Head', 'applies' => 'unplanned'],
-            ['dept' => $prodDept->id, 'level' => $deptHead->id,    'approver' => $prodDeptHead->id, 'order' => 4, 'name' => 'Approval Department Head', 'applies' => 'unplanned'],
+            // Step 5-7: UNPLANNED ONLY (tambahan untuk Unplanned)
             ['dept' => $prodDept->id, 'level' => $subdivHead->id,  'approver' => null,              'order' => 5, 'name' => 'Approval Sub Division Head', 'applies' => 'unplanned'],
             ['dept' => $prodDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 6, 'name' => 'Approval Division Head', 'applies' => 'unplanned'],
             ['dept' => $prodDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,   'order' => 7, 'name' => 'Approval HRD', 'applies' => 'unplanned'],
 
-            // IT - Unplanned Flow
-            ['dept' => $itDept->id, 'level' => $foreman->id,     'approver' => null,              'order' => 1, 'name' => 'Pengajuan', 'applies' => 'unplanned'],
-            ['dept' => $itDept->id, 'level' => $subdivHead->id,  'approver' => null,              'order' => 2, 'name' => 'Approval Sub Division Head', 'applies' => 'unplanned'],
-            ['dept' => $itDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 3, 'name' => 'Approval Division Head', 'applies' => 'unplanned'],
+            // ===== IT =====
+            // Step 1-2: BOTH (sama untuk Planning & Unplanned)
+            ['dept' => $itDept->id, 'level' => $foreman->id,     'approver' => null,              'order' => 1, 'name' => 'Pengajuan Laksanakan', 'applies' => 'both'],
+            ['dept' => $itDept->id, 'level' => $subdivHead->id,  'approver' => null,              'order' => 2, 'name' => 'Approval Sub Division Head', 'applies' => 'both'],
+            ['dept' => $itDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 3, 'name' => 'Approval Division Head', 'applies' => 'both'],
+            
+            // Step 4: UNPLANNED ONLY (tambahan untuk Unplanned)
             ['dept' => $itDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,   'order' => 4, 'name' => 'Approval HRD', 'applies' => 'unplanned'],
 
-            // Finance - Unplanned Flow
-            ['dept' => $finDept->id, 'level' => $deptHead->id,    'approver' => $finDeptHead->id,  'order' => 1, 'name' => 'Pengajuan', 'applies' => 'unplanned'],
-            ['dept' => $finDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head', 'applies' => 'unplanned'],
+            // ===== FINANCE =====
+            // Step 1-2: BOTH (sama untuk Planning & Unplanned)
+            ['dept' => $finDept->id, 'level' => $deptHead->id,  'approver' => $finDeptHead->id,  'order' => 1, 'name' => 'Pengajuan Laksanakan', 'applies' => 'both'],
+            ['dept' => $finDept->id, 'level' => $divHead->id,   'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head', 'applies' => 'both'],
+            
+            // Step 3: UNPLANNED ONLY (tambahan untuk Unplanned)
             ['dept' => $finDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,   'order' => 3, 'name' => 'Approval HRD', 'applies' => 'unplanned'],
             
-            // HRD - Unplanned Flow
-            ['dept' => $hrdDept->id, 'level' => $hrdManagerL->id, 'approver' => null,              'order' => 1, 'name' => 'Pengajuan', 'applies' => 'unplanned'],
-            ['dept' => $hrdDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head', 'applies' => 'unplanned'],
+            // ===== HRD =====
+            // Step 1-2: BOTH (sama untuk Planning & Unplanned)
+            ['dept' => $hrdDept->id, 'level' => $hrdManagerL->id, 'approver' => $hrdManager->id,   'order' => 1, 'name' => 'Pengajuan Laksanakan', 'applies' => 'both'],
+            ['dept' => $hrdDept->id, 'level' => $divHead->id,     'approver' => $divisionHead->id, 'order' => 2, 'name' => 'Approval Division Head', 'applies' => 'both'],
         ];
 
-        // Insert Planning Flows
-        foreach ($planningFlows as $flow) {
-            FlowJob::create([
-                'department_id'        => $flow['dept'],
-                'job_level_id'         => $flow['level'],
-                'approver_employee_id' => $flow['approver'],
-                'step_order'           => $flow['order'],
-                'step_name'            => $flow['name'],
-                'applies_to'           => $flow['applies'],
-                'is_active'            => true,
-            ]);
-        }
-
-        // Insert Unplanned Flows
-        foreach ($unplannedFlows as $flow) {
+        foreach ($flowJobs as $flow) {
             FlowJob::create([
                 'department_id'        => $flow['dept'],
                 'job_level_id'         => $flow['level'],
@@ -379,8 +341,11 @@ class MasterDataSeeder extends Seeder
         $this->command->info('✅ Master data seeded successfully!');
         $this->command->info('👤 Admin user created:');
         $this->command->info('   Username: admin | Email: admin@company.com | Password: password123');
-        $this->command->info('📋 Administrator can create planning for ALL departments');
-        $this->command->info('🔄 Flow Jobs created with Admin level (step_order = 0)
-    for cross-department approvals.');
+        $this->command->info('📋 Flow Jobs Structure:');
+        $this->command->info('   Produksi: Step 1-4 (both), Step 5-7 (unplanned)');
+        $this->command->info('   IT: Step 1-3 (both), Step 4 (unplanned)');
+        $this->command->info('   Finance: Step 1-2 (both), Step 3 (unplanned)');
+        $this->command->info('   HRD: Step 1-2 (both)');
+        $this->command->info('🔄 Step 1 = Pengajuan/Pelaksanaan (available untuk Planning dan Unplanned)');
     }
 }
