@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,71 +12,80 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
-       .status-badge {
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: bold;
-    text-transform: uppercase;
-    }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
 
-    /* Status Colors */
-    .status-yellow { 
-        background-color: #fff3cd; 
-        color: #856404; 
-    }
-    .status-orange { 
-        background-color: #ffeaa7; 
-        color: #d63031; 
-    }
-    .status-blue { 
-        background-color: #cce5ff; 
-        color: #0066cc; 
-    }
-    .status-purple { 
-        background-color: #e6ccff; 
-        color: #6600cc; 
-    }
-    .status-green { 
-        background-color: #d4edda; 
-        color: #155724; 
-        border: 2px solid #28a745;
-    }
-    .status-red { 
-        background-color: #f8d7da; 
-        color: #721c24; 
-    }
-    .status-gray { 
-        background-color: #e2e3e5; 
-        color: #6c757d; 
-    }
-    .status-act { 
-    background-color: #ffc107; 
-    color: #000; 
-    border: 2px solid #fd7e14;
-    animation: pulse-warning 2s infinite;
-    }
+        /* Status Colors */
+        .status-yellow {
+            background-color: #fff3cd;
+            color: #856404;
+        }
 
-    @keyframes pulse-warning {
-    0% {
-        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
-    }
-}
+        .status-orange {
+            background-color: #ffeaa7;
+            color: #d63031;
+        }
 
-        
+        .status-blue {
+            background-color: #cce5ff;
+            color: #0066cc;
+        }
+
+        .status-purple {
+            background-color: #e6ccff;
+            color: #6600cc;
+        }
+
+        .status-green {
+            background-color: #d4edda;
+            color: #155724;
+            border: 2px solid #28a745;
+        }
+
+        .status-red {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-gray {
+            background-color: #e2e3e5;
+            color: #6c757d;
+        }
+
+        .status-act {
+            background-color: #ffc107;
+            color: #000;
+            border: 2px solid #fd7e14;
+            animation: pulse-warning 2s infinite;
+        }
+
+        @keyframes pulse-warning {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+            }
+        }
+
+
         /* Custom Sidebar Styles */
         .sidebar {
             background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
             min-height: 100vh;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
         }
-        
+
         .sidebar .nav-link {
             color: #ecf0f1;
             margin: 1px 1px;
@@ -85,49 +95,49 @@
             display: flex;
             align-items: center;
         }
-        
+
         .sidebar .nav-link:hover {
             background-color: rgba(52, 152, 219, 0.2);
             color: #3498db;
         }
-        
+
         .sidebar .nav-link.active {
             background-color: #3498db;
             color: white;
         }
-        
+
         .sidebar .nav-link i {
             width: 20px;
             margin-right: 10px;
             text-align: center;
         }
-        
+
         /* Dropdown Styles */
         .sidebar .dropdown-menu {
             background-color: #34495e;
             border: none;
             border-radius: 1px;
             margin-left: 0;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             width: 100px;
         }
-        
+
         .sidebar .dropdown-item {
             color: #bdc3c7;
             padding: 10px 20px;
             transition: all 0.3s ease;
         }
-        
+
         .sidebar .dropdown-item:hover {
             background-color: rgba(52, 152, 219, 0.2);
             color: #3498db;
         }
-        
+
         .sidebar .dropdown-toggle::after {
             float: right;
             margin-top: 8px;
         }
-        
+
         /* Menu Header Styles */
         .menu-header {
             color: #95a5a6;
@@ -138,7 +148,7 @@
             padding: 10px 10px 5px 10px;
             margin-top: 1px;
         }
-        
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -150,7 +160,7 @@
                 z-index: 1000;
                 transition: left 0.3s ease;
             }
-            
+
             .sidebar.show {
                 left: 0;
             }
@@ -158,229 +168,238 @@
 
         /* Report Leaderboard Styles - Tambahkan ini ke dalam <style> tag di layouts/app.blade.php */
 
-/* Report Leaderboard Styles */
-.card.border-left-primary {
-    border-left: 4px solid #007bff;
-}
+        /* Report Leaderboard Styles */
+        .card.border-left-primary {
+            border-left: 4px solid #007bff;
+        }
 
-.avatar-sm {
-    width: 32px;
-    height: 32px;
-    font-size: 12px;
-}
+        .avatar-sm {
+            width: 32px;
+            height: 32px;
+            font-size: 12px;
+        }
 
-.trophy-gold {
-    color: #ffd700;
-}
+        .trophy-gold {
+            color: #ffd700;
+        }
 
-.trophy-silver {
-    color: #c0c0c0;
-}
+        .trophy-silver {
+            color: #c0c0c0;
+        }
 
-.trophy-bronze {
-    color: #cd7f32;
-}
+        .trophy-bronze {
+            color: #cd7f32;
+        }
 
-/* DataTable custom styling for leaderboard */
-#leaderboardTable tbody tr:nth-child(1) {
-    background: linear-gradient(45deg, #fff3cd, #ffffff) !important;
-    border-left: 4px solid #ffc107;
-}
+        /* DataTable custom styling for leaderboard */
+        #leaderboardTable tbody tr:nth-child(1) {
+            background: linear-gradient(45deg, #fff3cd, #ffffff) !important;
+            border-left: 4px solid #ffc107;
+        }
 
-#leaderboardTable tbody tr:nth-child(2) {
-    background: linear-gradient(45deg, #f8f9fa, #ffffff) !important;
-    border-left: 4px solid #6c757d;
-}
+        #leaderboardTable tbody tr:nth-child(2) {
+            background: linear-gradient(45deg, #f8f9fa, #ffffff) !important;
+            border-left: 4px solid #6c757d;
+        }
 
-#leaderboardTable tbody tr:nth-child(3) {
-    background: linear-gradient(45deg, #fff3cd, #ffffff) !important;
-    border-left: 4px solid #fd7e14;
-}
+        #leaderboardTable tbody tr:nth-child(3) {
+            background: linear-gradient(45deg, #fff3cd, #ffffff) !important;
+            border-left: 4px solid #fd7e14;
+        }
 
-/* Hover effects */
-#leaderboardTable tbody tr:hover {
-    background-color: #f8f9fa !important;
-    transition: all 0.3s ease;
-}
+        /* Hover effects */
+        #leaderboardTable tbody tr:hover {
+            background-color: #f8f9fa !important;
+            transition: all 0.3s ease;
+        }
 
-/* Modal customization */
-.modal-xl {
-    max-width: 90%;
-}
+        /* Modal customization */
+        .modal-xl {
+            max-width: 90%;
+        }
 
-/* Badge animations */
-.badge {
-    transition: all 0.3s ease;
-}
+        /* Badge animations */
+        .badge {
+            transition: all 0.3s ease;
+        }
 
-.badge:hover {
-    transform: scale(1.05);
-}
+        .badge:hover {
+            transform: scale(1.05);
+        }
 
-/* Loading animation for buttons */
-.btn.loading {
-    position: relative;
-    pointer-events: none;
-    color: transparent !important;
-}
+        /* Loading animation for buttons */
+        .btn.loading {
+            position: relative;
+            pointer-events: none;
+            color: transparent !important;
+        }
 
-.btn.loading::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-left: -8px;
-    margin-top: -8px;
-    width: 16px;
-    height: 16px;
-    border: 2px solid #ffffff;
-    border-radius: 50%;
-    border-top-color: transparent;
-    animation: spin 0.8s linear infinite;
-}
+        .btn.loading::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-left: -8px;
+            margin-top: -8px;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
 
-.btn-success.loading::after {
-    border-color: #ffffff;
-    border-top-color: transparent;
-}
+        .btn-success.loading::after {
+            border-color: #ffffff;
+            border-top-color: transparent;
+        }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
 
-/* Fix DataTable responsive issues */
-.dataTables_wrapper .dataTables_length,
-.dataTables_wrapper .dataTables_filter {
-    margin-bottom: 1rem;
-}
+            100% {
+                transform: rotate(360deg);
+            }
+        }
 
-.dataTables_wrapper .dataTables_info,
-.dataTables_wrapper .dataTables_paginate {
-    margin-top: 1rem;
-}
+        /* Fix DataTable responsive issues */
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            margin-bottom: 1rem;
+        }
 
-/* Additional DataTable fixes */
-.dataTables_wrapper {
-    overflow-x: auto;
-}
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
+            margin-top: 1rem;
+        }
 
-table.dataTable {
-    width: 100% !important;
-}
+        /* Additional DataTable fixes */
+        .dataTables_wrapper {
+            overflow-x: auto;
+        }
 
-table.dataTable thead th,
-table.dataTable tbody td {
-    white-space: nowrap;
-}
+        table.dataTable {
+            width: 100% !important;
+        }
 
-/* Responsive table adjustments */
-@media (max-width: 768px) {
-    .table-responsive {
-        font-size: 0.875rem;
-    }
-    
-    .badge {
-        font-size: 0.65rem;
-    }
-    
-    .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.775rem;
-    }
-}
-.select2-container--default .select2-selection--single {
-    border: 1px solid #dee2e6 !important;
-    border-radius: 0.375rem !important;
-    height: 38px !important;
-    padding: 0.375rem 0.75rem !important;
-    display: flex !important;
-    align-items: center !important;
-}
+        table.dataTable thead th,
+        table.dataTable tbody td {
+            white-space: nowrap;
+        }
 
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    line-height: 1.5 !important;
-    color: #212529 !important;
-}
+        /* Responsive table adjustments */
+        @media (max-width: 768px) {
+            .table-responsive {
+                font-size: 0.875rem;
+            }
 
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 36px !important;
-    right: 8px !important;
-}
+            .badge {
+                font-size: 0.65rem;
+            }
 
-.select2-container--default .select2-selection--single .select2-selection__placeholder {
-    color: #6c757d !important;
-}
+            .btn-sm {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.775rem;
+            }
+        }
 
-/* Dropdown styling */
-.select2-container--default .select2-dropdown {
-    border: 1px solid #dee2e6 !important;
-    border-radius: 0.375rem !important;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-}
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #dee2e6 !important;
+            border-radius: 0.375rem !important;
+            height: 38px !important;
+            padding: 0.375rem 0.75rem !important;
+            display: flex !important;
+            align-items: center !important;
+        }
 
-.select2-container--default .select2-search--dropdown .select2-search__field {
-    border: 1px solid #dee2e6 !important;
-    border-radius: 0.375rem !important;
-    padding: 0.375rem 0.75rem !important;
-}
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            line-height: 1.5 !important;
+            color: #212529 !important;
+        }
 
-/* Hover dan Selected states */
-.select2-container--default .select2-results__option--highlighted[aria-selected] {
-    background-color: #0d6efd !important;
-    color: white !important;
-}
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px !important;
+            right: 8px !important;
+        }
 
-.select2-container--default .select2-results__option[aria-selected=true] {
-    background-color: #e7f1ff !important;
-    color: #0d6efd !important;
-}
+        .select2-container--default .select2-selection--single .select2-selection__placeholder {
+            color: #6c757d !important;
+        }
 
-/* Focus state */
-.select2-container--default.select2-container--focus .select2-selection--single,
-.select2-container--default.select2-container--open .select2-selection--single {
-    border-color: #86b7fe !important;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
-}
+        /* Dropdown styling */
+        .select2-container--default .select2-dropdown {
+            border: 1px solid #dee2e6 !important;
+            border-radius: 0.375rem !important;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        }
 
-/* Invalid state untuk validation */
-.is-invalid ~ .select2-container--default .select2-selection--single {
-    border-color: #dc3545 !important;
-}
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            border: 1px solid #dee2e6 !important;
+            border-radius: 0.375rem !important;
+            padding: 0.375rem 0.75rem !important;
+        }
 
-.is-invalid ~ .select2-container--default.select2-container--focus .select2-selection--single {
-    border-color: #dc3545 !important;
-    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
-}
+        /* Hover dan Selected states */
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
 
-/* Width 100% */
-.select2-container {
-    width: 100% !important;
-}
+        .select2-container--default .select2-results__option[aria-selected=true] {
+            background-color: #e7f1ff !important;
+            color: #0d6efd !important;
+        }
+
+        /* Focus state */
+        .select2-container--default.select2-container--focus .select2-selection--single,
+        .select2-container--default.select2-container--open .select2-selection--single {
+            border-color: #86b7fe !important;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+        }
+
+        /* Invalid state untuk validation */
+        .is-invalid~.select2-container--default .select2-selection--single {
+            border-color: #dc3545 !important;
+        }
+
+        .is-invalid~.select2-container--default.select2-container--focus .select2-selection--single {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+        }
+
+        /* Width 100% */
+        .select2-container {
+            width: 100% !important;
+        }
     </style>
 </head>
+
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container"> 
+        <div class="container">
             <div class="navbar-nav ms-auto">
                 @auth
-                    <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            {{ Auth::user()->name }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('dashboard') }}">Dashboard</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item">Logout</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        {{ Auth::user()->name }}
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ route('dashboard') }}">Dashboard</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="dropdown-item">Logout</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
                 @endauth
             </div>
         </div>
@@ -399,7 +418,7 @@ table.dataTable tbody td {
                                 <i class="fas fa-tachometer-alt"></i> Dashboard
                             </a>
                         </li>
-                        
+
                         <!-- Management Data - Cek permission untuk seluruh section -->
                         @if(Auth::user()->hasPermission('view-users') || Auth::user()->hasPermission('view-roles') || Auth::user()->hasPermission('view-permissions'))
                         <div class="menu-header">Management Data</div>
@@ -410,25 +429,25 @@ table.dataTable tbody td {
                             <ul class="dropdown-menu">
                                 @permission('view-users')
                                 <li><a class="dropdown-item" href="{{ route('users.index') }}">
-                                    <i class="fas fa-users"></i> User
-                                </a></li>
+                                        <i class="fas fa-users"></i> User
+                                    </a></li>
                                 @endpermission
-                                
+
                                 @permission('view-roles')
                                 <li><a class="dropdown-item" href="{{ route('roles.index') }}">
-                                    <i class="fas fa-user-tag"></i> Role
-                                </a></li>
+                                        <i class="fas fa-user-tag"></i> Role
+                                    </a></li>
                                 @endpermission
-                                
+
                                 @permission('view-permissions')
                                 <li><a class="dropdown-item" href="{{ route('permissions.index') }}">
-                                    <i class="fas fa-key"></i> Permission
-                                </a></li>
+                                        <i class="fas fa-key"></i> Permission
+                                    </a></li>
                                 @endpermission
                             </ul>
                         </li>
                         @endif
-                        
+
                         <!-- Data Master - Cek permission untuk masing-masing item -->
                         @if(Auth::user()->hasPermission('view-employees') || Auth::user()->hasPermission('view-departments') || Auth::user()->hasPermission('view-job-levels') || Auth::user()->hasPermission('view-flow-jobs'))
                         <div class="menu-header">Data Master</div>
@@ -439,37 +458,37 @@ table.dataTable tbody td {
                             <ul class="dropdown-menu">
                                 @permission('view-employees')
                                 <li><a class="dropdown-item" href="{{ route('employees.index') }}">
-                                    <i class="fas fa-user-friends"></i> Karyawan
-                                </a></li>
+                                        <i class="fas fa-user-friends"></i> Karyawan
+                                    </a></li>
                                 @endpermission
-                                
+
                                 @permission('view-departments')
                                 <li><a class="dropdown-item" href="{{ route('departments.index') }}">
-                                    <i class="fas fa-building"></i> Department
-                                </a></li>
+                                        <i class="fas fa-building"></i> Department
+                                    </a></li>
                                 @endpermission
-                                
+
                                 @permission('view-job-levels')
                                 <li><a class="dropdown-item" href="{{ route('job-levels.index') }}">
-                                    <i class="fas fa-sitemap"></i> Level Jabatan
-                                </a></li>
+                                        <i class="fas fa-sitemap"></i> Level Jabatan
+                                    </a></li>
                                 @endpermission
-                                
+
                                 @permission('view-flow-jobs')
                                 <li><a class="dropdown-item" href="{{ route('flow-jobs.index') }}">
-                                    <i class="fas fa-stream"></i> Flow Job
-                                </a></li>
+                                        <i class="fas fa-stream"></i> Flow Job
+                                    </a></li>
                                 @endpermission
 
                                 @permission('view-process-types')
                                 <li><a class="dropdown-item" href="{{ route('process-types.index') }}">
-                                    <i class="fas fa-cogs"></i> Tipe Proses
-                                </a></li>
+                                        <i class="fas fa-cogs"></i> Tipe Proses
+                                    </a></li>
                                 @endpermission
                             </ul>
                         </li>
                         @endif
-                        
+
                         <!-- Pengajuan Lembur -->
                         <div class="menu-header">Pengajuan</div>
                         <li class="nav-item">
@@ -486,294 +505,63 @@ table.dataTable tbody td {
                         </li>
 
                         <!-- Report -->
-                         <div class="menu-header">Report</div>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('reports.overtime-leaderboard') }}">
-                                    <i class="fas fa-chart-bar"></i> Report Lembur
-                                </a>
-                            </li>
+                        <div class="menu-header">Report</div>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('reports.overtime-leaderboard') }}">
+                                <i class="fas fa-chart-bar"></i> Report Lembur
+                            </a>
+                        </li>
 
-                        
+
                         <!-- Approval Menu - PERBAIKAN STEP NAMES -->
                         <div class="menu-header">Approval</div>
-                        @php
-                            // Get current employee data berdasarkan email yang login
-                            $currentEmployee = App\Models\Employee::with('jobLevel')
-                                ->where('email', Auth::user()->email)
-                                ->first();
-                            
-                            $showApprovalMenu = false;
-                            $availableApprovals = [];
-                            $pendingPercentageCount = 0; // TAMBAHAN: Counter untuk percentage yang perlu diinput
-                            
-                            if ($currentEmployee && $currentEmployee->jobLevel) {
-                                // Cek approval yang tersedia untuk user ini
-                                $pendingApprovals = App\Models\OvertimeApproval::where('approver_employee_id', $currentEmployee->id)
-                                    ->where('status', 'pending')
-                                    ->with('overtimeRequest')
-                                    ->get();
-                                
-                                // TAMBAHAN: Hitung berapa banyak overtime yang perlu input persentase
-                                $percentageNeeded = App\Models\OvertimeRequest::whereHas('details', function($query) {
-                                        $query->where('overtime_type', 'qualitative')
-                                            ->whereNull('percentage_realization');
-                                    })
-                                    ->whereHas('approvals', function($query) use ($currentEmployee) {
-                                        $query->where('approver_employee_id', $currentEmployee->id)
-                                            ->whereIn('status', ['approved', 'pending']);
-                                    })
-                                    ->where('status', 'approved') // Status approved = sudah selesai approval, tinggal input data
-                                    ->count();
-                                
-                                $pendingPercentageCount = $percentageNeeded;
-                                
-                                // Group by step_name untuk menentukan menu yang perlu ditampilkan
-                                $approvalsByStep = $pendingApprovals->groupBy('step_name');
-                                
-                                // Sesuaikan dengan step_name yang benar di database
-                                if ($approvalsByStep->has('Approval Section Head')) {
-                                    $availableApprovals['sect-head'] = 'Approval Section Head';
-                                    $showApprovalMenu = true;
-                                }
 
-                                if ($approvalsByStep->has('Approval Sub Department Head')) {
-                                    $availableApprovals['sub-dept-head'] = 'Approval Sub Department Head';
-                                    $showApprovalMenu = true;
-                                }
-                                
-                                if ($approvalsByStep->has('Approval Department Head')) {
-                                    $availableApprovals['dept-head'] = 'Approval Department Head';
-                                    $showApprovalMenu = true;
-                                }
-
-                                if ($approvalsByStep->has('Approval Sub Division Head')) {
-                                    $availableApprovals['sub-div-head'] = 'Approval Sub Division Head';
-                                    $showApprovalMenu = true;
-                                }
-                                
-                                if ($approvalsByStep->has('Approval Division Head')) {
-                                    $availableApprovals['div-head'] = 'Approval Division Head';
-                                    $showApprovalMenu = true;
-                                }
-                                
-                                if ($approvalsByStep->has('Approval HRD')) {
-                                    $availableApprovals['hrd'] = 'Approval HRD';
-                                    $showApprovalMenu = true;
-                                }
-                                
-                                // Jika ada data percentage yang perlu diinput, tetap tampilkan menu
-                                if ($pendingPercentageCount > 0) {
-                                    $showApprovalMenu = true;
-                                    // Set approval berdasarkan job level jika belum ada
-                                    if (empty($availableApprovals)) {
-                                        $jobLevelCode = $currentEmployee->jobLevel->code;
-                                        switch ($jobLevelCode) {
-                                            case 'SECT':
-                                                $availableApprovals['sect-head'] = 'Approval Section Head';
-                                                break;
-                                            case 'SUBDEPT':
-                                                $availableApprovals['sub-dept-head'] = 'Approval Sub Department Head';
-                                                break;
-                                            case 'DEPT':
-                                                $availableApprovals['dept-head'] = 'Approval Department Head';
-                                                break;
-                                            case 'SUBDIV':
-                                                $availableApprovals['sub-div-head'] = 'Approval Sub Division Head';
-                                                break;
-                                            case 'DIV':
-                                                $availableApprovals['div-head'] = 'Approval Division Head';
-                                                break;
-                                            case 'HRD':
-                                                $availableApprovals['hrd'] = 'Approval HRD';
-                                                break;
-                                        }
-                                    }
-                                }
-                                
-                                // Juga tampilkan approval yang sudah diproses untuk history
-                                $processedApprovals = App\Models\OvertimeApproval::where('approver_employee_id', $currentEmployee->id)
-                                    ->whereIn('status', ['approved', 'rejected'])
-                                    ->with('overtimeRequest')
-                                    ->exists();
-                                    
-                                if ($processedApprovals && empty($availableApprovals) && $pendingPercentageCount == 0) {
-                                    // Logic yang sudah ada sebelumnya...
-                                    $jobLevelCode = $currentEmployee->jobLevel->code;
-                                    switch ($jobLevelCode) {
-                                        case 'SECT':
-                                            $availableApprovals['sect-head'] = 'Approval Section Head';
-                                            break;
-                                        case 'SUBDEPT':
-                                            $availableApprovals['sub-dept-head'] = 'Approval Sub Department Head';
-                                            break;
-                                        case 'DEPT':
-                                            $availableApprovals['dept-head'] = 'Approval Department Head';
-                                            break;
-                                        case 'SUBDIV':
-                                            $availableApprovals['sub-div-head'] = 'Approval Sub Division Head';
-                                            break;
-                                        case 'DIV':
-                                            $availableApprovals['div-head'] = 'Approval Division Head';
-                                            break;
-                                        case 'HRD':
-                                            $availableApprovals['hrd'] = 'Approval HRD';
-                                            break;
-                                    }
-                                    $showApprovalMenu = true;
-                                }
-                            }
-                        @endphp
-
-                        @if($showApprovalMenu)
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-check-circle"></i> Approval
-                                @if(($pendingApprovals && $pendingApprovals->count() > 0) || $pendingPercentageCount > 0)
-                                    @php
-                                        $totalNotifications = ($pendingApprovals ? $pendingApprovals->count() : 0) + $pendingPercentageCount;
-                                    @endphp
-                                    <span class="badge bg-danger ms-1">{{ $totalNotifications }}</span>
+                                @php $totalNotif = $pendingApprovals->count() + $pendingPercentageCount; @endphp
+                                @if($totalNotif > 0)
+                                <span class="badge bg-danger ms-1">{{ $totalNotif }}</span>
                                 @endif
                             </a>
-                            <ul class="dropdown-menu">
-                                @if(isset($availableApprovals['sect-head']))
-                                    <li><a class="dropdown-item" href="{{ route('approvals.sect-head') }}">
-                                        <i class="fas fa-user-check"></i> Section Head
-                                        @php 
-                                            $sectPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval Section Head')->count() : 0;
-                                            $sectPercentage = 0;
-                                            if ($currentEmployee->jobLevel->code == 'SECT' && $pendingPercentageCount > 0) {
-                                                $sectPercentage = $pendingPercentageCount;
-                                            }
-                                            $sectTotal = $sectPending + $sectPercentage;
-                                        @endphp
-                                        @if($sectTotal > 0)
-                                            <span class="badge bg-danger ms-1">{{ $sectTotal }}</span>
-                                        @endif
-                                    </a></li>
-                                @endif
-
-                                @if(isset($availableApprovals['sub-dept-head']))
-                                    <li><a class="dropdown-item" href="{{ route('approvals.sub-dept-head') }}">
-                                        <i class="fas fa-user-tie"></i> Sub Department Head
-                                        @php 
-                                            $subdeptPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval Sub Department Head')->count() : 0;
-                                            $subdeptPercentage = 0;
-                                            if ($currentEmployee->jobLevel->code == 'SUBDEPT' && $pendingPercentageCount > 0) {
-                                                $subdeptPercentage = $pendingPercentageCount;
-                                            }
-                                            $subdeptTotal = $subdeptPending + $subdeptPercentage;
-                                        @endphp
-                                        @if($subdeptTotal > 0)
-                                            <span class="badge bg-danger ms-1">{{ $subdeptTotal }}</span>
-                                        @endif
-                                    </a></li>
-                                @endif
-                                
-                                @if(isset($availableApprovals['dept-head']))
-                                    <li><a class="dropdown-item" href="{{ route('approvals.dept-head') }}">
-                                        <i class="fas fa-user-tie"></i> Department Head
-                                        @php 
-                                            $deptPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval Department Head')->count() : 0;
-                                            $deptPercentage = 0;
-                                            if ($currentEmployee->jobLevel->code == 'DEPT' && $pendingPercentageCount > 0) {
-                                                $deptPercentage = $pendingPercentageCount;
-                                            }
-                                            $deptTotal = $deptPending + $deptPercentage;
-                                        @endphp
-                                        @if($deptTotal > 0)
-                                            <span class="badge bg-danger ms-1">{{ $deptTotal }}</span>
-                                        @endif
-                                    </a></li>
-                                @endif
-
-                                @if(isset($availableApprovals['sub-div-head']))
-                                    <li><a class="dropdown-item" href="{{ route('approvals.sub-div-head') }}">
-                                        <i class="fas fa-user-cog"></i> Sub Division Head
-                                        @php 
-                                            $subdivPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval Sub Division Head')->count() : 0;
-                                            $subdivPercentage = 0;
-                                            if ($currentEmployee->jobLevel->code == 'SUBDIV' && $pendingPercentageCount > 0) {
-                                                $subdivPercentage = $pendingPercentageCount;
-                                            }
-                                            $subdivTotal = $subdivPending + $subdivPercentage;
-                                        @endphp
-                                        @if($subdivTotal > 0)
-                                            <span class="badge bg-danger ms-1">{{ $subdivTotal }}</span>
-                                        @endif
-                                    </a></li>
-                                @endif
-                                
-                                @if(isset($availableApprovals['div-head']))
-                                    <li><a class="dropdown-item" href="{{ route('approvals.div-head') }}">
-                                        <i class="fas fa-user-graduate"></i> Division Head
-                                        @php 
-                                            $divPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval Division Head')->count() : 0;
-                                            $divPercentage = 0;
-                                            if ($currentEmployee->jobLevel->code == 'DIV' && $pendingPercentageCount > 0) {
-                                                $divPercentage = $pendingPercentageCount;
-                                            }
-                                            $divTotal = $divPending + $divPercentage;
-                                        @endphp
-                                        @if($divTotal > 0)
-                                            <span class="badge bg-danger ms-1">{{ $divTotal }}</span>
-                                        @endif
-                                    </a></li>
-                                @endif
-                                
-                                @if(isset($availableApprovals['hrd']))
-                                    <li><a class="dropdown-item" href="{{ route('approvals.hrd') }}">
-                                        <i class="fas fa-user-shield"></i> HRD
-                                        @php 
-                                            $hrdPending = $pendingApprovals ? $pendingApprovals->where('step_name', 'Approval HRD')->count() : 0;
-                                            $hrdPercentage = 0;
-                                            if ($currentEmployee->jobLevel->code == 'HRD' && $pendingPercentageCount > 0) {
-                                                $hrdPercentage = $pendingPercentageCount;
-                                            }
-                                            $hrdTotal = $hrdPending + $hrdPercentage;
-                                        @endphp
-                                        @if($hrdTotal > 0)
-                                            <span class="badge bg-danger ms-1">{{ $hrdTotal }}</span>
-                                        @endif
-                                    </a></li>
-                                @endif
-                                
-                                @if(empty($availableApprovals))
-                                    <li><span class="dropdown-item text-muted">
-                                        <i class="fas fa-info-circle"></i> Tidak ada approval tersedia
-                                    </span></li>
-                                @endif
+                            <ul class="dropdown-menu" style="width: 100%;">
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('approvals.index',['job_level' => Auth::user()->jobLevel->code]) }}">
+                                        <i class="fas fa-user-check"></i> {{ $currentEmployee->jobLevel->name }}
+                                        <span class="badge bg-danger ms-1">{{$totalNotif}}</span>
+                                    </a>
+                                </li>
                             </ul>
                         </li>
-                        @endif
+
                     </ul>
                 </div>
             </nav>
-            
+
             <!-- Main content dengan lebar penuh ketika tidak ada sidebar -->
             <main class="@auth col-md-10 ms-sm-auto @else col-12 @endauth px-md-4">
-            @else
-            <!-- Ketika user belum login, main content menggunakan container biasa -->
-            <main class="col-12 px-md-4">
-            @endauth
-                <div class="pt-3">
-                    @if(session('success'))
+                @else
+                <!-- Ketika user belum login, main content menggunakan container biasa -->
+                <main class="col-12 px-md-4">
+                    @endauth
+                    <div class="pt-3">
+                        @if(session('success'))
                         <div class="alert alert-success alert-dismissible fade show">
                             {{ session('success') }}
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
-                    @endif
+                        @endif
 
-                    @if(session('error'))
+                        @if(session('error'))
                         <div class="alert alert-danger alert-dismissible fade show">
                             {{ session('error') }}
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
-                    @endif
+                        @endif
 
-                    @yield('content')
-                </div>
-            </main>
+                        @yield('content')
+                    </div>
+                </main>
         </div>
     </div>
 
@@ -783,20 +571,20 @@ table.dataTable tbody td {
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    
+
     <script>
         // Script untuk active state menu
         $(document).ready(function() {
             // Mendapatkan URL saat ini
             var currentUrl = window.location.href;
-            
+
             // Menambahkan class active pada link yang sesuai
             $('.nav-link').each(function() {
                 if (this.href === currentUrl) {
                     $(this).addClass('active');
                 }
             });
-            
+
             $('.dropdown-item').each(function() {
                 if (this.href === currentUrl) {
                     $(this).addClass('active');
@@ -805,7 +593,8 @@ table.dataTable tbody td {
             });
         });
     </script>
-    
+
     @stack('scripts')
 </body>
+
 </html>
