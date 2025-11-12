@@ -473,9 +473,7 @@ class OvertimeController extends Controller
         // definisi level mana saja yang bersifat lokal
         $localLevels = [10, 11]; // misal: Forman dan Section Head
 
-        $query = Employee::where('department_id', $departmentId)
-            ->where('job_level_id', $jobLevelCode)
-            ->where('is_active', true);
+        $query = Employee::where('id', $flowJob->approver_employee_id);
 
         if (in_array($flowJob->job_level_id, $localLevels)) {
             // cari di plant yang sama (lokal)

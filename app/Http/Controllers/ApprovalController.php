@@ -18,6 +18,7 @@ class ApprovalController extends Controller
         $approvals = $this->getApprovalsWithPercentageNeeded($request->job_level);
 
         $joblevel = JobLevel::where('code', $request->job_level)->first();
+
         return view('approvals.master', compact('approvals', 'joblevel'));
     }
 
@@ -243,7 +244,7 @@ class ApprovalController extends Controller
             'approverEmployee.jobLevel'
         ])
             ->where('approver_employee_id', $currentEmployee->id)
-            ->where('approver_level', $approverLevel)
+            // ->where('approver_level', $currentEmployee->jobLevel)
             ->orderBy('created_at', 'desc')
             ->get();
 
