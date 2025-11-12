@@ -135,6 +135,7 @@ class OvertimeController extends Controller
         $eligibleEmployees = Employee::with(['department', 'jobLevel', 'plant'])
             ->where('department_id', $currentEmployee->department_id)
             ->where('is_active', true)
+            ->where('plant_id', $currentEmployee->plant_id)
             ->whereHas('jobLevel', function ($query) use ($requesterLevelOrder) {
                 $query->where('level_order', '>=', $requesterLevelOrder);
             })
