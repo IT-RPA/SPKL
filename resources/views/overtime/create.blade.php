@@ -356,7 +356,7 @@
             <option value="${emp.id}" 
                     data-level="${emp.job_level ? emp.job_level.name : 'N/A'}" 
                     data-level-order="${emp.job_level ? emp.job_level.level_order : 999}">
-                ${emp.name} - ${emp.employee_id} (${emp.job_level ? emp.job_level.name : 'N/A'})
+                ${emp.name} - ${emp.employee_id} - ${emp.plant.name} (${emp.job_level ? emp.job_level.name : 'N/A'})
             </option>
         `);
         });
