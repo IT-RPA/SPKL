@@ -11,10 +11,11 @@ class Employee extends Model
 
     protected $fillable = [
         'employee_id',
-        'name', 
+        'name',
         'email',
         'department_id',
         'job_level_id',
+        'plant_id',
         'is_active'
     ];
 
@@ -32,6 +33,11 @@ class Employee extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'email', 'email');
+    }
+
+    public function plant()
+    {
+        return $this->belongsTo(Plant::class);
     }
 
     // ✅ NEW: Add relationship to overtime details

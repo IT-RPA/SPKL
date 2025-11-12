@@ -33,6 +33,7 @@
                                 <tr>
                                     <th>No</th>
                                     <th>Departemen</th>
+                                    <th>Plant</th>
                                     <th>Urutan Step</th>
                                     <th>Nama Step</th>
                                     <th>Level Jabatan</th>
@@ -50,6 +51,7 @@
                                 <tr>
                                     <td>{{ $loop->parent->iteration }}.{{ $loop->iteration }}</td>
                                     <td>{{ $departmentName }}</td>
+                                    <td>{{ $flowJob->plant->name ?? 'All Plant' }}</td>
                                     <td>
                                         <span class="badge bg-secondary">Step {{ $flowJob->step_order }}</span>
                                     </td>
@@ -57,11 +59,11 @@
                                     <td>{{ $flowJob->jobLevel->name }}</td>
                                     <td>
                                         @if($flowJob->applies_to === 'planned')
-                                            <span class="badge bg-primary">Planned</span>
+                                        <span class="badge bg-primary">Planned</span>
                                         @elseif($flowJob->applies_to === 'unplanned')
-                                            <span class="badge bg-warning text-dark">Unplanned</span>
+                                        <span class="badge bg-warning text-dark">Unplanned</span>
                                         @else
-                                            <span class="badge bg-info">Both</span>
+                                        <span class="badge bg-info">Both</span>
                                         @endif
                                     </td>
                                     <td>
@@ -76,11 +78,13 @@
                                             <button type="button" class="btn btn-sm btn-warning edit-btn"
                                                 data-id="{{ $flowJob->id }}"
                                                 data-department_id="{{ $flowJob->department_id }}"
+                                                data-plant_id="{{ $flowJob->plant_id }}"
                                                 data-job_level_id="{{ $flowJob->job_level_id }}"
                                                 data-step_order="{{ $flowJob->step_order }}"
                                                 data-step_name="{{ $flowJob->step_name }}"
                                                 data-applies_to="{{ $flowJob->applies_to }}"
-                                                data-is_active="{{ $flowJob->is_active }}">
+                                                data-is_active="{{ $flowJob->is_active }}"
+                                                data-approver="{{ $flowJob->approver_employee_id }}">
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                             @endpermission
@@ -120,16 +124,27 @@
                 @csrf
                 <div class="modal-body">
                     <input type="hidden" id="flow_job_id" name="flow_job_id">
-
-                    <div class="mb-3">
-                        <label for="department_id" class="form-label">Departemen</label>
-                        <select class="form-control select2-modal" id="department_id" name="department_id" required>
-                            <option value="">Pilih Departemen</option>
-                            @foreach($departments as $department)
-                            <option value="{{ $department->id }}">{{ $department->name }}</option>
-                            @endforeach
-                        </select>
-                        <div class="invalid-feedback"></div>
+                    <div class="row">
+                        <div class="mb-3 col-md-6">
+                            <label for="department_id" class="form-label">Departemen</label>
+                            <select class="form-control select2-modal" id="department_id" name="department_id" required>
+                                <option value="">Pilih Departemen</option>
+                                @foreach($departments as $department)
+                                <option value="{{ $department->id }}">{{ $department->name }}</option>
+                                @endforeach
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="mb-3 col-md-6">
+                            <label for="plant_id" class="form-label">Plant</label>
+                            <select class="form-control select2-modal" id="plant_id" name="plant_id" required>
+                                <option value="#">All-PLant</option>
+                                @foreach($plants as $plant)
+                                <option value="{{ $plant->id }}">{{ $plant->name }}</option>
+                                @endforeach
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -153,6 +168,14 @@
                             @foreach($jobLevels as $jobLevel)
                             <option value="{{ $jobLevel->id }}">{{ $jobLevel->name }}</option>
                             @endforeach
+                        </select>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="approver_employee_id" class="form-label">Nama Approver</label>
+                        <select class="form-control select2-modal" id="approver_employee_id" name="approver_employee_id" disabled>
+                            <option value="">Pilih Level Jabatan terlebih dahulu</option>
                         </select>
                         <div class="invalid-feedback"></div>
                     </div>
@@ -196,28 +219,28 @@
         border: 1px solid #ced4da;
         border-radius: 0.25rem;
     }
-    
+
     .select2-container--default .select2-selection--single .select2-selection__rendered {
         line-height: 36px;
         padding-left: 12px;
     }
-    
+
     .select2-container--default .select2-selection--single .select2-selection__arrow {
         height: 36px;
     }
-    
+
     /* Styling untuk error state */
     .select2-container--default.is-invalid .select2-selection--single {
         border-color: #dc3545;
     }
-    
+
     /* Dropdown di dalam modal */
     .select2-container {
         width: 100% !important;
     }
-    
+
     /* Styling untuk filter select2 */
-    .select2-filter + .select2-container {
+    .select2-filter+.select2-container {
         display: inline-block !important;
     }
 </style>
@@ -225,62 +248,14 @@
 
 @push('scripts')
 <script>
-$(document).ready(function() {
-    let isEditMode = false;
+    $(document).ready(function() {
+        let isEditMode = false;
 
-    // Initialize Select2 untuk filter departemen (di luar modal)
-    $('.select2-filter').select2({
-        placeholder: 'Semua Departemen',
-        allowClear: true,
-        width: '250px',
-        language: {
-            noResults: function() {
-                return "Tidak ada hasil yang ditemukan";
-            },
-            searching: function() {
-                return "Mencari...";
-            }
-        }
-    });
-
-    // Initialize DataTable
-    var table = $('#flowJobTable').DataTable({
-        responsive: true,
-        language: {
-            "sEmptyTable": "Tidak ada data yang tersedia pada tabel ini",
-            "sInfo": "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
-            "sInfoEmpty": "Menampilkan 0 sampai 0 dari 0 entri",
-            "sInfoFiltered": "(disaring dari _MAX_ entri keseluruhan)",
-            "sLengthMenu": "Tampilkan _MENU_ entri",
-            "sLoadingRecords": "Sedang memuat...",
-            "sProcessing": "Sedang memproses...",
-            "sSearch": "Cari:",
-            "sZeroRecords": "Tidak ditemukan data yang sesuai",
-            "oPaginate": {
-                "sFirst": "Pertama",
-                "sLast": "Terakhir",
-                "sNext": "Selanjutnya",
-                "sPrevious": "Sebelumnya"
-            }
-        },
-        order: [[1, 'asc'], [2, 'asc']]
-    });
-
-    // Filter departemen dengan Select2
-    $('#departmentFilter').on('change', function() {
-        var selectedDepartment = this.value;
-        table.column(1).search(selectedDepartment).draw();
-    });
-
-    // Initialize Select2 untuk modal
-    function initModalSelect2() {
-        $('.select2-modal').select2({
-            dropdownParent: $('#flowJobModal'),
-            placeholder: function() {
-                return $(this).find('option:first').text();
-            },
+        // Initialize Select2 untuk filter departemen (di luar modal)
+        $('.select2-filter').select2({
+            placeholder: 'Semua Departemen',
             allowClear: true,
-            width: '100%',
+            width: '250px',
             language: {
                 noResults: function() {
                     return "Tidak ada hasil yang ditemukan";
@@ -290,195 +265,281 @@ $(document).ready(function() {
                 }
             }
         });
-    }
-    
-    @permission('create-flow-jobs')
-    $('#flowJobModal').on('show.bs.modal', function() {
-        if (!isEditMode) {
-            resetForm();
-        }
-        // Initialize Select2 setiap kali modal dibuka
-        initModalSelect2();
-        isEditMode = false;
-    });
 
-    // Destroy Select2 saat modal ditutup
-    $('#flowJobModal').on('hidden.bs.modal', function() {
-        $('.select2-modal').select2('destroy');
-    });
-
-    function resetForm() {
-        $('#flowJobForm')[0].reset();
-        $('#flow_job_id').val('');
-        $('#flowJobModalLabel').text('Tambah Flow Job');
-        $('.form-control').removeClass('is-invalid');
-        $('.invalid-feedback').text('');
-        $('#is_active').prop('checked', true);
-        
-        // Reset Select2
-        $('#department_id').val('').trigger('change');
-        $('#job_level_id').val('').trigger('change');
-        $('#applies_to').val('both').trigger('change');
-    }
-
-    $('button[data-bs-target="#flowJobModal"]').on('click', function() {
-        isEditMode = false;
-    });
-    @endpermission
-
-    @permission('edit-flow-jobs')
-    $(document).on('click', '.edit-btn', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        isEditMode = true;
-        
-        const id = $(this).data('id');
-        const departmentId = $(this).data('department_id');
-        const jobLevelId = $(this).data('job_level_id');
-        const stepOrder = $(this).data('step_order');
-        const stepName = $(this).data('step_name');
-        const appliesTo = $(this).data('applies_to');
-        const isActive = $(this).data('is_active');
-
-        $('.form-control').removeClass('is-invalid');
-        $('.invalid-feedback').text('');
-        
-        $('#flow_job_id').val(id);
-        $('#step_order').val(stepOrder);
-        $('#step_name').val(stepName);
-        $('#is_active').prop('checked', Boolean(Number(isActive)));
-        $('#flowJobModalLabel').text('Edit Flow Job');
-        
-        // Set nilai Select2 setelah modal terbuka
-        setTimeout(function() {
-            $('#department_id').val(departmentId).trigger('change');
-            $('#job_level_id').val(jobLevelId).trigger('change');
-            $('#applies_to').val(appliesTo).trigger('change');
-        }, 100);
-        
-        $('#flowJobModal').modal('show');
-    });
-    @endpermission
-
-    @if(Auth::user()->hasPermission('create-flow-jobs') || Auth::user()->hasPermission('edit-flow-jobs'))
-    $('#flowJobForm').on('submit', function(e) {
-        e.preventDefault();
-
-        const id = $('#flow_job_id').val();
-        const isEdit = id !== '';
-        const url = isEdit ? `/flow-jobs/${id}` : '/flow-jobs';
-
-        const formData = new FormData(this);
-        if (isEdit) {
-            formData.append('_method', 'PUT');
-        }
-
-        $('.form-control').removeClass('is-invalid');
-        $('.select2-container').removeClass('is-invalid');
-        $('.invalid-feedback').text('');
-
-        $.ajax({
-            url: url,
-            method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    $('#flowJobModal').modal('hide');
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil!',
-                        text: response.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        location.reload();
-                    });
+        // Initialize DataTable
+        var table = $('#flowJobTable').DataTable({
+            responsive: true,
+            language: {
+                "sEmptyTable": "Tidak ada data yang tersedia pada tabel ini",
+                "sInfo": "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
+                "sInfoEmpty": "Menampilkan 0 sampai 0 dari 0 entri",
+                "sInfoFiltered": "(disaring dari _MAX_ entri keseluruhan)",
+                "sLengthMenu": "Tampilkan _MENU_ entri",
+                "sLoadingRecords": "Sedang memuat...",
+                "sProcessing": "Sedang memproses...",
+                "sSearch": "Cari:",
+                "sZeroRecords": "Tidak ditemukan data yang sesuai",
+                "oPaginate": {
+                    "sFirst": "Pertama",
+                    "sLast": "Terakhir",
+                    "sNext": "Selanjutnya",
+                    "sPrevious": "Sebelumnya"
                 }
             },
-            error: function(xhr) {
-                if (xhr.status === 422) {
-                    const errors = xhr.responseJSON.errors;
+            order: [
+                [1, 'asc'],
+                [2, 'asc']
+            ]
 
-                    Object.keys(errors).forEach(function(key) {
-                        const element = $(`#${key}`);
-                        element.addClass('is-invalid');
-                        
-                        // Tambahkan class is-invalid ke Select2 container juga
-                        if (element.hasClass('select2-modal')) {
-                            element.next('.select2-container').addClass('is-invalid');
-                        }
-                        
-                        element.siblings('.invalid-feedback').text(errors[key][0]);
-                    });
-                } else {
-                    const response = xhr.responseJSON;
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal!',
-                        text: response?.message || 'Terjadi kesalahan saat menyimpan data.'
-                    });
+
+        });
+
+        // Filter departemen dengan Select2
+        $('#departmentFilter').on('change', function() {
+            var selectedDepartment = this.value;
+            table.column(1).search(selectedDepartment).draw();
+        });
+
+        // Initialize Select2 untuk modal
+        function initModalSelect2() {
+            $('.select2-modal').select2({
+                dropdownParent: $('#flowJobModal'),
+                placeholder: function() {
+                    return $(this).find('option:first').text();
+                },
+                allowClear: true,
+                width: '100%',
+                language: {
+                    noResults: function() {
+                        return "Tidak ada hasil yang ditemukan";
+                    },
+                    searching: function() {
+                        return "Mencari...";
+                    }
                 }
+            });
+        }
+
+        @permission('create-flow-jobs')
+        $('#flowJobModal').on('show.bs.modal', function() {
+            if (!isEditMode) {
+                resetForm();
+            }
+            // Initialize Select2 setiap kali modal dibuka
+            initModalSelect2();
+            isEditMode = false;
+        });
+
+        // Destroy Select2 saat modal ditutup
+        $('#flowJobModal').on('hidden.bs.modal', function() {
+            $('.select2-modal').select2('destroy');
+        });
+
+        function resetForm() {
+            $('#flowJobForm')[0].reset();
+            $('#flow_job_id').val('');
+            $('#flowJobModalLabel').text('Tambah Flow Job');
+            $('.form-control').removeClass('is-invalid');
+            $('.invalid-feedback').text('');
+            $('#is_active').prop('checked', true);
+
+            // Reset Select2
+            $('#department_id').val('').trigger('change');
+            $('#plant_id').val('#').trigger('change');
+            $('#job_level_id').val('').trigger('change');
+
+            $('#applies_to').val('both').trigger('change');
+        }
+
+        $('button[data-bs-target="#flowJobModal"]').on('click', function() {
+            isEditMode = false;
+        });
+        @endpermission
+
+        const approverSelect = $('#approver_employee_id');
+
+        $('#job_level_id').on('change', function() {
+            const jobLevelId = $(this).val();
+            approverSelect.empty(); // kosongkan dulu
+            approverSelect.prop('disabled', true);
+
+            if (jobLevelId) {
+                $.ajax({
+                    url: "{{ route('employees.byJob', ':jobLevelId') }}".replace(':jobLevelId', jobLevelId),
+                    type: 'GET',
+                    success: function(data) {
+                        approverSelect.append('<option value="">Pilih Nama Approver</option>');
+                        data.forEach(function(emp) {
+                            approverSelect.append(`<option value="${emp.id}">${emp.name}</option>`);
+                        });
+                        approverSelect.prop('disabled', false);
+                        approverSelect.trigger('change.select2');
+                    }
+                });
+            } else {
+                approverSelect.append('<option value="">Pilih Level Jabatan terlebih dahulu</option>');
+                approverSelect.trigger('change.select2');
             }
         });
-    });
-    @endif
+        @permission('edit-flow-jobs')
+        $(document).on('click', '.edit-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
 
-    @permission('delete-flow-jobs')
-    $(document).on('click', '.delete-btn', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const id = $(this).data('id');
-        const department = $(this).data('department');
-        const step = $(this).data('step');
+            isEditMode = true;
 
-        Swal.fire({
-            title: 'Apakah Anda yakin?',
-            text: `Flow Job "${step}" di departemen "${department}" akan dihapus permanen!`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: `/flow-jobs/${id}`,
-                    method: 'DELETE',
-                    data: {
-                        _token: $('meta[name="csrf-token"]').attr('content')
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Terhapus!',
-                                text: response.message,
-                                timer: 2000,
-                                showConfirmButton: false
-                            }).then(() => {
-                                location.reload();
-                            });
-                        }
-                    },
-                    error: function(xhr) {
+            const id = $(this).data('id');
+            const departmentId = $(this).data('department_id');
+            const plantId = $(this).data('plant_id') == '' ? '#' : $(this).data('plant_id');
+            const jobLevelId = $(this).data('job_level_id');
+            const stepOrder = $(this).data('step_order');
+            const stepName = $(this).data('step_name');
+            const appliesTo = $(this).data('applies_to');
+            const approverEmployeeId = $(this).data('approver');
+            const isActive = $(this).data('is_active');
+
+            $('.form-control').removeClass('is-invalid');
+            $('.invalid-feedback').text('');
+
+            $('#flow_job_id').val(id);
+            $('#step_order').val(stepOrder);
+            $('#step_name').val(stepName);
+            $('#is_active').prop('checked', Boolean(Number(isActive)));
+            $('#flowJobModalLabel').text('Edit Flow Job');
+
+            // Set nilai Select2 setelah modal terbuka
+            setTimeout(function() {
+                $('#plant_id').val(plantId).trigger('change');
+                $('#department_id').val(departmentId).trigger('change');
+                $('#job_level_id').val(jobLevelId).trigger('change');
+                $('#applies_to').val(appliesTo).trigger('change');
+                setTimeout(function() {
+                    $('#approver_employee_id').val(approverEmployeeId).trigger('change');
+                }, 1000);
+            }, 100);
+
+            $('#flowJobModal').modal('show');
+        });
+        @endpermission
+
+        @if("Auth::user()->hasPermission('create-flow-jobs')" || "Auth::user()->hasPermission('edit-flow-jobs')")
+        $('#flowJobForm').on('submit', function(e) {
+            e.preventDefault();
+
+            const id = $('#flow_job_id').val();
+            const isEdit = id !== '';
+            const url = isEdit ? `/flow-jobs/${id}` : '/flow-jobs';
+
+            const formData = new FormData(this);
+            if (isEdit) {
+                formData.append('_method', 'PUT');
+            }
+
+            $('.form-control').removeClass('is-invalid');
+            $('.select2-container').removeClass('is-invalid');
+            $('.invalid-feedback').text('');
+
+            $.ajax({
+                url: url,
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        $('#flowJobModal').modal('hide');
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil!',
+                            text: response.message,
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload();
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        const errors = xhr.responseJSON.errors;
+
+                        Object.keys(errors).forEach(function(key) {
+                            const element = $(`#${key}`);
+                            element.addClass('is-invalid');
+
+                            // Tambahkan class is-invalid ke Select2 container juga
+                            if (element.hasClass('select2-modal')) {
+                                element.next('.select2-container').addClass('is-invalid');
+                            }
+
+                            element.siblings('.invalid-feedback').text(errors[key][0]);
+                        });
+                    } else {
                         const response = xhr.responseJSON;
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal!',
-                            text: response?.message || 'Terjadi kesalahan saat menghapus data.'
+                            text: response?.message || 'Terjadi kesalahan saat menyimpan data.'
                         });
                     }
-                });
-            }
+                }
+            });
         });
+        @endif
+
+        @permission('delete-flow-jobs')
+        $(document).on('click', '.delete-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const id = $(this).data('id');
+            const department = $(this).data('department');
+            const step = $(this).data('step');
+
+            Swal.fire({
+                title: 'Apakah Anda yakin?',
+                text: `Flow Job "${step}" di departemen "${department}" akan dihapus permanen!`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/flow-jobs/${id}`,
+                        method: 'DELETE',
+                        data: {
+                            _token: $('meta[name="csrf-token"]').attr('content')
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Terhapus!',
+                                    text: response.message,
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            const response = xhr.responseJSON;
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: response?.message || 'Terjadi kesalahan saat menghapus data.'
+                            });
+                        }
+                    });
+                }
+            });
+        });
+        @endpermission
     });
-    @endpermission
-});
 </script>
 @endpush

@@ -13,6 +13,7 @@ use App\Http\Controllers\JobLevelController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ProcessTypeController;
 use App\Http\Controllers\FlowJobController;
+use App\Http\Controllers\PlantController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +40,7 @@ Route::middleware(['auth'])->group(function () {
     // Master Data
     Route::resource('departments', DepartmentController::class);
     Route::resource('job-levels', JobLevelController::class);
+    Route::get('/employees/by-job/{jobLevel}', [EmployeeController::class, 'getByJobLevel'])->name('employees.byJob');
     Route::resource('employees', EmployeeController::class);
     Route::resource('flow-jobs', FlowJobController::class);
 
@@ -82,6 +84,8 @@ Route::middleware(['auth'])->group(function () {
     });
     // Process Types
     Route::resource('process-types', ProcessTypeController::class)->middleware('auth');
+    // Plant
+    Route::resource('plants', PlantController::class)->middleware('auth');
 
     Route::get('/approvals/detail/{approval}', [ApprovalController::class, 'overtimeDetail'])->name('approvals.detail');
     Route::get('/api/employees/search', [UserController::class, 'searchEmployees'])->name('api.employees.search');

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +11,7 @@ class FlowJob extends Model
 
     protected $fillable = [
         'department_id',
+        'plant_id',
         'job_level_id',
         'approver_employee_id',
         'step_order',
@@ -31,6 +33,11 @@ class FlowJob extends Model
     public function jobLevel()
     {
         return $this->belongsTo(JobLevel::class);
+    }
+
+    public function plant()
+    {
+        return $this->belongsTo(Plant::class);
     }
 
     // ✅ TAMBAH RELASI INI

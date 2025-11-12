@@ -132,7 +132,7 @@ class OvertimeController extends Controller
         \Log::info("Requester: {$currentEmployee->name}");
         \Log::info("Requester Level: {$currentEmployee->jobLevel->name} (Order: {$requesterLevelOrder})");
 
-        $eligibleEmployees = Employee::with(['department', 'jobLevel'])
+        $eligibleEmployees = Employee::with(['department', 'jobLevel', 'plant'])
             ->where('department_id', $currentEmployee->department_id)
             ->where('is_active', true)
             ->whereHas('jobLevel', function ($query) use ($requesterLevelOrder) {
@@ -419,6 +419,10 @@ class OvertimeController extends Controller
                 $query->where('applies_to', $overtimeCategory)
                     ->orWhere('applies_to', 'both');
             })
+            ->where(function ($query) use ($requesterEmployee) {
+                $query->where('plant_id', $requesterEmployee->plant_id)
+                    ->orWhereNull('plant_id');
+            })
             ->orderBy('step_order')
             ->get();
 
@@ -464,43 +468,22 @@ class OvertimeController extends Controller
     // ✅ FUNGSI BARU: Find approver helper
     private function findApproverForFlowJob($flowJob, $departmentId)
     {
-        $jobLevelCode = $flowJob->jobLevel->code;
+        $jobLevelCode = $flowJob->jobLevel->id;
 
-        switch ($jobLevelCode) {
-            case 'DIV':
-            case 'SUBDIV':
-            case 'HRD':
-                return Employee::with('jobLevel')
-                    ->where('job_level_id', $flowJob->job_level_id)
-                    ->where('is_active', true)
-                    ->first();
+        // definisi level mana saja yang bersifat lokal
+        $localLevels = [10, 11]; // misal: Forman dan Section Head
 
-            case 'DEPT':
-            case 'ASDEPT':
-            case 'SUBDEPT':
-            case 'SECT':
-                return Employee::with('jobLevel')
-                    ->where('department_id', $departmentId)
-                    ->where('job_level_id', $flowJob->job_level_id)
-                    ->where('is_active', true)
-                    ->first();
+        $query = Employee::where('department_id', $departmentId)
+            ->where('job_level_id', $jobLevelCode)
+            ->where('is_active', true);
 
-            default:
-                $approver = Employee::with('jobLevel')
-                    ->where('department_id', $departmentId)
-                    ->where('job_level_id', $flowJob->job_level_id)
-                    ->where('is_active', true)
-                    ->first();
-
-                if (!$approver) {
-                    $approver = Employee::with('jobLevel')
-                        ->where('job_level_id', $flowJob->job_level_id)
-                        ->where('is_active', true)
-                        ->first();
-                }
-
-                return $approver;
+        if (in_array($flowJob->job_level_id, $localLevels)) {
+            // cari di plant yang sama (lokal)
+            $query->where('plant_id', $flowJob->plant_id);
         }
+        // jika tidak termasuk lokal, berarti global (tanpa filter plant)
+
+        return $query->first();
     }
 
     public function checkOvertimeEligibility(Request $request)

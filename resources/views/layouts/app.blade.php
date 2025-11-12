@@ -449,7 +449,11 @@
                         @endif
 
                         <!-- Data Master - Cek permission untuk masing-masing item -->
-                        @if(Auth::user()->hasPermission('view-employees') || Auth::user()->hasPermission('view-departments') || Auth::user()->hasPermission('view-job-levels') || Auth::user()->hasPermission('view-flow-jobs'))
+                        @php
+                        $permissions = ['view-employees', 'view-departments', 'view-job-levels', 'view-flow-jobs', 'view-plant'];
+                        @endphp
+
+                        @if(collect($permissions)->contains(fn($p) => Auth::user()->hasPermission($p)))
                         <div class="menu-header">Data Master</div>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -483,6 +487,11 @@
                                 @permission('view-process-types')
                                 <li><a class="dropdown-item" href="{{ route('process-types.index') }}">
                                         <i class="fas fa-cogs"></i> Tipe Proses
+                                    </a></li>
+                                @endpermission
+                                @permission('view-plant')
+                                <li><a class="dropdown-item" href="{{ route('plants.index') }}">
+                                        <i class="fas fa-building"></i> Plant
                                     </a></li>
                                 @endpermission
                             </ul>

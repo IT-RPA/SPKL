@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\Department;
 use App\Models\JobLevel;
+use App\Models\Plant;
 use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
@@ -23,8 +24,9 @@ class EmployeeController extends Controller
         $employees = Employee::with(['department', 'jobLevel'])->get();
         $departments = Department::where('is_active', true)->get();
         $jobLevels = JobLevel::where('is_active', true)->orderBy('level_order')->get();
-        
-        return view('employees.index', compact('employees', 'departments', 'jobLevels'));
+        $plants = Plant::get();
+
+        return view('employees.index', compact('employees', 'departments', 'jobLevels', 'plants'));
     }
 
     public function store(Request $request)
@@ -34,7 +36,8 @@ class EmployeeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:employees,email',
             'department_id' => 'required|exists:departments,id',
-            'job_level_id' => 'required|exists:job_levels,id'
+            'job_level_id' => 'required|exists:job_levels,id',
+            'plant_id' => 'nullable|exists:plants,id'
         ]);
 
         $data = $request->all();
@@ -56,6 +59,7 @@ class EmployeeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:employees,email,' . $employee->id,
             'department_id' => 'required|exists:departments,id',
+            'plant_id' => 'nullable|exists:plants,id',
             'job_level_id' => 'required|exists:job_levels,id'
         ]);
 
@@ -85,5 +89,14 @@ class EmployeeController extends Controller
                 'message' => 'Gagal menghapus karyawan. Data mungkin sedang digunakan.'
             ], 400);
         }
+    }
+
+    public function getByJobLevel($jobLevel)
+    {
+        $employees = Employee::where('job_level_id', $jobLevel)
+            ->select('id', 'name')
+            ->get();
+
+        return response()->json($employees);
     }
 }
