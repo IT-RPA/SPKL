@@ -235,7 +235,7 @@ class ApprovalController extends Controller
             return collect();
         }
 
-        // Ambil approval biasa (pending/approved/rejected)
+        // Ambil approvals biasa
         $approvals = OvertimeApproval::with([
             'overtimeRequest.requesterEmployee.jobLevel',
             'overtimeRequest.department',
@@ -244,48 +244,78 @@ class ApprovalController extends Controller
             'approverEmployee.jobLevel'
         ])
             ->where('approver_employee_id', $currentEmployee->id)
-            // ->where('approver_level', $currentEmployee->jobLevel)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // TAMBAHAN: Ambil juga overtime yang sudah approved dan perlu input percentage
-        // untuk level yang sama atau di bawah current employee
+        // Ambil overtime yang perlu input persentase
         $overtimesNeedingPercentage = OvertimeRequest::with([
             'requesterEmployee.jobLevel',
             'department',
             'details.employee',
             'approvals.approverEmployee.jobLevel'
         ])
-            ->where('status', 'approved') // Status approved = perlu input data
-            ->whereHas('details', function ($query) {
-                $query->where('overtime_type', 'qualitative')
-                    ->whereNull('percentage_realization');
-            })
-            ->whereHas('approvals', function ($query) use ($currentEmployee) {
-                $query->where('approver_employee_id', $currentEmployee->id)
-                    ->where('status', 'approved'); // User ini sudah approve
-            })
+            ->where('status', 'approved')
+            ->whereHas(
+                'details',
+                fn($q) =>
+                $q->where('overtime_type', 'qualitative')
+                    ->whereNull('percentage_realization')
+            )
+            ->whereHas(
+                'approvals',
+                fn($q) =>
+                $q->where('approver_employee_id', $currentEmployee->id)
+                    ->where('status', 'approved')
+            )
             ->get();
 
-        // Gabungkan data untuk ditampilkan dalam satu tabel
-        $combinedData = $approvals->toBase();
+        // ============================
+        //  STEP 3: List approval ID yg harus disembunyikan
+        // ============================
+        $approvalIdsToHide = collect();
 
-        // Tambahkan data percentage yang perlu diinput sebagai "pseudo approval"
-        foreach ($overtimesNeedingPercentage as $overtime) {
-            // Cari approval user ini untuk overtime tersebut
-            $userApproval = $overtime->approvals->where('approver_employee_id', $currentEmployee->id)->first();
+        foreach ($overtimesNeedingPercentage as $ot) {
+            $userApproval = $ot->approvals
+                ->where('approver_employee_id', $currentEmployee->id)
+                ->first();
 
             if ($userApproval) {
-                // Buat duplikat approval tapi dengan flag khusus
-                $pseudoApproval = $userApproval->replicate();
-                $pseudoApproval->needs_percentage_input = true;
-                $pseudoApproval->percentage_status = 'needs_input';
-
-                $combinedData->push($pseudoApproval);
+                $approvalIdsToHide->push($userApproval->id);
             }
         }
 
-        return $combinedData->sortByDesc('created_at');
+        // ============================
+        //  STEP 4: Filter approvals → buang approval asli yg perlu pseudo
+        // ============================
+        $filteredApprovals = $approvals->reject(function ($item) use ($approvalIdsToHide) {
+            return $approvalIdsToHide->contains($item->id);
+        });
+
+        // ============================
+        //  STEP 5: Tambahkan pseudo approvals
+        // ============================
+        $combinedData = $filteredApprovals->values();
+
+        foreach ($overtimesNeedingPercentage as $ot) {
+            $userApproval = $ot->approvals
+                ->where('approver_employee_id', $currentEmployee->id)
+                ->first();
+
+            if ($userApproval) {
+                $pseudo = $userApproval->replicate();
+                $pseudo->id = $userApproval->id;  // ← INI WAJIB
+                $pseudo->needs_percentage_input = true;
+                $pseudo->percentage_status = 'needs_input';
+
+                // opsional: tandai ini pseudo
+                $pseudo->is_pseudo = true;
+
+                $combinedData->push($pseudo);
+            }
+        }
+
+        // Urutkan dan return
+        return $combinedData->sortByDesc('created_at')->values();
     }
 
     public function rejectDetail(Request $request, $detailId)

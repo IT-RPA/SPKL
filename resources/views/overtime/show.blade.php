@@ -6,42 +6,42 @@
     <div>
         {{-- ✅ PERBAIKAN: Tambahkan tombol edit jam jika user memiliki wewenang --}}
         @if(isset($canEditTime) && $canEditTime)
-            <button class="btn btn-warning btn-sm" onclick="toggleEditMode()">
-                <i class="fas fa-edit"></i> Edit Jam
-            </button>
+        <button class="btn btn-warning btn-sm" onclick="toggleEditMode()">
+            <i class="fas fa-edit"></i> Edit Jam
+        </button>
         @endif
 
         @if(isset($canInputPercentage) && $canInputPercentage && $overtime->details()->where('overtime_type', 'qualitative')->exists())
-    @php
+        @php
         $hasPercentageReady = $overtime->details()
-            ->where('overtime_type', 'qualitative')
-            ->where('is_rejected', false)
-            ->get()
-            ->filter(function($detail) {
-                try {
-                    return $detail->canInputPercentageNow();
-                } catch (\Exception $e) {
-                    return false;
-                }
-            })->count() > 0;
-    @endphp
-    
-    @if($hasPercentageReady)
+        ->where('overtime_type', 'qualitative')
+        ->where('is_rejected', false)
+        ->get()
+        ->filter(function($detail) {
+        try {
+        return $detail->canInputPercentageNow();
+        } catch (\Exception $e) {
+        return false;
+        }
+        })->count() > 0;
+        @endphp
+
+        @if($hasPercentageReady)
         <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#updatePercentageModal">
             <i class="fas fa-percentage"></i> Input Persentase
         </button>
-    @endif
-@endif
+        @endif
+        @endif
         <a href="{{ route('overtime.index') }}" class="btn btn-secondary">Kembali</a>
     </div>
 </div>
 
 {{-- ✅ PERBAIKAN: Alert untuk status 'act' --}}
 @if($overtime->status == 'act')
-    <div class="alert alert-info">
-        <i class="fas fa-info-circle"></i>
-        <strong>Status: Siap Input Qty Actual</strong> - Semua approval telah selesai. Silakan input qty actual untuk menyelesaikan lembur.
-    </div>
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i>
+    <strong>Status: Siap Input Qty Actual</strong> - Semua approval telah selesai. Silakan input qty actual untuk menyelesaikan lembur.
+</div>
 @endif
 
 {{-- Header Information Card --}}
@@ -128,9 +128,9 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Detail Karyawan Lembur</h5>
         @if(isset($canInputActual) && $canInputActual && $overtime->details()->whereNotNull('qty_plan')->whereNull('qty_actual')->where('is_rejected', false)->count() > 0)
-            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#updateActualModal">
-                <i class="fas fa-edit"></i> Update Qty Actual
-            </button>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#updateActualModal">
+            <i class="fas fa-edit"></i> Update Qty Actual
+        </button>
         @endif
     </div>
     <div class="card-body">
@@ -142,30 +142,30 @@
                 <i class="fas fa-exclamation-triangle"></i>
                 <strong>Mode Edit Jam:</strong> Anda sedang mengedit jam lembur. Pastikan perubahan sudah benar sebelum menyimpan.
             </div>
-            
+
             @foreach($overtime->details as $index => $detail)
-                <div class="border rounded p-3 mb-3">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <strong>Karyawan:</strong><br>
-                            {{ $detail->employee->name }} - {{ $detail->employee->employee_id }}
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Jam Mulai</label>
-                            <input type="time" class="form-control" 
-                                   name="details[{{ $detail->id }}][start_time]" 
-                                   value="{{ $detail->start_time }}" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Jam Selesai</label>
-                            <input type="time" class="form-control" 
-                                   name="details[{{ $detail->id }}][end_time]" 
-                                   value="{{ $detail->end_time }}" required>
-                        </div>
+            <div class="border rounded p-3 mb-3">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Karyawan:</strong><br>
+                        {{ $detail->employee->name }} - {{ $detail->employee->employee_id }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Jam Mulai</label>
+                        <input type="time" class="form-control"
+                            name="details[{{ $detail->id }}][start_time]"
+                            value="{{ $detail->start_time }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Jam Selesai</label>
+                        <input type="time" class="form-control"
+                            name="details[{{ $detail->id }}][end_time]"
+                            value="{{ $detail->end_time }}" required>
                     </div>
                 </div>
+            </div>
             @endforeach
-            
+
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> Simpan Perubahan Jam
@@ -176,162 +176,161 @@
             </div>
         </form>
 
-{{-- Display Mode (Default) --}}
-<div id="displayMode">
-    @foreach($overtime->details as $index => $detail)
-        <div class="border rounded p-3 mb-3 {{ $loop->last ? 'mb-0' : '' }} {{ $detail->is_rejected ? 'bg-light border-danger' : '' }}">
-            {{-- ✅ TAMBAHAN: Badge rejected --}}
-            @if($detail->is_rejected)
+        {{-- Display Mode (Default) --}}
+        <div id="displayMode">
+            @foreach($overtime->details as $index => $detail)
+            <div class="border rounded p-3 mb-3 {{ $loop->last ? 'mb-0' : '' }} {{ $detail->is_rejected ? 'bg-light border-danger' : '' }}">
+                {{-- ✅ TAMBAHAN: Badge rejected --}}
+                @if($detail->is_rejected)
                 <div class="alert alert-danger mb-3">
                     <i class="fas fa-times-circle"></i>
                     <strong>Detail Ditolak</strong>
                     <br><small><strong>Alasan:</strong> {{ $detail->rejection_reason }}</small>
-                    <br><small><strong>Ditolak oleh:</strong> {{ $detail->rejectedBy->name ?? '-' }} 
-                    pada {{ $detail->rejected_at ? $detail->rejected_at->format('d/m/Y H:i') : '-' }}</small>
+                    <br><small><strong>Ditolak oleh:</strong> {{ $detail->rejectedBy->name ?? '-' }}
+                        pada {{ $detail->rejected_at ? $detail->rejected_at->format('d/m/Y H:i') : '-' }}</small>
                 </div>
-            @endif
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <strong>Karyawan:</strong><br>
-                    {{ $detail->employee->name }} - {{ $detail->employee->employee_id }}
-                </div>
-                <div class="col-md-3">
-                    <strong>Tipe:</strong><br>
-                    <span class="badge bg-{{ $detail->overtime_type == 'quantitative' ? 'primary' : 'info' }}">
-                        {{ ucfirst($detail->overtime_type) }}
-                    </span>
-                    {{-- ✅ TAMBAHAN: Badge rejected --}}
-                    @if($detail->is_rejected)
+                @endif
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Karyawan:</strong><br>
+                        {{ $detail->employee->name }} - {{ $detail->employee->employee_id }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Tipe:</strong><br>
+                        <span class="badge bg-{{ $detail->overtime_type == 'quantitative' ? 'primary' : 'info' }}">
+                            {{ ucfirst($detail->overtime_type) }}
+                        </span>
+                        {{-- ✅ TAMBAHAN: Badge rejected --}}
+                        @if($detail->is_rejected)
                         <span class="badge bg-danger ms-1">
                             <i class="fas fa-ban"></i> DITOLAK
                         </span>
-                    @endif
+                        @endif
+                    </div>
+
+                    <div class="col-md-3">
+                        <strong>Jam Mulai:</strong><br>
+                        {{ $detail->start_time }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Jam Selesai:</strong><br>
+                        {{ $detail->end_time }}
+                    </div>
                 </div>
 
-                        <div class="col-md-3">
-                            <strong>Jam Mulai:</strong><br>
-                            {{ $detail->start_time }}
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Jam Selesai:</strong><br>
-                            {{ $detail->end_time }}
-                        </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <strong>Prioritas Pekerjaan:</strong><br>
+                        <p class="mb-0">{{ $detail->work_priority }}</p>
                     </div>
-                    
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <strong>Prioritas Pekerjaan:</strong><br>
-                            <p class="mb-0">{{ $detail->work_priority }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Proses:</strong><br>
-                            <p class="mb-0">{{ $detail->processType->name ?? $detail->work_process }}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="row mt-3">
-                        @if($detail->overtime_type == 'quantitative')
-                        <div class="col-md-3">
-                            <strong>Qty Plan:</strong><br>
-                            {{ $detail->qty_plan ?? '-' }}
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Qty Actual:</strong><br>
-                            @if($detail->qty_plan)
-                                @if(isset($canInputActual) && $canInputActual)
-                                    <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-info' }}">
-                                        {{ $detail->qty_actual ?? 'Siap diisi' }}
-                                    </span>
-                                @else
-                                    <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-warning' }}">
-                                        {{ $detail->qty_actual ?? 'Menunggu approval' }}
-                                    </span>
-                                @endif
-                            @else
-                                -
-                            @endif
-                         </div>
-                            @else
-                                <div class="col-md-3">
-                                    <strong>Persentase Realisasi:</strong><br>
-                                    @if($detail->percentage_realization !== null)
-                                        <span class="badge bg-success">{{ $detail->percentage_realization }}%</span>
-                                    @elseif($overtime->canInputPercentage(Auth::id()) && $detail->canInputPercentageNow())
-                                        <span class="badge bg-info">Siap diisi</span>
-                                    @else
-                                        <span class="badge bg-warning">Menunggu</span>
-                                    @endif
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>Status:</strong><br>
-                                    <span class="badge bg-info">Kualitatif</span>
-                                </div>
-                            @endif
-                        </div>
+                    <div class="col-md-6">
+                        <strong>Proses:</strong><br>
+                        <p class="mb-0">{{ $detail->processType->name ?? $detail->work_process }}</p>
                     </div>
                 </div>
-            @endforeach
+
+                <div class="row mt-3">
+                    @if($detail->overtime_type == 'quantitative')
+                    <div class="col-md-3">
+                        <strong>Qty Plan:</strong><br>
+                        {{ $detail->qty_plan ?? '-' }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Qty Actual:</strong><br>
+                        @if($detail->qty_plan)
+                        @if(isset($canInputActual) && $canInputActual)
+                        <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-info' }}">
+                            {{ $detail->qty_actual ?? 'Siap diisi' }}
+                        </span>
+                        @else
+                        <span class="badge {{ $detail->qty_actual ? 'bg-success' : 'bg-warning' }}">
+                            {{ $detail->qty_actual ?? 'Menunggu approval' }}
+                        </span>
+                        @endif
+                        @else
+                        -
+                        @endif
+                    </div>
+                    @else
+                    <div class="col-md-3">
+                        <strong>Persentase Realisasi:</strong><br>
+                        @if($detail->percentage_realization !== null)
+                        <span class="badge bg-success">{{ $detail->percentage_realization }}%</span>
+                        @elseif($overtime->canInputPercentage(Auth::id()) && $detail->canInputPercentageNow())
+                        <span class="badge bg-info">Siap diisi</span>
+                        @else
+                        <span class="badge bg-warning">Menunggu</span>
+                        @endif
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Status:</strong><br>
+                        <span class="badge bg-info">Kualitatif</span>
+                    </div>
+                    @endif
+                </div>
+            </div>
         </div>
+        @endforeach
     </div>
 </div>
 
 {{-- Approval Status Card --}}
-<div class="card">
+<div class="card mb-4">
     <div class="card-header">
         <h5 class="mb-0">Status Persetujuan</h5>
     </div>
     <div class="card-body">
         @if($overtime->approvals->count() > 0)
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Step</th>
-                            <th>Level</th>
-                            <th>Approver</th>
-                            <th>Status</th>
-                            <th>Tanggal Approval</th>
-                            <th>Keterangan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($overtime->approvals->sortBy('step_order') as $approval)
-                        <tr>
-                            <td>{{ $approval->step_name }}</td>
-                            <td>
-                                <span class="badge bg-secondary">{{ $approval->approver_level }}</span>
-                            </td>
-                            <td>{{ $approval->approverEmployee->name ?? 'Belum ditentukan' }}</td>
-                            <td>
-                                @switch($approval->status)
-                                    @case('pending')
-                                        <span class="badge bg-warning">Menunggu</span>
-                                        @break
-                                    @case('approved')
-                                        <span class="badge bg-success">Disetujui</span>
-                                        @break
-                                    @case('rejected')
-                                        <span class="badge bg-danger">Ditolak</span>
-                                        @break
-                                    @case('cancelled')
-                                        <span class="badge bg-secondary">Dibatalkan</span>
-                                        @break
-                                    @default
-                                        <span class="badge bg-light text-dark">{{ ucfirst($approval->status) }}</span>
-                                @endswitch
-                            </td>
-                            <td>
-                                {{ $approval->approved_at ? $approval->approved_at->format('d/m/Y H:i') : '-' }}
-                            </td>
-                            <td>{{ $approval->notes ?? '-' }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Step</th>
+                        <th>Level</th>
+                        <th>Approver</th>
+                        <th>Status</th>
+                        <th>Tanggal Approval</th>
+                        <th>Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($overtime->approvals->sortBy('step_order') as $approval)
+                    <tr>
+                        <td>{{ $approval->step_name }}</td>
+                        <td>
+                            <span class="badge bg-secondary">{{ $approval->approver_level }}</span>
+                        </td>
+                        <td>{{ $approval->approverEmployee->name ?? 'Belum ditentukan' }}</td>
+                        <td>
+                            @switch($approval->status)
+                            @case('pending')
+                            <span class="badge bg-warning">Menunggu</span>
+                            @break
+                            @case('approved')
+                            <span class="badge bg-success">Disetujui</span>
+                            @break
+                            @case('rejected')
+                            <span class="badge bg-danger">Ditolak</span>
+                            @break
+                            @case('cancelled')
+                            <span class="badge bg-secondary">Dibatalkan</span>
+                            @break
+                            @default
+                            <span class="badge bg-light text-dark">{{ ucfirst($approval->status) }}</span>
+                            @endswitch
+                        </td>
+                        <td>
+                            {{ $approval->approved_at ? $approval->approved_at->format('d/m/Y H:i') : '-' }}
+                        </td>
+                        <td>{{ $approval->notes ?? '-' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
         @else
-            <p class="text-muted mb-0">Tidak ada data persetujuan.</p>
+        <p class="text-muted mb-0">Tidak ada data persetujuan.</p>
         @endif
     </div>
 </div>
@@ -355,71 +354,71 @@
                         <i class="fas fa-info-circle"></i>
                         Silakan isi persentase realisasi sesuai dengan hasil kerja lembur kualitatif yang telah dilaksanakan.
                     </div>
-                    
+
                     @php
-                        // ✅ FILTER: Exclude rejected details
-                        $qualitativeDetails = $overtime->details
-                            ->where('overtime_type', 'qualitative')
-                            ->where('is_rejected', false);
+                    // ✅ FILTER: Exclude rejected details
+                    $qualitativeDetails = $overtime->details
+                    ->where('overtime_type', 'qualitative')
+                    ->where('is_rejected', false);
                     @endphp
-                    
+
                     @if($qualitativeDetails->count() == 0)
-                        <div class="alert alert-warning">
-                            <i class="fas fa-info-circle"></i>
-                            Tidak ada detail kualitatif yang valid untuk diisi persentase.
-                            @if($overtime->details()->where('overtime_type', 'qualitative')->where('is_rejected', true)->count() > 0)
-                                <br><small>Beberapa detail kualitatif telah ditolak oleh approver.</small>
-                            @endif
-                        </div>
-                    @else
-                        @foreach($qualitativeDetails as $detail)
-                        @if($detail->canInputPercentageNow())
-                        <div class="border rounded p-3 mb-3">
-                            <h6>{{ $detail->employee->name }} - {{ $detail->employee->employee_id }}</h6>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <label class="form-label">Jam Lembur</label>
-                                    <div class="form-control-plaintext">{{ $detail->start_time }} - {{ $detail->end_time }}</div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Persentase Realisasi (%) <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <input type="number" class="form-control" 
-                                               name="details[{{ $detail->id }}][percentage_realization]" 
-                                               value="{{ $detail->percentage_realization }}" 
-                                               min="0" max="100" step="0.01"
-                                               placeholder="0-100" required>
-                                        <span class="input-group-text">%</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Tipe</label>
-                                    <div class="form-control-plaintext">
-                                        <span class="badge bg-info">Kualitatif</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mt-2">
-                                <div class="col-md-6">
-                                    <label class="form-label">Prioritas Pekerjaan</label>
-                                    <p class="form-control-plaintext small">{{ $detail->work_priority }}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Proses</label>
-                                    <p class="form-control-plaintext small">{{ $detail->processType->name ?? $detail->work_process }}</p>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        Tidak ada detail kualitatif yang valid untuk diisi persentase.
+                        @if($overtime->details()->where('overtime_type', 'qualitative')->where('is_rejected', true)->count() > 0)
+                        <br><small>Beberapa detail kualitatif telah ditolak oleh approver.</small>
                         @endif
-                        @endforeach
+                    </div>
+                    @else
+                    @foreach($qualitativeDetails as $detail)
+                    @if($detail->canInputPercentageNow())
+                    <div class="border rounded p-3 mb-3">
+                        <h6>{{ $detail->employee->name }} - {{ $detail->employee->employee_id }}</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Jam Lembur</label>
+                                <div class="form-control-plaintext">{{ $detail->start_time }} - {{ $detail->end_time }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Persentase Realisasi (%) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control"
+                                        name="details[{{ $detail->id }}][percentage_realization]"
+                                        value="{{ $detail->percentage_realization }}"
+                                        min="0" max="100" step="0.01"
+                                        placeholder="0-100" required>
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Tipe</label>
+                                <div class="form-control-plaintext">
+                                    <span class="badge bg-info">Kualitatif</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Prioritas Pekerjaan</label>
+                                <p class="form-control-plaintext small">{{ $detail->work_priority }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Proses</label>
+                                <p class="form-control-plaintext small">{{ $detail->processType->name ?? $detail->work_process }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                    @endforeach
                     @endif
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                     @if($qualitativeDetails->count() > 0)
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save"></i> Simpan Persentase
-                        </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Simpan Persentase
+                    </button>
                     @endif
                 </div>
             </form>
@@ -448,54 +447,54 @@
                         <i class="fas fa-info-circle"></i>
                         Silakan isi qty actual sesuai dengan hasil kerja lembur yang telah dilaksanakan.
                     </div>
-                    
+
                     @php
-                        // ✅ FILTER: Exclude rejected details
-                        $quantitativeDetails = $overtime->details
-                            ->where('qty_plan', '!=', null)
-                            ->where('is_rejected', false);
+                    // ✅ FILTER: Exclude rejected details
+                    $quantitativeDetails = $overtime->details
+                    ->where('qty_plan', '!=', null)
+                    ->where('is_rejected', false);
                     @endphp
-                    
+
                     @if($quantitativeDetails->count() == 0)
-                        <div class="alert alert-warning">
-                            <i class="fas fa-info-circle"></i>
-                            Tidak ada detail kuantitatif yang valid untuk diisi qty actual.
-                            @if($overtime->details()->whereNotNull('qty_plan')->where('is_rejected', true)->count() > 0)
-                                <br><small>Beberapa detail kuantitatif telah ditolak oleh approver.</small>
-                            @endif
-                        </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        Tidak ada detail kuantitatif yang valid untuk diisi qty actual.
+                        @if($overtime->details()->whereNotNull('qty_plan')->where('is_rejected', true)->count() > 0)
+                        <br><small>Beberapa detail kuantitatif telah ditolak oleh approver.</small>
+                        @endif
+                    </div>
                     @else
-                        @foreach($quantitativeDetails as $detail)
-                        <div class="border rounded p-3 mb-3">
-                            <h6>{{ $detail->employee->name }} - {{ $detail->employee->employee_id }}</h6>
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <label class="form-label">Qty Plan</label>
-                                    <input type="number" class="form-control" value="{{ $detail->qty_plan }}" readonly>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Qty Actual <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control" 
-                                           name="details[{{ $detail->id }}][qty_actual]" 
-                                           value="{{ $detail->qty_actual }}" 
-                                           min="0"
-                                           placeholder="Masukkan qty actual" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Proses</label>
-                                    <p class="form-control-plaintext">{{ $detail->processType->name ?? $detail->work_process }}</p>
-                                </div>
+                    @foreach($quantitativeDetails as $detail)
+                    <div class="border rounded p-3 mb-3">
+                        <h6>{{ $detail->employee->name }} - {{ $detail->employee->employee_id }}</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">Qty Plan</label>
+                                <input type="number" class="form-control" value="{{ $detail->qty_plan }}" readonly>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Qty Actual <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control"
+                                    name="details[{{ $detail->id }}][qty_actual]"
+                                    value="{{ $detail->qty_actual }}"
+                                    min="0"
+                                    placeholder="Masukkan qty actual" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Proses</label>
+                                <p class="form-control-plaintext">{{ $detail->processType->name ?? $detail->work_process }}</p>
                             </div>
                         </div>
-                        @endforeach
+                    </div>
+                    @endforeach
                     @endif
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                     @if($quantitativeDetails->count() > 0)
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save"></i> Update Qty Actual
-                        </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Update Qty Actual
+                    </button>
                     @endif
                 </div>
             </form>
@@ -505,104 +504,106 @@
 @endif
 @push('scripts')
 <script>
-function toggleEditMode() {
-    const timeForm = document.getElementById('timeForm');
-    const displayMode = document.getElementById('displayMode');
-    
-    if (timeForm.style.display === 'none') {
-        timeForm.style.display = 'block';
-        displayMode.style.display = 'none';
-    } else {
-        timeForm.style.display = 'none';
-        displayMode.style.display = 'block';
-    }
-}
+    function toggleEditMode() {
+        const timeForm = document.getElementById('timeForm');
+        const displayMode = document.getElementById('displayMode');
 
-// SweetAlert untuk konfirmasi dan notifikasi
-document.addEventListener('DOMContentLoaded', function() {
-    @if(session('success'))
+        if (timeForm.style.display === 'none') {
+            timeForm.style.display = 'block';
+            displayMode.style.display = 'none';
+        } else {
+            timeForm.style.display = 'none';
+            displayMode.style.display = 'block';
+        }
+    }
+
+    // SweetAlert untuk konfirmasi dan notifikasi
+    document.addEventListener('DOMContentLoaded', function() {
+        @if(session('success'))
         Swal.fire({
             icon: 'success',
             title: 'Berhasil!',
-            text: '{{ session('success') }}',
+            text: '{{ session('
+            success ') }}',
             timer: 3000,
             showConfirmButton: false
         });
-    @endif
+        @endif
 
-    @if(session('error'))
+        @if(session('error'))
         Swal.fire({
             icon: 'error',
             title: 'Error!',
-            text: '{{ session('error') }}',
+            text: '{{ session('
+            error ') }}',
             confirmButtonText: 'OK'
         });
-    @endif
+        @endif
 
-    // ✅ TAMBAHAN: Handle form submission dengan AJAX
-    const timeForm = document.getElementById('timeForm');
-    if (timeForm) {
-        timeForm.addEventListener('submit', function(e) {
-            e.preventDefault(); // Prevent form submit biasa
-            
-            const formData = new FormData(this);
-            
-            // Tampilkan loading
-            Swal.fire({
-                title: 'Menyimpan...',
-                text: 'Sedang mengupdate jam lembur',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil!',
-                        text: data.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        // Reload halaman untuk menampilkan data terbaru
-                        window.location.reload();
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal!',
-                        text: data.message || 'Terjadi kesalahan saat mengupdate jam',
-                        confirmButtonText: 'OK'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.close();
+        // ✅ TAMBAHAN: Handle form submission dengan AJAX
+        const timeForm = document.getElementById('timeForm');
+        if (timeForm) {
+            timeForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevent form submit biasa
+
+                const formData = new FormData(this);
+
+                // Tampilkan loading
                 Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan jaringan',
-                    confirmButtonText: 'OK'
+                    title: 'Menyimpan...',
+                    text: 'Sedang mengupdate jam lembur',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
                 });
+
+                fetch(this.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        Swal.close();
+
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: data.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                // Reload halaman untuk menampilkan data terbaru
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: data.message || 'Terjadi kesalahan saat mengupdate jam',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.close();
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: 'Terjadi kesalahan jaringan',
+                            confirmButtonText: 'OK'
+                        });
+                    });
             });
-        });
-    }
-});
+        }
+    });
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -610,46 +611,54 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @push('styles')
 <style>
-.status-badge {
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-size: 0.8em;
-    font-weight: bold;
-    text-transform: uppercase;
-}
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.8em;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
 
-.status-red {
-    background-color: #dc3545;
-    color: white;
-}
+    .status-red {
+        background-color: #dc3545;
+        color: white;
+    }
 
-.status-yellow {
-    background-color: #ffc107;
-    color: black;
-}
+    .status-yellow {
+        background-color: #ffc107;
+        color: black;
+    }
 
-.status-green {
-    background-color: #198754;
-    color: white;
-}
+    .status-green {
+        background-color: #198754;
+        color: white;
+    }
 
-.status-act {
-    background-color: #0dcaf0;
-    color: white;
-    animation: pulse 2s infinite;
-}
+    .status-act {
+        background-color: #0dcaf0;
+        color: white;
+        animation: pulse 2s infinite;
+    }
 
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.7; }
-    100% { opacity: 1; }
-}
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+        }
 
-.timeline-item {
-    border-left: 3px solid #dee2e6;
-    padding-left: 1rem;
-    margin-bottom: 1rem;
-}
+        50% {
+            opacity: 0.7;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    .timeline-item {
+        border-left: 3px solid #dee2e6;
+        padding-left: 1rem;
+        margin-bottom: 1rem;
+    }
 </style>
 @endpush
 @endsection

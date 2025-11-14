@@ -105,17 +105,18 @@ $query->where('approver_employee_id', $currentEmployee->id)
                         </td>
                         <td>
                             <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-outline-primary"
-                                    onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
-                                    title="Lihat Detail">
-                                    <i class="fas fa-eye"></i> Detail
-                                </button>
 
                                 @if(isset($approval->needs_percentage_input) && $approval->needs_percentage_input)
                                 <button class="btn btn-sm btn-warning"
                                     onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
                                     title="Input Persentase">
                                     <i class="fas fa-percentage"></i> Input %
+                                </button>
+                                @else
+                                <button class="btn btn-sm btn-outline-primary"
+                                    onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
+                                    title="Lihat Detail">
+                                    <i class="fas fa-eye"></i> Detail
                                 </button>
                                 @endif
 

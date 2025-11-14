@@ -7,6 +7,7 @@ use App\Models\OvertimePlanningApproval;
 use App\Models\Employee;
 use App\Models\Department;
 use App\Models\FlowJob;
+use App\Models\Plant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,10 +20,10 @@ class PlanningOvertimeController extends Controller
     public function index()
     {
         $currentUser = Auth::user();
-        
+
         // Cari employee berdasarkan user login
         $currentEmployee = Employee::where('email', $currentUser->email)->first();
-        
+
         if (!$currentEmployee) {
             return redirect()->route('dashboard')
                 ->with('error', 'Data karyawan tidak ditemukan.');
@@ -35,14 +36,11 @@ class PlanningOvertimeController extends Controller
         // ✅ Cek level jabatan untuk menentukan akses
         $jobLevelCode = $currentEmployee->jobLevel->code ?? null;
         $isAdmin = $currentUser->role->name === 'admin';
-        
-        // Level yang bisa lihat cross-department (Sub Div Head ke atas)
-        $crossDeptLevels = ['SUBDIV', 'DIV', 'HRD', 'ADMIN'];
-        
-        if (!$isAdmin && !in_array($jobLevelCode, $crossDeptLevels)) {
-            // Dept Head ke bawah: hanya bisa lihat planning department sendiri
-            $query->where('department_id', $currentEmployee->department_id);
-        }
+
+
+        $query->whereHas('approvals', function ($query) use ($currentEmployee) {
+            $query->where('approver_employee_id', $currentEmployee->id);
+        });
         // Admin dan level tinggi (Sub Div, Div, HRD): bisa lihat semua planning
 
         $plannings = $query->paginate(10);
@@ -56,12 +54,13 @@ class PlanningOvertimeController extends Controller
     public function create()
     {
         $currentUser = Auth::user();
-        
+
         $currentEmployee = Employee::with(['department', 'jobLevel'])
             ->where('email', $currentUser->email)
             ->where('is_active', true)
             ->first();
-        
+        $plants = Plant::get();
+
         if (!$currentEmployee) {
             return redirect()->route('planning.index')
                 ->with('error', 'Data karyawan tidak ditemukan.');
@@ -69,7 +68,7 @@ class PlanningOvertimeController extends Controller
 
         // ✅ VALIDASI: Admin bisa buat untuk semua dept, Manager/Staff hanya dept sendiri
         $isAdmin = $currentUser->role->name === 'admin';
-        
+
         if (!$isAdmin) {
             // Non-admin: Hanya Dept Head ke atas yang boleh buat planning
             $minLevelOrder = 4; // Department Head level_order = 4
@@ -80,35 +79,42 @@ class PlanningOvertimeController extends Controller
         }
 
         // ✅ ADMIN: bisa pilih semua department | Non-Admin: hanya department sendiri
-        $departments = $isAdmin 
+        $departments = $isAdmin
             ? Department::where('is_active', true)->orderBy('name')->get()
             : Department::where('id', $currentEmployee->department_id)
-                        ->where('is_active', true)
-                        ->get();
+            ->where('is_active', true)
+            ->get();
 
         // ✅ Ambil approval levels untuk dropdown admin (per department)
         $approvalLevelsByDept = [];
         if ($isAdmin) {
             foreach ($departments as $dept) {
-                $flowJobs = FlowJob::with('jobLevel')
-                    ->where('department_id', $dept->id)
-                    ->where('is_active', true)
-                    ->whereIn('applies_to', ['planned', 'both'])
-                    ->where('step_order', '>', 0) // Skip step 0 (pengajuan)
-                    ->orderBy('step_order')
-                    ->get();
-                
-                $approvalLevelsByDept[$dept->id] = $flowJobs->map(function($flow) {
-                    return [
-                        'job_level_id' => $flow->job_level_id,
-                        'step_order' => $flow->step_order,
-                        'level_name' => $flow->jobLevel->name,
-                    ];
-                });
+                foreach ($plants as $plant) {
+                    $flowJobs = FlowJob::with('jobLevel', 'approverEmployee')
+                        ->where('department_id', $dept->id)
+                        ->where(function ($q) use ($plant) {
+                            $q->where('plant_id', $plant->id)
+                                ->orWhereNull('plant_id');
+                        })
+                        ->where('is_active', true)
+                        ->whereIn('applies_to', ['planned', 'both'])
+                        ->where('step_order', '>', 0)
+                        ->orderBy('step_order')
+                        ->get();
+
+                    $approvalLevelsByDept[$dept->id][$plant->id] = $flowJobs->map(function ($flow) {
+                        return [
+                            'job_level_id'   => $flow->job_level_id,
+                            'step_order'     => $flow->step_order,
+                            'level_name'     => $flow->jobLevel->name,
+                            'approver_name'  => $flow->approverEmployee->name ?? 'Belum ada approver',
+                        ];
+                    });
+                }
             }
         }
 
-        return view('planning.create', compact('currentEmployee', 'departments', 'isAdmin', 'approvalLevelsByDept'));
+        return view('planning.create', compact('currentEmployee', 'departments', 'isAdmin', 'approvalLevelsByDept', 'plants'));
     }
 
     /**
@@ -117,18 +123,19 @@ class PlanningOvertimeController extends Controller
     public function store(Request $request)
     {
         $currentUser = Auth::user();
-        
+
         $currentEmployee = Employee::with(['jobLevel', 'department'])
             ->where('email', $currentUser->email)
             ->where('is_active', true)
             ->first();
-        
+
         if (!$currentEmployee) {
             return redirect()->route('planning.index')
                 ->with('error', 'Data karyawan tidak ditemukan.');
         }
 
         $validationRules = [
+            'plant_id' => 'required|exists:plants,id',
             'department_id' => 'required|exists:departments,id',
             'planned_date' => 'required|date|after_or_equal:today',
             'max_employees' => 'required|integer|min:1|max:100',
@@ -161,9 +168,10 @@ class PlanningOvertimeController extends Controller
         DB::transaction(function () use ($request, $currentEmployee, $isAdmin) {
             // Generate planning number
             $planningNumber = OvertimePlanning::generatePlanningNumber($request->planned_date);
-            
+
             // Create planning
             $planning = OvertimePlanning::create([
+                'plant_id' => $request->plant_id,
                 'planning_number' => $planningNumber,
                 'department_id' => $request->department_id,
                 'planned_date' => $request->planned_date,
@@ -186,7 +194,7 @@ class PlanningOvertimeController extends Controller
             } else {
                 $this->createPlanningApprovalFlow($planning, $currentEmployee);
             }
-            
+
             // Update status
             $planning->updateStatusBasedOnApprovals();
         });
@@ -204,7 +212,7 @@ class PlanningOvertimeController extends Controller
         $planning->load([
             'department',
             'creator.jobLevel',
-            'approvals' => function($query) {
+            'approvals' => function ($query) {
                 $query->orderBy('step_order', 'asc');
             },
             'approvals.approverEmployee.jobLevel',
@@ -231,7 +239,7 @@ class PlanningOvertimeController extends Controller
     public function approve(Request $request, OvertimePlanningApproval $approval)
     {
         $currentEmployee = Employee::where('email', Auth::user()->email)->first();
-        
+
         if (!$currentEmployee) {
             return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
         }
@@ -273,7 +281,7 @@ class PlanningOvertimeController extends Controller
         ]);
 
         $currentEmployee = Employee::where('email', Auth::user()->email)->first();
-        
+
         if (!$currentEmployee) {
             return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
         }
@@ -328,6 +336,10 @@ class PlanningOvertimeController extends Controller
         // Ambil flow job untuk planning (applies_to = 'planned' atau 'both')
         $flowJobs = FlowJob::with('jobLevel')
             ->where('department_id', $planning->department_id)
+            ->where(function ($query) use ($planning) {
+                $query->where('plant_id', $planning->plant_id)
+                    ->orWhereNull('plant_id');
+            })
             ->where('is_active', true)
             ->whereIn('applies_to', ['planned', 'both'])
             ->orderBy('step_order')
@@ -337,7 +349,7 @@ class PlanningOvertimeController extends Controller
 
         // Cari step_order dari level yang dipilih admin
         $startFlowJob = $flowJobs->where('job_level_id', $startApprovalLevelId)->first();
-        
+
         if (!$startFlowJob) {
             \Log::error("Flow job tidak ditemukan untuk level yang dipilih admin");
             throw new \Exception('Flow job tidak ditemukan untuk level approval yang dipilih');
@@ -347,7 +359,7 @@ class PlanningOvertimeController extends Controller
 
         // ✅ FIX: Gunakan >= untuk INCLUDE level yang dipilih sebagai approver pertama
         $nextFlowJobs = $flowJobs->where('step_order', '>=', $startFlowJob->step_order);
-        
+
         \Log::info("Creating " . $nextFlowJobs->count() . " approval steps (starting from {$startFlowJob->step_name})");
 
         foreach ($nextFlowJobs as $flowJob) {
@@ -363,9 +375,8 @@ class PlanningOvertimeController extends Controller
                         'step_name' => $flowJob->step_name,
                         'status' => 'pending',
                     ]);
-                    
+
                     \Log::info("✅ Created approval ID {$approvalRecord->id} for {$flowJob->step_name} - Approver: {$approver->name}");
-                    
                 } catch (\Exception $e) {
                     \Log::error("❌ Failed to create approval for {$flowJob->step_name}: " . $e->getMessage());
                 }
@@ -373,7 +384,7 @@ class PlanningOvertimeController extends Controller
                 \Log::warning("⚠️ Approver not found for step: {$flowJob->step_name}, Job Level: {$flowJob->jobLevel->code}");
             }
         }
-        
+
         \Log::info("=== END CREATE PLANNING APPROVAL FLOW FOR ADMIN ===");
     }
 
@@ -389,6 +400,10 @@ class PlanningOvertimeController extends Controller
         // Ambil flow job untuk planning (applies_to = 'planned' atau 'both')
         $flowJobs = FlowJob::with('jobLevel')
             ->where('department_id', $planning->department_id)
+            ->where(function ($query) use ($planning) {
+                $query->where('plant_id', $planning->plant_id)
+                    ->orWhereNull('plant_id');
+            })
             ->where('is_active', true)
             ->whereIn('applies_to', ['planned', 'both'])
             ->orderBy('step_order')
@@ -398,7 +413,7 @@ class PlanningOvertimeController extends Controller
 
         // Cari posisi requester dalam flow
         $requesterFlowJob = $flowJobs->where('job_level_id', $requester->job_level_id)->first();
-        
+
         if (!$requesterFlowJob) {
             \Log::error("Flow job tidak ditemukan untuk level jabatan pengaju: {$requester->jobLevel->code}");
             throw new \Exception('Flow job tidak ditemukan untuk level jabatan pengaju');
@@ -408,7 +423,7 @@ class PlanningOvertimeController extends Controller
 
         // Buat approval untuk step selanjutnya
         $nextFlowJobs = $flowJobs->where('step_order', '>', $requesterFlowJob->step_order);
-        
+
         \Log::info("Found " . $nextFlowJobs->count() . " next flow jobs");
 
         foreach ($nextFlowJobs as $flowJob) {
@@ -424,9 +439,8 @@ class PlanningOvertimeController extends Controller
                         'step_name' => $flowJob->step_name,
                         'status' => 'pending',
                     ]);
-                    
+
                     \Log::info("✅ Created approval ID {$approvalRecord->id} for {$flowJob->step_name} - Approver: {$approver->name}");
-                    
                 } catch (\Exception $e) {
                     \Log::error("❌ Failed to create approval for {$flowJob->step_name}: " . $e->getMessage());
                 }
@@ -434,7 +448,7 @@ class PlanningOvertimeController extends Controller
                 \Log::error("❌ Approver not found for step: {$flowJob->step_name}, Job Level: {$flowJob->jobLevel->code}");
             }
         }
-        
+
         \Log::info("=== END CREATE PLANNING APPROVAL FLOW (NON-ADMIN) ===");
     }
 
@@ -443,49 +457,20 @@ class PlanningOvertimeController extends Controller
      */
     private function findApproverForFlowJob(FlowJob $flowJob, $departmentId)
     {
-        $jobLevelCode = $flowJob->jobLevel->code;
-        $approver = null;
+        $jobLevelCode = $flowJob->jobLevel->id;
 
-        switch ($jobLevelCode) {
-            case 'DIV':
-            case 'SUBDIV':
-            case 'HRD':
-                // Level tinggi: cari global
-                $approver = Employee::with('jobLevel')
-                    ->where('job_level_id', $flowJob->job_level_id)
-                    ->where('is_active', true)
-                    ->first();
-                break;
-                
-            case 'DEPT':
-            case 'SUBDEPT':
-            case 'SECT':
-                // Level departemen: cari di department yang sama
-                $approver = Employee::with('jobLevel')
-                    ->where('department_id', $departmentId)
-                    ->where('job_level_id', $flowJob->job_level_id)
-                    ->where('is_active', true)
-                    ->first();
-                break;
-                
-            default:
-                // Coba di department dulu, kalau gak ada cari global
-                $approver = Employee::with('jobLevel')
-                    ->where('department_id', $departmentId)
-                    ->where('job_level_id', $flowJob->job_level_id)
-                    ->where('is_active', true)
-                    ->first();
-                    
-                if (!$approver) {
-                    $approver = Employee::with('jobLevel')
-                        ->where('job_level_id', $flowJob->job_level_id)
-                        ->where('is_active', true)
-                        ->first();
-                }
-                break;
+        // definisi level mana saja yang bersifat lokal
+        $localLevels = [10, 11]; // misal: Forman dan Section Head
+
+        $query = Employee::where('id', $flowJob->approver_employee_id);
+
+        if (in_array($flowJob->job_level_id, $localLevels)) {
+            // cari di plant yang sama (lokal)
+            $query->where('plant_id', $flowJob->plant_id);
         }
+        // jika tidak termasuk lokal, berarti global (tanpa filter plant)
 
-        return $approver;
+        return $query->first();
     }
 
     /**
@@ -502,7 +487,7 @@ class PlanningOvertimeController extends Controller
             ->where('step_order', '<', $approval->step_order)
             ->where('status', 'pending')
             ->exists();
-        
+
         return !$previousPendingApproval;
     }
 }

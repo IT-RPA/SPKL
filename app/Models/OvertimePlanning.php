@@ -12,6 +12,7 @@ class OvertimePlanning extends Model
 
     protected $fillable = [
         'planning_number',
+        'plant_id',
         'department_id',
         'planned_date',
         'max_employees',
@@ -36,7 +37,7 @@ class OvertimePlanning extends Model
     ];
 
     // ===== RELATIONSHIPS =====
-    
+
     public function department()
     {
         return $this->belongsTo(Department::class);
@@ -63,7 +64,7 @@ class OvertimePlanning extends Model
     }
 
     // ===== STATIC METHODS =====
-    
+
     /**
      * Generate unique planning number
      * Format: PLAN-YYYYMMDD-XXX
@@ -72,14 +73,14 @@ class OvertimePlanning extends Model
     {
         $dateStr = Carbon::parse($date)->format('Ymd');
         $prefix = 'PLAN';
-        
+
         \Log::info("=== GENERATE PLANNING NUMBER DEBUG ===");
         \Log::info("Date: {$dateStr}");
-        
+
         $lastPlanning = static::where('planning_number', 'like', "{$prefix}-{$dateStr}%")
             ->orderBy('planning_number', 'desc')
             ->first();
-        
+
         if ($lastPlanning) {
             \Log::info("Last planning found: {$lastPlanning->planning_number}");
             $lastSequence = (int)substr($lastPlanning->planning_number, -3);
@@ -89,32 +90,32 @@ class OvertimePlanning extends Model
             \Log::info("No previous planning found for this date, starting with sequence 1");
             $sequence = 1;
         }
-        
+
         $planningNumber = $prefix . '-' . $dateStr . '-' . str_pad($sequence, 3, '0', STR_PAD_LEFT);
-        
+
         // Safety check untuk race condition
         $attempts = 0;
         $maxAttempts = 100;
-        
+
         while (static::where('planning_number', $planningNumber)->exists() && $attempts < $maxAttempts) {
             $attempts++;
             $sequence++;
             $planningNumber = $prefix . '-' . $dateStr . '-' . str_pad($sequence, 3, '0', STR_PAD_LEFT);
             \Log::warning("Planning number {$planningNumber} already exists, trying next sequence (attempt {$attempts})");
         }
-        
+
         if ($attempts >= $maxAttempts) {
             throw new \Exception('Unable to generate unique planning number after ' . $maxAttempts . ' attempts');
         }
-        
+
         \Log::info("Final planning number: {$planningNumber} (after {$attempts} attempts)");
         \Log::info("=== END GENERATE PLANNING NUMBER DEBUG ===");
-        
+
         return $planningNumber;
     }
 
     // ===== STATUS MANAGEMENT =====
-    
+
     /**
      * Update status berdasarkan approval
      */
@@ -122,7 +123,7 @@ class OvertimePlanning extends Model
     {
         \Log::info("=== UPDATE PLANNING STATUS DEBUG ===");
         \Log::info("Planning ID: {$this->id}");
-        
+
         $totalApprovals = $this->approvals()->count();
         $approvedCount = $this->approvals()->where('status', 'approved')->count();
         $rejectedCount = $this->approvals()->where('status', 'rejected')->count();
@@ -153,15 +154,15 @@ class OvertimePlanning extends Model
     }
 
     // ===== VALIDATION & CHECKS =====
-    
+
     /**
      * Check apakah planning masih valid untuk digunakan
      */
     public function isValid()
     {
-        return $this->status === 'approved' && 
-               $this->remaining_employees > 0 &&
-               $this->planned_date >= now()->format('Y-m-d');
+        return $this->status === 'approved' &&
+            $this->remaining_employees > 0 &&
+            $this->planned_date >= now()->format('Y-m-d');
     }
 
     /**
@@ -170,8 +171,8 @@ class OvertimePlanning extends Model
     public function needsReminder()
     {
         $sevenDaysFromNow = now()->addDays(7)->format('Y-m-d');
-        return $this->status === 'approved' && 
-               $this->planned_date == $sevenDaysFromNow;
+        return $this->status === 'approved' &&
+            $this->planned_date == $sevenDaysFromNow;
     }
 
     /**
@@ -180,13 +181,13 @@ class OvertimePlanning extends Model
     public function isExpired()
     {
         $oneDayAfter = Carbon::parse($this->planned_date)->addDay()->format('Y-m-d');
-        return now()->format('Y-m-d') >= $oneDayAfter && 
-               $this->status === 'approved' &&
-               $this->remaining_employees > 0;
+        return now()->format('Y-m-d') >= $oneDayAfter &&
+            $this->status === 'approved' &&
+            $this->remaining_employees > 0;
     }
 
     // ===== USAGE TRACKING =====
-    
+
     /**
      * Increment penggunaan kuota
      */
@@ -194,21 +195,21 @@ class OvertimePlanning extends Model
     {
         \Log::info("=== INCREMENT USAGE DEBUG ===");
         \Log::info("Planning ID: {$this->id}, Current used: {$this->used_employees}, Increment by: {$count}");
-        
+
         $this->increment('used_employees', $count);
         $this->decrement('remaining_employees', $count);
-        
+
         // Fresh reload
         $this->refresh();
-        
+
         \Log::info("After increment - Used: {$this->used_employees}, Remaining: {$this->remaining_employees}");
-        
+
         // Jika quota habis, set status completed
         if ($this->remaining_employees <= 0) {
             $this->update(['status' => 'completed']);
             \Log::info("Quota habis, status set to COMPLETED");
         }
-        
+
         \Log::info("=== END INCREMENT USAGE DEBUG ===");
     }
 
@@ -219,34 +220,34 @@ class OvertimePlanning extends Model
     {
         \Log::info("=== DECREMENT USAGE DEBUG ===");
         \Log::info("Planning ID: {$this->id}, Current used: {$this->used_employees}, Decrement by: {$count}");
-        
+
         $this->decrement('used_employees', $count);
         $this->increment('remaining_employees', $count);
-        
+
         // Fresh reload
         $this->refresh();
-        
+
         \Log::info("After decrement - Used: {$this->used_employees}, Remaining: {$this->remaining_employees}");
-        
+
         // Jika sebelumnya completed, kembalikan ke approved
         if ($this->status === 'completed' && $this->remaining_employees > 0) {
             $this->update(['status' => 'approved']);
             \Log::info("Status changed back to APPROVED");
         }
-        
+
         \Log::info("=== END DECREMENT USAGE DEBUG ===");
     }
 
     // ===== SCOPE QUERIES =====
-    
+
     /**
      * Scope untuk planning yang valid (bisa digunakan)
      */
     public function scopeValid($query)
     {
         return $query->where('status', 'approved')
-                    ->where('remaining_employees', '>', 0)
-                    ->where('planned_date', '>=', now()->format('Y-m-d'));
+            ->where('remaining_employees', '>', 0)
+            ->where('planned_date', '>=', now()->format('Y-m-d'));
     }
 
     /**
@@ -256,7 +257,7 @@ class OvertimePlanning extends Model
     {
         $sevenDaysFromNow = now()->addDays(7)->format('Y-m-d');
         return $query->where('status', 'approved')
-                    ->where('planned_date', $sevenDaysFromNow);
+            ->where('planned_date', $sevenDaysFromNow);
     }
 
     /**
@@ -266,7 +267,7 @@ class OvertimePlanning extends Model
     {
         $oneDayAgo = now()->subDay()->format('Y-m-d');
         return $query->where('status', 'approved')
-                    ->where('remaining_employees', '>', 0)
-                    ->where('planned_date', '<=', $oneDayAgo);
+            ->where('remaining_employees', '>', 0)
+            ->where('planned_date', '<=', $oneDayAgo);
     }
 }

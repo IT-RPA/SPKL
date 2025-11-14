@@ -52,6 +52,7 @@ class FlowJobController extends Controller
                 Rule::unique('flow_jobs')
                     ->where(function ($query) use ($request) {
                         return $query
+                            ->where('department_id', $request->department_id)
                             ->where('plant_id', $request->plant_id)
                             ->where('applies_to', $request->applies_to);
                     }),
