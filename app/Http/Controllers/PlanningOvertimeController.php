@@ -11,6 +11,7 @@ use App\Models\Plant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Helpers\FonnteHelper;
 
 class PlanningOvertimeController extends Controller
 {
@@ -22,7 +23,7 @@ class PlanningOvertimeController extends Controller
         $currentUser = Auth::user();
 
         // Cari employee berdasarkan user login
-        $currentEmployee = Employee::where('email', $currentUser->email)->first();
+        $currentEmployee = Employee::with('jobLevel')->where('email', $currentUser->email)->first();
 
         if (!$currentEmployee) {
             return redirect()->route('dashboard')
@@ -33,15 +34,29 @@ class PlanningOvertimeController extends Controller
         $query = OvertimePlanning::with(['department', 'creator', 'approvals.approverEmployee'])
             ->orderBy('created_at', 'desc');
 
-        // ✅ Cek level jabatan untuk menentukan akses
-        $jobLevelCode = $currentEmployee->jobLevel->code ?? null;
-        $isAdmin = $currentUser->role->name === 'admin';
-
-
-        $query->whereHas('approvals', function ($query) use ($currentEmployee) {
-            $query->where('approver_employee_id', $currentEmployee->id);
-        });
-        // Admin dan level tinggi (Sub Div, Div, HRD): bisa lihat semua planning
+        // ✅ LOGIC AKSES BARU
+        if (
+            $currentUser->level_jabatan === "Administrator" ||
+            $currentUser->name === "Fachri Ismawan" ||
+            $currentUser->name === "Muhammad Natsir Irawan" ||
+            $currentUser->name === "Hery Sumardiyanto"
+        ) {
+            // 1. Administrator & Special Users: Melihat SEMUA data (Bypass Filter)
+        } elseif ($currentUser->level_jabatan == 'Department Head') {
+            // 2. Department Head: Melihat data SATU DEPARTEMEN
+            $query->where('department_id', $currentEmployee->department_id);
+        } else {
+            // 3. Role Lainnya: Department sendiri OR Pending Approval
+            $query->where(function ($q) use ($currentEmployee, $currentUser) {
+                // Condition 1: Same Department
+                $q->where('department_id', $currentEmployee->department_id)
+                    // Condition 2: Pending Approval for this user's level
+                    ->orWhereHas('approvals', function ($subQ) use ($currentUser) {
+                        $subQ->where('approver_level', $currentUser->level_jabatan)
+                            ->where('status', 'pending');
+                    });
+            });
+        }
 
         $plannings = $query->paginate(10);
 
@@ -55,6 +70,11 @@ class PlanningOvertimeController extends Controller
     {
         $currentUser = Auth::user();
 
+        // Guard tambahan: hanya Department Head dan Administrator yang boleh akses form create
+        if (!in_array($currentUser->level_jabatan, ['Department Head', 'Administrator'])) {
+            abort(403, 'Anda tidak memiliki akses membuat Planning.');
+        }
+
         $currentEmployee = Employee::with(['department', 'jobLevel'])
             ->where('email', $currentUser->email)
             ->where('is_active', true)
@@ -66,24 +86,13 @@ class PlanningOvertimeController extends Controller
                 ->with('error', 'Data karyawan tidak ditemukan.');
         }
 
-        // ✅ VALIDASI: Admin bisa buat untuk semua dept, Manager/Staff hanya dept sendiri
-        $isAdmin = $currentUser->role->name === 'admin';
-
-        if (!$isAdmin) {
-            // Non-admin: Hanya Dept Head ke atas yang boleh buat planning
-            $minLevelOrder = 4; // Department Head level_order = 4
-            if ($currentEmployee->jobLevel->level_order > $minLevelOrder) {
-                return redirect()->route('planning.index')
-                    ->with('error', 'Hanya Department Head ke atas yang dapat membuat planning lembur.');
-            }
-        }
-
         // ✅ ADMIN: bisa pilih semua department | Non-Admin: hanya department sendiri
+        $isAdmin = optional($currentUser->role)->name === 'admin';
         $departments = $isAdmin
             ? Department::where('is_active', true)->orderBy('name')->get()
             : Department::where('id', $currentEmployee->department_id)
-            ->where('is_active', true)
-            ->get();
+                ->where('is_active', true)
+                ->get();
 
         // ✅ Ambil approval levels untuk dropdown admin (per department)
         $approvalLevelsByDept = [];
@@ -104,10 +113,10 @@ class PlanningOvertimeController extends Controller
 
                     $approvalLevelsByDept[$dept->id][$plant->id] = $flowJobs->map(function ($flow) {
                         return [
-                            'job_level_id'   => $flow->job_level_id,
-                            'step_order'     => $flow->step_order,
-                            'level_name'     => $flow->jobLevel->name,
-                            'approver_name'  => $flow->approverEmployee->name ?? 'Belum ada approver',
+                            'job_level_id' => $flow->job_level_id,
+                            'step_order' => $flow->step_order,
+                            'level_name' => $flow->jobLevel->name,
+                            'approver_name' => $flow->approverEmployee->name ?? 'Belum ada approver',
                         ];
                     });
                 }
@@ -134,6 +143,13 @@ class PlanningOvertimeController extends Controller
                 ->with('error', 'Data karyawan tidak ditemukan.');
         }
 
+        // ✅ VALIDASI: Hanya Administrator dan Department Head yang dapat membuat planning
+        if (!in_array($currentUser->level_jabatan, ['Department Head', 'Administrator'])) {
+            abort(403, 'Anda tidak memiliki akses membuat Planning.');
+        }
+
+        $isAdmin = optional($currentUser->role)->name === 'admin';
+
         $validationRules = [
             'plant_id' => 'required|exists:plants,id',
             'department_id' => 'required|exists:departments,id',
@@ -146,7 +162,6 @@ class PlanningOvertimeController extends Controller
         ];
 
         // ✅ Admin wajib pilih start approval level
-        $isAdmin = $currentUser->role->name === 'admin';
         if ($isAdmin) {
             $validationRules['start_approval_level_id'] = 'required|exists:job_levels,id';
         }
@@ -197,6 +212,31 @@ class PlanningOvertimeController extends Controller
 
             // Update status
             $planning->updateStatusBasedOnApprovals();
+
+            // ----------------------------------------------------
+            // WA NOTIFICATION LOGIC (CREATE/STORE)
+            // ----------------------------------------------------
+            try {
+                $planning->refresh();
+                // Cari step selanjutnya yang PENDING (Step 1)
+                $nextApproval = $planning->approvals()
+                    ->where('status', 'pending')
+                    ->orderBy('step_order', 'asc')
+                    ->with('approverEmployee')
+                    ->first();
+
+                if ($nextApproval && $nextApproval->approverEmployee) {
+                    // Cari User associated with Approver Employee
+                    $nextUser = \App\Models\User::where('employee_id', $nextApproval->approverEmployee->employee_id)->first();
+
+                    if ($nextUser && $nextUser->phone) {
+                        $nextUser->notify(new \App\Notifications\PlanningApprovalNotification($planning));
+                        \Log::info("Sent Initial PlanningApprovalNotification to User ID {$nextUser->id}");
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error("WA Notification Error (Store): " . $e->getMessage());
+            }
         });
 
         return redirect()->route('planning.index')
@@ -222,12 +262,32 @@ class PlanningOvertimeController extends Controller
         $currentUser = Auth::user();
         $currentEmployee = Employee::where('email', $currentUser->email)->first();
 
-        // Check apakah user ini salah satu approver
+        // Check apakah user ini salah satu approver (BY LEVEL JABATAN - FLEXIBLE MATCH)
         $currentApproval = null;
-        if ($currentEmployee) {
-            $currentApproval = $planning->approvals()
-                ->where('approver_employee_id', $currentEmployee->id)
-                ->first();
+        if ($currentUser->level_jabatan) {
+            $userLevel = strtolower(trim($currentUser->level_jabatan));
+            $empLevelName = $currentEmployee ? strtolower(trim($currentEmployee->jobLevel->name ?? '')) : '';
+            $empLevelCode = $currentEmployee ? strtolower(trim($currentEmployee->jobLevel->code ?? '')) : '';
+
+            // Helper function untuk matching level
+            $isLevelMatch = function ($approverLevel) use ($userLevel, $empLevelName, $empLevelCode) {
+                $appLevel = strtolower(trim($approverLevel));
+                return $appLevel === $userLevel ||
+                    ($empLevelName && $appLevel === $empLevelName) ||
+                    ($empLevelCode && $appLevel === $empLevelCode);
+            };
+
+            // 1. Cari yang PENDING (agar tombol muncul)
+            $currentApproval = $planning->approvals->first(function ($app) use ($isLevelMatch) {
+                return $isLevelMatch($app->approver_level) && $app->status === 'pending';
+            });
+
+            // 2. Jika tidak ada yang pending, cari history approval level ini
+            if (!$currentApproval) {
+                $currentApproval = $planning->approvals->first(function ($app) use ($isLevelMatch) {
+                    return $isLevelMatch($app->approver_level);
+                });
+            }
         }
 
         return view('planning.show', compact('planning', 'currentApproval', 'currentEmployee'));
@@ -244,9 +304,18 @@ class PlanningOvertimeController extends Controller
             return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
         }
 
-        // Validasi approver
-        if ($approval->approver_employee_id !== $currentEmployee->id) {
-            return redirect()->back()->with('error', 'Anda tidak berwenang untuk approval ini');
+        // Validasi approver (Flexible Match)
+        $userLevel = strtolower(trim(Auth::user()->level_jabatan));
+        $empLevelName = $currentEmployee ? strtolower(trim($currentEmployee->jobLevel->name ?? '')) : '';
+        $empLevelCode = $currentEmployee ? strtolower(trim($currentEmployee->jobLevel->code ?? '')) : '';
+        $approverLevel = strtolower(trim($approval->approver_level));
+
+        $isLevelMatch = ($approverLevel === $userLevel) ||
+            ($empLevelName && $approverLevel === $empLevelName) ||
+            ($empLevelCode && $approverLevel === $empLevelCode);
+
+        if (!$isLevelMatch) {
+            return redirect()->back()->with('error', 'Anda tidak berwenang untuk approval ini (Level mismatch)');
         }
 
         // Validasi giliran approve
@@ -266,6 +335,53 @@ class PlanningOvertimeController extends Controller
 
             // Update status planning
             $approval->planning->updateStatusBasedOnApprovals();
+
+            // ----------------------------------------------------
+            // WA NOTIFICATION LOGIC (APPROVE)
+            // ----------------------------------------------------
+            try {
+                $planning = $approval->planning->fresh(); // Reload to get latest status
+
+                // Cek apakah planning sudah kelar (approved/active)
+                if (in_array($planning->status, ['approved', 'active'])) {
+                    // Kirim ke pembuat planning (Creator)
+                    $creatorEmployee = $planning->creator; // Employee model
+                    if ($creatorEmployee) {
+                        $creatorUser = \App\Models\User::where('employee_id', $creatorEmployee->employee_id)->first();
+
+                        if ($creatorUser && $creatorUser->phone) {
+                            $msg = "*Planning Lembur Disetujui Semua Level*\n\n";
+                            $msg .= "No: {$planning->planning_number}\n";
+                            $msg .= "Planning telah selesai disetujui.";
+
+                            FonnteHelper::send($creatorUser->phone, $msg);
+                        }
+                    }
+
+                } else {
+                    // Jika belum kelar, cari step selanjutnya yang PENDING
+                    $nextApproval = $planning->approvals()
+                        ->where('status', 'pending')
+                        ->orderBy('step_order', 'asc')
+                        ->with('approverEmployee')
+                        ->first();
+
+                    if ($nextApproval && $nextApproval->approverEmployee) {
+                        // Cari User associated with Approver Employee
+                        $nextUser = \App\Models\User::where('employee_id', $nextApproval->approverEmployee->employee_id)->first();
+
+                        if ($nextUser && $nextUser->phone) {
+                            // Send custom Notification class
+                            $nextUser->notify(new \App\Notifications\PlanningApprovalNotification($planning));
+                            \Log::info("Sent PlanningApprovalNotification to User ID {$nextUser->id}");
+                        } else {
+                            \Log::warning("Cannot send notification: User not found or no phone for Employee ID {$nextApproval->approverEmployee->employee_id}");
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error("WA Notification Error (Approve): " . $e->getMessage());
+            }
         });
 
         return redirect()->back()->with('success', 'Planning lembur berhasil disetujui');
@@ -286,8 +402,20 @@ class PlanningOvertimeController extends Controller
             return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
         }
 
-        if ($approval->approver_employee_id !== $currentEmployee->id) {
-            return redirect()->back()->with('error', 'Anda tidak berwenang untuk approval ini');
+        // Validasi approver (Flexible Match)
+        $userLevel = strtolower(trim(Auth::user()->level_jabatan));
+        $empLevelName = $currentEmployee ? strtolower(trim($currentEmployee->jobLevel->name ?? '')) : '';
+        $empLevelCode = $currentEmployee ? strtolower(trim($currentEmployee->jobLevel->code ?? '')) : '';
+        $approverLevel = strtolower(trim($approval->approver_level));
+
+        $isLevelMatch = $approverLevel !== '' && (
+            ($approverLevel === $userLevel) ||
+            ($empLevelName && $approverLevel === $empLevelName) ||
+            ($empLevelCode && $approverLevel === $empLevelCode)
+        );
+
+        if (!$isLevelMatch) {
+            return redirect()->back()->with('error', 'Anda tidak berwenang untuk approval ini (Level mismatch)');
         }
 
         if (!$this->canUserApproveNow($approval)) {
@@ -301,6 +429,30 @@ class PlanningOvertimeController extends Controller
                 'approved_at' => now(),
                 'notes' => $request->reason,
             ]);
+
+            // ----------------------------------------------------
+            // WA NOTIFICATION LOGIC (REJECT)
+            // ----------------------------------------------------
+            try {
+                $planning = $approval->planning;
+                // Kirim ke pembuat planning
+                $creatorEmployee = $planning->creator;
+
+                if ($creatorEmployee) {
+                    $creatorUser = \App\Models\User::where('employee_id', $creatorEmployee->employee_id)->first();
+
+                    if ($creatorUser && $creatorUser->phone) {
+                        $msg = "*Planning Lembur Ditolak*\n\n";
+                        $msg .= "No: {$planning->planning_number}\n";
+                        $msg .= "Ditolak oleh: " . Auth::user()->name . "\n\n";
+                        $msg .= "Catatan:\n{$request->reason}";
+
+                        FonnteHelper::send($creatorUser->phone, $msg);
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error("WA Notification Error (Reject): " . $e->getMessage());
+            }
 
             // Auto-reject approval selanjutnya
             $pendingApprovals = OvertimePlanningApproval::where('planning_id', $approval->planning_id)

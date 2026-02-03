@@ -16,7 +16,8 @@ class Employee extends Model
         'department_id',
         'job_level_id',
         'plant_id',
-        'is_active'
+        'is_active',
+        'phone',
     ];
 
     // Existing relationships

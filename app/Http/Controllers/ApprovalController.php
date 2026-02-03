@@ -15,12 +15,18 @@ class ApprovalController extends Controller
 {
     public function sectHeadIndex(Request $request)
     {
-        $approvals = $this->getApprovalsWithPercentageNeeded($request->job_level);
+        // User login
+        $user = Auth::user();
 
-        $joblevel = JobLevel::where('code', $request->job_level)->first();
+        // Ambil joblevel berdasarkan user
+        $joblevel = JobLevel::find($user->job_level_id);
+
+        // Ambil list approvals sesuai level user
+        $approvals = $this->getApprovalsWithPercentageNeeded($joblevel->code);
 
         return view('approvals.master', compact('approvals', 'joblevel'));
     }
+
 
     // Method approve, reject, dan lainnya tetap sama
     public function approve(Request $request, OvertimeApproval $approval)
@@ -35,15 +41,56 @@ class ApprovalController extends Controller
             return redirect()->back()->with('error', 'Belum giliran Anda untuk approve. Masih ada approval sebelumnya yang belum disetujui.');
         }
 
-        $approval->update([
-            'status' => 'approved',
-            'approved_at' => now(),
-            'notes' => $request->notes ?? 'Disetujui',
-        ]);
+        DB::transaction(function () use ($approval, $request) {
+            $approval->update([
+                'status' => 'approved',
+                'approved_at' => now(),
+                'notes' => $request->notes ?? 'Disetujui',
+            ]);
 
-        $approval->overtimeRequest->updateStatusAndColor();
+            $approval->overtimeRequest->updateStatusAndColor();
 
-        \Log::info("Approval approved - ID: {$approval->id}, Step: {$approval->step_name}, User: " . Auth::user()->name);
+            \Log::info("Approval approved - ID: {$approval->id}, Step: {$approval->step_name}, User: " . Auth::user()->name);
+
+            // ============================================
+            // WHATSAPP NOTIFICATION LOGIC (APPROVE)
+            // ============================================
+            try {
+                $overtimeRequest = $approval->overtimeRequest->fresh();
+
+                // Cek apakah sudah selesai semua approval
+                if ($overtimeRequest->status === 'approved') {
+                    // Kirim notifikasi FINAL ke pemohon (creator)
+                    $requesterUser = \App\Models\User::where('id', $overtimeRequest->requester_id)->first();
+
+                    if ($requesterUser && $requesterUser->phone) {
+                        $requesterUser->notify(new \App\Notifications\OvertimeFinalApprovalNotification($overtimeRequest));
+                        \Log::info("Sent OvertimeFinalApprovalNotification to User ID {$requesterUser->id}");
+                    }
+                } else {
+                    // Masih ada approval berikutnya, kirim notifikasi ke approver berikutnya
+                    $nextApproval = $overtimeRequest->approvals()
+                        ->where('status', 'pending')
+                        ->orderBy('step_order', 'asc')
+                        ->with('approverEmployee')
+                        ->first();
+
+                    if ($nextApproval && $nextApproval->approverEmployee) {
+                        // Cari User berdasarkan employee_id
+                        $nextUser = \App\Models\User::where('employee_id', $nextApproval->approverEmployee->employee_id)->first();
+
+                        if ($nextUser && $nextUser->phone) {
+                            $nextUser->notify(new \App\Notifications\OvertimeRequestApprovalNotification($overtimeRequest));
+                            \Log::info("Sent OvertimeRequestApprovalNotification to User ID {$nextUser->id}");
+                        } else {
+                            \Log::warning("Cannot send notification: User not found or no phone for Employee ID {$nextApproval->approverEmployee->employee_id}");
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error("WA Notification Error (Approve): " . $e->getMessage());
+            }
+        });
 
         return redirect()->back()->with('success', 'Pengajuan berhasil disetujui');
     }
@@ -87,6 +134,23 @@ class ApprovalController extends Controller
             }
 
             $approval->overtimeRequest->updateStatusAndColor();
+
+            // ============================================
+            // WHATSAPP NOTIFICATION LOGIC (REJECT)
+            // ============================================
+            try {
+                $overtimeRequest = $approval->overtimeRequest;
+                $requesterUser = \App\Models\User::where('id', $overtimeRequest->requester_id)->first();
+
+                if ($requesterUser && $requesterUser->phone) {
+                    // Kirim notifikasi rejection ke pemohon
+                    $rejectorName = Auth::user()->name;
+                    $requesterUser->notify(new \App\Notifications\OvertimeRejectedNotification($overtimeRequest, $rejectorName));
+                    \Log::info("Sent OvertimeRejectedNotification to User ID {$requesterUser->id}");
+                }
+            } catch (\Exception $e) {
+                \Log::error("WA Notification Error (Reject): " . $e->getMessage());
+            }
 
             DB::commit();
 

@@ -131,6 +131,13 @@
         height: 300px;
         width: 100%;
     }
+
+    /* Mobile chart scroll wrapper */
+    .chart-scroll {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
     
     /* Info Cards */
     .info-grid {
@@ -220,8 +227,152 @@
     
     /* Responsive */
     @media (max-width: 768px) {
+        .dashboard-header {
+            padding: 20px 15px;
+            margin-bottom: 20px;
+        }
+        
+        .dashboard-header h1 {
+            font-size: 1.4rem;
+        }
+        
+        .dashboard-header .d-flex {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 10px;
+        }
+        
+        .dashboard-header .d-flex > div:last-child {
+            font-size: 0.9rem;
+        }
+        
         .stats-grid {
             grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        
+        .charts-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        
+        .info-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        
+        .chart-canvas {
+            height: 250px;
+        }
+        
+        .chart-body {
+            padding: 15px;
+        }
+        
+        .chart-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 10px;
+        }
+        
+        .chart-scroll .chart-canvas {
+            min-width: 380px;
+        }
+        
+        .chart-header {
+            padding: 12px 15px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .chart-header h5 {
+            font-size: 0.95rem;
+        }
+        
+        .chart-header select {
+            width: 100%;
+            max-width: 150px;
+        }
+        
+        .stat-card {
+            padding: 15px;
+        }
+        
+        .stat-card .stat-number {
+            font-size: 1.6rem;
+        }
+        
+        .stat-card .stat-icon {
+            font-size: 2.5rem;
+            opacity: 0.08;
+        }
+        
+        .info-body {
+            padding: 12px;
+        }
+        
+        .quick-links {
+            padding: 15px;
+        }
+        
+        .quick-links .btn {
+            margin: 3px;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.8rem;
+        }
+        
+        .status-row,
+        .dept-row {
+            padding: 8px;
+            margin: 4px 0;
+        }
+        
+        .alert-box {
+            padding: 8px 10px;
+            font-size: 0.8rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .dashboard-header {
+            padding: 15px 12px;
+        }
+        
+        .dashboard-header h1 {
+            font-size: 1.25rem;
+        }
+        
+        .stat-card {
+            padding: 12px;
+        }
+        
+        .stat-card .stat-number {
+            font-size: 1.4rem;
+        }
+        
+        .chart-scroll .chart-canvas {
+            min-width: 350px;
+        }
+        
+        .chart-header {
+            padding: 10px 12px;
+        }
+        
+        .chart-body {
+            padding: 12px;
+        }
+        
+        .quick-links .btn {
+            font-size: 0.8rem;
+            padding: 0.35rem 0.7rem;
+            margin: 2px;
+        }
+    }
+    
+    @media (min-width: 769px) and (max-width: 1024px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
         }
         
         .charts-grid {
@@ -229,11 +380,7 @@
         }
         
         .info-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .chart-canvas {
-            height: 250px;
+            grid-template-columns: repeat(2, 1fr);
         }
     }
 </style>
@@ -294,8 +441,10 @@
                 </select>
             </div>
             <div class="chart-body">
-                <div class="chart-canvas">
-                    <canvas id="dailyChart"></canvas>
+                <div class="chart-scroll">
+                    <div class="chart-canvas">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -312,8 +461,10 @@
                 </select>
             </div>
             <div class="chart-body">
-                <div class="chart-canvas">
-                    <canvas id="monthlyChart"></canvas>
+                <div class="chart-scroll">
+                    <div class="chart-canvas">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -333,8 +484,10 @@
                 </select>
             </div>
             <div class="chart-body">
-                <div class="chart-canvas">
-                    <canvas id="dailyHoursChart"></canvas>
+                <div class="chart-scroll">
+                    <div class="chart-canvas">
+                        <canvas id="dailyHoursChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -351,8 +504,10 @@
                 </select>
             </div>
             <div class="chart-body">
-                <div class="chart-canvas">
-                    <canvas id="monthlyHoursChart"></canvas>
+                <div class="chart-scroll">
+                    <div class="chart-canvas">
+                        <canvas id="monthlyHoursChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>

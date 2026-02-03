@@ -1,7 +1,95 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
+<style>
+    /* Mobile responsive styles for overtime */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 15px;
+        }
+        
+        .page-header h2 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        
+        .alert {
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .alert .alert-heading {
+            font-size: 1rem;
+        }
+        
+        .table-responsive {
+            border: none;
+            font-size: 0.875rem;
+        }
+        
+        .table th,
+        .table td {
+            padding: 0.5rem 0.25rem;
+            white-space: nowrap;
+        }
+        
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        
+        .badge {
+            font-size: 0.65rem;
+        }
+        
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 3px 6px;
+        }
+        
+        /* Hide less important columns on mobile */
+        .table th:nth-child(3),
+        .table td:nth-child(3),
+        .table th:nth-child(5),
+        .table td:nth-child(5) {
+            display: none;
+        }
+        
+        /* Stack category and planning info */
+        .category-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .category-info small {
+            font-size: 0.7rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .table th:nth-child(4),
+        .table td:nth-child(4) {
+            display: none;
+        }
+        
+        .btn {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+</style>
+
+<div class="page-header">
     <h2>Daftar Pengajuan Lembur</h2>
     
     @if(isset($hasIncompleteRequest) && $hasIncompleteRequest)
@@ -14,12 +102,12 @@
                 data-bs-title="Tidak dapat membuat pengajuan baru karena masih ada pengajuan yang perlu diselesaikan"
                 onclick="showIncompleteAlert()"
             >
-                <i class="fas fa-plus"></i> Buat Pengajuan Baru
+                <i class="fas fa-plus"></i> <span class="d-none d-sm-inline">Buat Pengajuan Baru</span>
             </button>
         </div>
     @else
         <a href="{{ route('overtime.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Buat Pengajuan Baru
+            <i class="fas fa-plus"></i> <span class="d-none d-sm-inline">Buat Pengajuan Baru</span>
         </a>
     @endif
 </div>
@@ -48,9 +136,9 @@
                     <tr>
                         <th>No. SPK</th>
                         <th>Tanggal</th>
-                        <th>Departemen</th>
+                        <th class="d-none d-md-table-cell">Departemen</th>
                         <th>Kategori</th>
-                        <th>Tingkatan</th>
+                        <th class="d-none d-md-table-cell">Tingkatan</th>
                         <th>Status</th>
                         <th>Aksi</th>
                     </tr>
@@ -60,22 +148,24 @@
                     <tr @if($request->status == 'approved') class="table-warning" @endif>
                         <td><strong>{{ $request->request_number }}</strong></td>
                         <td>{{ $request->date->format('d/m/Y') }}</td>
-                        <td>{{ $request->department->name }}</td>
+                        <td class="d-none d-md-table-cell">{{ $request->department->name }}</td>
                         <td>
-                            @if($request->overtime_category === 'planned')
-                                <span class="badge bg-success">
-                                    <i class="fas fa-calendar-check"></i> Planned
-                                </span>
-                                @if($request->planning)
-                                    <br><small class="text-muted">{{ $request->planning->planning_number }}</small>
+                            <div class="category-info">
+                                @if($request->overtime_category === 'planned')
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-calendar-check"></i> Planned
+                                    </span>
+                                    @if($request->planning)
+                                        <small class="text-muted">{{ $request->planning->planning_number }}</small>
+                                    @endif
+                                @else
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-bolt"></i> Unplanned
+                                    </span>
                                 @endif
-                            @else
-                                <span class="badge bg-secondary">
-                                    <i class="fas fa-bolt"></i> func_get_args Unplanned
-                                </span>
-                            @endif
+                            </div>
                         </td>
-                        <td>
+                        <td class="d-none d-md-table-cell">
                             <span class="badge bg-info">{{ ucfirst(str_replace('_', ' ', $request->requester_level)) }}</span>
                         </td>
                         <td>
@@ -135,7 +225,7 @@
                             </span>
                             
                             @if($request->status == 'approved')
-                                <small class="text-muted d-block mt-1">
+                                <small class="text-muted d-block mt-1 d-none d-sm-block">
                                     <i class="fas fa-exclamation-triangle text-warning"></i>
                                     Butuh input data
                                 </small>
@@ -145,9 +235,9 @@
                             <a href="{{ route('overtime.show', $request) }}" 
                                class="btn btn-sm @if($request->status == 'approved') btn-warning @else btn-outline-primary @endif">
                                 @if($request->status == 'approved')
-                                    <i class="fas fa-edit"></i> Input Data
+                                    <i class="fas fa-edit"></i> <span class="d-none d-lg-inline">Input Data</span>
                                 @else
-                                    <i class="fas fa-eye"></i> Detail
+                                    <i class="fas fa-eye"></i> <span class="d-none d-lg-inline">Detail</span>
                                 @endif
                             </a>
                         </td>

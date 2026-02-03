@@ -15,17 +15,26 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'username' => 'required|string',  // ✅ GANTI dari 'email'
+            'username' => 'required|string',
             'password' => 'required',
         ]);
 
         if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
-            return redirect()->intended('/dashboard');
-        }
+    $request->session()->regenerate();
+
+    $redirect = $request->get('redirect');
+
+    if (!empty($redirect)) {
+        // decode dulu biar tidak rusak
+        return redirect(urldecode($redirect));
+    }
+
+    return redirect('/dashboard');
+}
+
 
         return back()->withErrors([
-            'username' => 'Username atau password salah.',  // ✅ GANTI pesan error
+            'username' => 'Username atau password salah.',
         ])->withInput($request->only('username'));
     }
 

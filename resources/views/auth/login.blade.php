@@ -197,24 +197,128 @@
     
     /* Responsive */
     @media (max-width: 768px) {
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
         .login-container {
-            padding: 20px 15px;
+            min-height: 100vh;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .login-card {
-            margin: 0 10px;
+            margin: 0;
+            max-width: 100%;
+            width: 100%;
         }
         
         .login-header {
-            padding: 30px 20px;
+            padding: 25px 20px;
         }
         
         .login-body {
-            padding: 30px 20px;
+            padding: 25px 20px;
         }
         
         .login-header h4 {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
+        }
+        
+        .login-header p {
+            font-size: 0.9rem;
+        }
+        
+        .login-icon {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 15px;
+        }
+        
+        .form-control {
+            padding: 12px 16px;
+            font-size: 16px; /* Prevent zoom on iOS */
+        }
+        
+        .login-btn {
+            padding: 12px 25px;
+            font-size: 0.95rem;
+        }
+        
+        .welcome-text h5 {
+            font-size: 1.1rem;
+        }
+        
+        .welcome-text p {
+            font-size: 0.85rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .login-container {
+            padding: 10px;
+        }
+        
+        .login-header {
+            padding: 20px 15px;
+        }
+        
+        .login-body {
+            padding: 20px 15px;
+        }
+        
+        .login-footer {
+            padding: 15px;
+        }
+        
+        .login-header h4 {
+            font-size: 1.25rem;
+        }
+        
+        .form-control {
+            padding: 10px 14px;
+        }
+        
+        .login-btn {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+        }
+    }
+    
+    /* Landscape mobile */
+    @media (max-width: 768px) and (orientation: landscape) {
+        .login-container {
+            min-height: 100vh;
+            padding: 10px;
+        }
+        
+        .login-header {
+            padding: 15px 20px;
+        }
+        
+        .login-body {
+            padding: 20px;
+        }
+        
+        .login-icon {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 10px;
+        }
+        
+        .login-header h4 {
+            font-size: 1.2rem;
+        }
+        
+        .welcome-text {
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
         }
     }
     

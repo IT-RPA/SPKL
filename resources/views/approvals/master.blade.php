@@ -1,7 +1,113 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
+<style>
+    /* Mobile responsive styles for approval */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 15px;
+        }
+        
+        .page-header h2 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        
+        .alert {
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .table-responsive {
+            border: none;
+            font-size: 0.875rem;
+        }
+        
+        .table th,
+        .table td {
+            padding: 0.5rem 0.25rem;
+            white-space: nowrap;
+        }
+        
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        
+        .badge {
+            font-size: 0.65rem;
+        }
+        
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .btn-group .btn {
+            width: 100%;
+            margin: 0;
+        }
+        
+        /* Hide less important columns on mobile */
+        .table th:nth-child(3),
+        .table td:nth-child(3),
+        .table th:nth-child(4),
+        .table td:nth-child(4),
+        .table th:nth-child(6),
+        .table td:nth-child(6) {
+            display: none;
+        }
+        
+        /* Modal responsive */
+        .modal-dialog {
+            margin: 0.5rem;
+            max-width: calc(100% - 1rem);
+        }
+        
+        .modal-xl {
+            max-width: calc(100% - 1rem);
+        }
+        
+        .modal-body {
+            padding: 1rem;
+        }
+        
+        .modal-body .table-responsive {
+            font-size: 0.8rem;
+        }
+        
+        .modal-body .table th,
+        .modal-body .table td {
+            padding: 0.375rem 0.25rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .table th:nth-child(5),
+        .table td:nth-child(5),
+        .table th:nth-child(8),
+        .table td:nth-child(8) {
+            display: none;
+        }
+        
+        .btn {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+    }
+    
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+</style>
+
+<div class="page-header">
     <h2>Approval {{$joblevel->name}}</h2>
 </div>
 
@@ -42,12 +148,12 @@ $query->where('approver_employee_id', $currentEmployee->id)
                     <tr>
                         <th>No. SPK</th>
                         <th>Pengaju</th>
-                        <th>Level Pengaju</th>
-                        <th>Departemen</th>
+                        <th class="d-none d-md-table-cell">Level Pengaju</th>
+                        <th class="d-none d-md-table-cell">Departemen</th>
                         <th>Tanggal</th>
-                        <th>Step</th>
+                        <th class="d-none d-lg-table-cell">Step</th>
                         <th>Status</th>
-                        <th>Persentase</th>
+                        <th class="d-none d-lg-table-cell">Persentase</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -56,10 +162,10 @@ $query->where('approver_employee_id', $currentEmployee->id)
                     <tr>
                         <td>{{ $approval->overtimeRequest->request_number }}</td>
                         <td>{{ $approval->overtimeRequest->requesterEmployee->name ?? $approval->overtimeRequest->requester->name }}</td>
-                        <td>{{ $approval->overtimeRequest->requesterEmployee->jobLevel->name ?? $approval->overtimeRequest->requester_level }}</td>
-                        <td>{{ $approval->overtimeRequest->department->name }}</td>
+                        <td class="d-none d-md-table-cell">{{ $approval->overtimeRequest->requesterEmployee->jobLevel->name ?? $approval->overtimeRequest->requester_level }}</td>
+                        <td class="d-none d-md-table-cell">{{ $approval->overtimeRequest->department->name }}</td>
                         <td>{{ $approval->overtimeRequest->date->format('d/m/Y') }}</td>
-                        <td>
+                        <td class="d-none d-lg-table-cell">
                             <span class="badge bg-info">{{ $approval->step_name }}</span>
                         </td>
                         <td>
@@ -76,7 +182,7 @@ $query->where('approver_employee_id', $currentEmployee->id)
                             <br><small class="text-muted">{{ $approval->notes }}</small>
                             @endif
                         </td>
-                        <td>
+                        <td class="d-none d-lg-table-cell">
                             @php
                             $qualitativeDetails = $approval->overtimeRequest->details->where('overtime_type', 'qualitative') ->where('is_rejected', false);
                             $totalQualitative = $qualitativeDetails->count();
@@ -110,13 +216,13 @@ $query->where('approver_employee_id', $currentEmployee->id)
                                 <button class="btn btn-sm btn-warning"
                                     onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
                                     title="Input Persentase">
-                                    <i class="fas fa-percentage"></i> Input %
+                                    <i class="fas fa-percentage"></i> <span class="d-none d-lg-inline">Input %</span>
                                 </button>
                                 @else
                                 <button class="btn btn-sm btn-outline-primary"
                                     onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
                                     title="Lihat Detail">
-                                    <i class="fas fa-eye"></i> Detail
+                                    <i class="fas fa-eye"></i> <span class="d-none d-lg-inline">Detail</span>
                                 </button>
                                 @endif
 
@@ -124,7 +230,7 @@ $query->where('approver_employee_id', $currentEmployee->id)
                                 <button class="btn btn-sm btn-outline-warning"
                                     onclick="editOvertimeModal({{ $approval->overtimeRequest->id }})"
                                     title="Edit Overtime">
-                                    <i class="fas fa-edit"></i> Edit
+                                    <i class="fas fa-edit"></i> <span class="d-none d-lg-inline">Edit</span>
                                 </button>
                                 @endif
 
@@ -132,7 +238,7 @@ $query->where('approver_employee_id', $currentEmployee->id)
                                 <button class="btn btn-sm btn-outline-danger"
                                     onclick="confirmDelete({{ $approval->overtimeRequest->id }}, '{{ $approval->overtimeRequest->request_number }}')"
                                     title="Hapus Overtime">
-                                    <i class="fas fa-trash"></i> Delete
+                                    <i class="fas fa-trash"></i> <span class="d-none d-lg-inline">Delete</span>
                                 </button>
                                 @endif
                             </div>

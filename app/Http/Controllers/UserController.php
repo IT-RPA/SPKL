@@ -21,22 +21,37 @@ class UserController extends Controller
         $this->middleware('check.permission:delete-users')->only(['destroy']);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with(['role', 'department', 'jobLevel'])->get();
+        $query = User::with(['role', 'department', 'jobLevel']);
+
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('username', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhereHas('role', function ($q) use ($search) {
+                        $q->where('display_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $users = $query->get(); // Using get() to allow DataTables to handle pagination/searching/sorting client-side as requested
         return view('users.index', compact('users'));
     }
 
     public function create()
     {
         // Ambil employees yang belum punya user account
-        $employees = Employee::whereNotIn('employee_id', function($query) {
+        $employees = Employee::whereNotIn('employee_id', function ($query) {
             $query->select('employee_id')->from('users');
         })->where('is_active', true)->get();
-        
+
         // Ambil semua roles untuk dipilih
         $roles = Role::all();
-        
+
         return view('users.create', compact('employees', 'roles'));
     }
 
@@ -47,6 +62,7 @@ class UserController extends Controller
             'username' => 'required|string|unique:users',
             'password' => 'required|min:8',
             'role_id' => 'required|exists:roles,id',
+            'phone' => 'nullable|string|regex:/^62[0-9]+$/|min:10|max:20',
         ]);
 
         // Ambil data employee
@@ -62,6 +78,7 @@ class UserController extends Controller
                 'username' => $request->username,
                 'name' => $employee->name,
                 'email' => $employee->email,
+                'phone' => $request->phone, // Save phone
                 'password' => Hash::make($request->password),
                 'role_id' => $request->role_id, // Role dari input manual
                 'department_id' => $employee->department_id,
@@ -77,10 +94,10 @@ class UserController extends Controller
     {
         // Ambil employee yang terkait
         $employee = Employee::where('employee_id', $user->employee_id)->first();
-        
+
         // Ambil semua roles untuk dipilih
         $roles = Role::all();
-        
+
         return view('users.edit', compact('user', 'employee', 'roles'));
     }
 
@@ -90,14 +107,16 @@ class UserController extends Controller
             'username' => 'required|string|unique:users,username,' . $user->id,
             'password' => 'nullable|min:8',
             'role_id' => 'required|exists:roles,id',
+            'phone' => 'nullable|string|regex:/^62[0-9]+$/|min:10|max:20',
         ]);
 
         DB::transaction(function () use ($request, $user) {
             $data = [
                 'username' => $request->username,
-                'role_id' => $request->role_id, // Update role dari input manual
+                'role_id' => $request->role_id,
+                'phone' => $request->phone,
             ];
-            
+
             if ($request->filled('password')) {
                 $data['password'] = Hash::make($request->password);
             }
@@ -118,20 +137,20 @@ class UserController extends Controller
     public function searchEmployees(Request $request)
     {
         $search = $request->get('q');
-        
+
         $employees = Employee::where('is_active', true)
-            ->whereNotIn('employee_id', function($query) {
+            ->whereNotIn('employee_id', function ($query) {
                 $query->select('employee_id')->from('users');
             })
-            ->where(function($query) use ($search) {
+            ->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('employee_id', 'like', "%{$search}%");
+                    ->orWhere('employee_id', 'like', "%{$search}%");
             })
             ->limit(10)
             ->get(['id', 'employee_id', 'name']);
 
         return response()->json([
-            'results' => $employees->map(function($emp) {
+            'results' => $employees->map(function ($emp) {
                 return [
                     'id' => $emp->employee_id,
                     'text' => "{$emp->employee_id} - {$emp->name}"

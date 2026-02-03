@@ -23,7 +23,7 @@
                         name="department_id" id="department_id" required>
                         <option value="">Pilih Departemen</option>
                         @foreach($departments as $department)
-                        <option value="{{ $department->id }}" {{ old('department_id') == $department->id ? 'selected' : '' }}>
+                        <option value="{{ $department->id }}" {{ (old('department_id') == $department->id || (auth()->user()->department_id == $department->id)) ? 'selected' : '' }}>
                             {{ $department->name }}
                         </option>
                         @endforeach
@@ -78,7 +78,7 @@
                         @if(isset($eligibleRequesters))
                         @foreach($eligibleRequesters as $requester)
                         <option value="{{ $requester->id }}"
-                            {{ (old('employee_id') == $requester->id || (isset($currentEmployeeData) && $currentEmployeeData->id == $requester->id)) ? 'selected' : '' }}>
+                            {{ (old('employee_id') == $requester->id || auth()->id() == $requester->id || (isset($currentEmployeeData) && $currentEmployeeData->id == $requester->id)) ? 'selected' : '' }}>
                             {{ $requester->name }} - {{ $requester->employee_id }} ({{ $requester->jobLevel->name ?? 'N/A' }})
                         </option>
                         @endforeach
@@ -243,11 +243,6 @@
             width: '100%'
         });
 
-        $('#employee_id').select2({
-            placeholder: 'Pilih Karyawan Pengaju',
-            width: '100%'
-        });
-
         // Event: Check planning saat tanggal berubah
         $('#overtimeDate').on('change', function() {
             const date = $(this).val();
@@ -277,6 +272,13 @@
                 $('#submitBtn').prop('disabled', false);
             }
         });
+
+        // Cek eligibility saat halaman load (field pengaju sekarang otomatis terisi)
+        const initEmployeeId = $('#employee_id').val();
+        const initDepartmentId = $('#department_id').val();
+        if (initEmployeeId && initDepartmentId) {
+            checkFlowJobEligibility(initEmployeeId, initDepartmentId);
+        }
 
         $('#overtimeForm').on('submit', function(e) {
             if ($('#submitBtn').prop('disabled')) {

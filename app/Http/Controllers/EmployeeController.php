@@ -19,9 +19,27 @@ class EmployeeController extends Controller
         $this->middleware('check.permission:delete-employees')->only(['destroy']);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $employees = Employee::with(['department', 'jobLevel'])->get();
+        $query = Employee::with(['department', 'jobLevel', 'plant']);
+
+        // Search functionality
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('employee_id', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('department', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('jobLevel', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $employees = $query->get();
         $departments = Department::where('is_active', true)->get();
         $jobLevels = JobLevel::where('is_active', true)->orderBy('level_order')->get();
         $plants = Plant::get();
@@ -41,7 +59,6 @@ class EmployeeController extends Controller
         ]);
 
         $data = $request->all();
-        // Handle checkbox - jika tidak dicentang, set ke false (0)
         $data['is_active'] = $request->has('is_active') ? 1 : 0;
 
         Employee::create($data);
@@ -64,7 +81,6 @@ class EmployeeController extends Controller
         ]);
 
         $data = $request->all();
-        // Handle checkbox - jika tidak dicentang, set ke false (0)
         $data['is_active'] = $request->has('is_active') ? 1 : 0;
 
         $employee->update($data);
@@ -78,10 +94,18 @@ class EmployeeController extends Controller
     public function destroy(Employee $employee)
     {
         try {
+            // 3. Delete Employee & User Logic
+            // Hapus user terkait jika ada (Manual delete selain via Observer untuk memastikan)
+            $user = \App\Models\User::where('employee_id', $employee->employee_id)->first();
+            if ($user) {
+                $user->delete();
+            }
+
             $employee->delete();
+
             return response()->json([
                 'success' => true,
-                'message' => 'Karyawan berhasil dihapus!'
+                'message' => 'Karyawan dan akun pengguna terkait berhasil dihapus!'
             ]);
         } catch (\Exception $e) {
             return response()->json([

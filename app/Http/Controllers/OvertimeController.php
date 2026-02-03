@@ -278,6 +278,31 @@ class OvertimeController extends Controller
             // ✅ PERBAIKAN: Filter flow jobs berdasarkan kategori
             $this->createApprovalRecords($overtimeRequest, $selectedEmployee, $request->overtime_category);
             $overtimeRequest->updateStatusAndColor();
+
+            // ----------------------------------------------------
+            // WA NOTIFICATION LOGIC (CREATE/STORE)
+            // ----------------------------------------------------
+            try {
+                $overtimeRequest->refresh();
+                // Cari step selanjutnya yang PENDING (Step 1)
+                $nextApproval = $overtimeRequest->approvals()
+                    ->where('status', 'pending')
+                    ->orderBy('step_order', 'asc')
+                    ->with('approverEmployee')
+                    ->first();
+
+                if ($nextApproval && $nextApproval->approverEmployee) {
+                    // Cari User associated with Approver Employee
+                    $nextUser = \App\Models\User::where('employee_id', $nextApproval->approverEmployee->employee_id)->first();
+
+                    if ($nextUser && $nextUser->phone) {
+                        $nextUser->notify(new \App\Notifications\OvertimeRequestApprovalNotification($overtimeRequest));
+                        \Log::info("Sent Initial OvertimeRequestApprovalNotification to User ID {$nextUser->id}");
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error("WA Notification Error (Store): " . $e->getMessage());
+            }
         });
 
         return redirect()->route('overtime.index')->with('success', 'Pengajuan lembur berhasil dibuat');

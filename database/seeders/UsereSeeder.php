@@ -29,6 +29,7 @@ class UsereSeeder extends Seeder
             'role_id' => $adminRole->id,
             'department_id' => $itDept->id,
             'level' => 'hrd',
+            'phone' => null,
             'is_active' => true,
         ]);
 
@@ -41,6 +42,7 @@ class UsereSeeder extends Seeder
             'role_id' => $managerRole->id,
             'department_id' => $hrdDept->id,
             'level' => 'hrd',
+            'phone' => null,
             'is_active' => true,
         ]);
 
@@ -53,6 +55,7 @@ class UsereSeeder extends Seeder
             'role_id' => $managerRole->id,
             'department_id' => $prodDept->id,
             'level' => 'div_head',
+            'phone' => null,
             'is_active' => true,
         ]);
 
@@ -65,6 +68,7 @@ class UsereSeeder extends Seeder
             'role_id' => $managerRole->id,
             'department_id' => $prodDept->id,
             'level' => 'dept_head',
+            'phone' => null,
             'is_active' => true,
         ]);
 
@@ -77,6 +81,7 @@ class UsereSeeder extends Seeder
             'role_id' => $managerRole->id,
             'department_id' => $prodDept->id,
             'level' => 'sect_head',
+            'phone' => null,
             'is_active' => true,
         ]);
 
@@ -89,6 +94,7 @@ class UsereSeeder extends Seeder
             'role_id' => $employeeRole->id,
             'department_id' => $prodDept->id,
             'level' => 'foreman',
+            'phone' => null,
             'is_active' => true,
         ]);
 
@@ -102,6 +108,7 @@ class UsereSeeder extends Seeder
                 'role_id' => $employeeRole->id,
                 'department_id' => $prodDept->id,
                 'level' => 'foreman',
+                'phone' => null,
                 'is_active' => true,
             ]);
         }

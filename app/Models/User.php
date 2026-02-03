@@ -12,8 +12,16 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'employee_id', 'username','name', 'email', 'password', 'role_id', 
-        'department_id', 'job_level_id', 'is_active'  
+        'employee_id',
+        'username',
+        'name',
+        'email',
+        'phone',
+        'password',
+        'role_id',
+        'department_id',
+        'job_level_id',
+        'is_active'
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -31,7 +39,7 @@ class User extends Authenticatable
 
     public function employee()
     {
-        return $this->hasOne(Employee::class, 'email', 'email'); 
+        return $this->hasOne(Employee::class, 'email', 'email');
     }
 
     public function department()
@@ -77,5 +85,17 @@ class User extends Authenticatable
     public function hasPermission($permission)
     {
         return $this->role && $this->role->permissions->contains('name', $permission);
+    }
+
+    /**
+     * Nama level jabatan (untuk pengecekan akses Planning, dll.)
+     * Mengembalikan jobLevel->name, atau 'Administrator' jika role = admin
+     */
+    public function getLevelJabatanAttribute()
+    {
+        if (optional($this->role)->name === 'admin') {
+            return 'Administrator';
+        }
+        return $this->jobLevel->name ?? null;
     }
 }
