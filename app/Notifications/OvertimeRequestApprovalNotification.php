@@ -35,12 +35,18 @@ class OvertimeRequestApprovalNotification extends Notification
     {
         $appUrl = config('app.url');
 
+        // FIX: fallback kalau user/jobLevel null → WA TETAP TERKIRIM
+        $levelCode = optional($notifiable->jobLevel)->code
+                   ?? optional(optional($notifiable->employee)->jobLevel)->code
+                   ?? '';
+
+        $redirectLink = "{$appUrl}/approvals/data?job_level=" . urlencode($levelCode);
+
         $message = "Halo {$notifiable->name},\n\n" .
             "Pemberitahuan: terdapat pengajuan lembur yang memerlukan approval dari Anda.\n\n" .
             "Silakan cek dan proses melalui sistem SPKL agar dapat dilanjutkan ke tahap berikutnya.\n\n" .
-            "{$appUrl}/approvals/data?job_level={$notifiable->job_level->code}\n\n" .
+            "{$redirectLink}\n\n" .
             "Terima kasih.";
-
 
         return [
             'target'  => $notifiable->phone,

@@ -20,18 +20,12 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($credentials)) {
-    $request->session()->regenerate();
+            $request->session()->regenerate();
 
-    $redirect = $request->get('redirect');
-
-    if (!empty($redirect)) {
-        // decode dulu biar tidak rusak
-        return redirect(urldecode($redirect));
-    }
-
-    return redirect('/dashboard');
-}
-
+            // 🔥 Redirect sesuai URL tujuan (intended)
+            // Jika tidak ada intended URL → fallback ke /dashboard
+            return redirect()->intended('/dashboard');
+        }
 
         return back()->withErrors([
             'username' => 'Username atau password salah.',

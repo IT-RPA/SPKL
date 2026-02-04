@@ -39,7 +39,7 @@ class PlanningApprovalNotification extends Notification
     $levelCode = $notifiable->jobLevel->code ?? '';
 
     // Redirect link dengan CODE
-    $redirectLink = "{$appUrl}/login?redirect=/approvals/data?job_level={$levelCode}";
+    $redirectLink = "{$appUrl}/approvals/data?job_level={$levelCode}";
 
     $message = "Halo {$notifiable->name},\n\n" .
         "Pemberitahuan: terdapat planning lembur yang memerlukan approval dari Anda.\n\n" .

@@ -31,24 +31,27 @@ class OvertimeRejectedNotification extends Notification
     }
 
     /**
-     * Get the WhatsApp representation of the notification.
-     * 
-     * Format pesan PERSIS seperti yang diminta:
-     * - Pengajuan lembur Anda telah ditolak oleh {nama_approver}.
-     * - Silakan cek kembali detailnya melalui sistem SPKL.
-     * - Terima kasih.
+     * WhatsApp message.
      */
     public function toWhatsApp(object $notifiable): array
     {
         $appUrl = config('app.url');
 
+        // FIX: fallback kalau joblevel null
+        $levelCode = optional($notifiable->jobLevel)->code
+                   ?? optional(optional($notifiable->employee)->jobLevel)->code
+                   ?? '';
+
         $rejectorName = $this->rejectorName ?: 'Approver';
-        
+
+        // FIX: redirect dengan job_level + encode
+        $redirectLink = "{$appUrl}/approvals/data?job_level=" . urlencode($levelCode);
+
         $message = "Halo {$notifiable->name},\n\n" .
-                "Pengajuan lembur Anda telah ditolak oleh {$rejectorName}.\n\n" .
-                "Silakan cek kembali detailnya melalui sistem SPKL.\n\n" .
-                "{$appUrl}/login?redirect=/approvals/data\n\n" .
-                "Terima kasih.";
+            "Pengajuan lembur Anda telah ditolak oleh {$rejectorName}.\n\n" .
+            "Silakan cek kembali detailnya melalui sistem SPKL.\n\n" .
+            "{$redirectLink}\n\n" .
+            "Terima kasih.";
 
         return [
             'target'  => $notifiable->phone,

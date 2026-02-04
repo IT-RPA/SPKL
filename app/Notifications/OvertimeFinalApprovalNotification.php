@@ -30,20 +30,22 @@ class OvertimeFinalApprovalNotification extends Notification
 
     /**
      * Get the WhatsApp representation of the notification.
-     * 
-     * Format pesan PERSIS seperti yang diminta:
-     * - Pengajuan lembur Anda telah disetujui sepenuhnya.
-     * - Silakan lanjutkan proses sesuai prosedur.
-     * - Terima kasih.
      */
     public function toWhatsApp(object $notifiable): array
     {
         $appUrl = config('app.url');
 
+        // FIX: fallback kalau user/jobLevel null -> WA tetap terkirim
+        $levelCode = optional($notifiable->jobLevel)->code
+                   ?? optional(optional($notifiable->employee)->jobLevel)->code
+                   ?? '';
+
+        $redirectLink = "{$appUrl}/approvals/data?job_level=" . urlencode($levelCode);
+
         $message = "Halo {$notifiable->name},\n\n" .
             "Pengajuan lembur Anda telah disetujui sepenuhnya.\n\n" .
             "Silakan lanjutkan proses sesuai prosedur.\n\n" .
-            "{$appUrl}/approvals/data?job_level={$notifiable->job_level->code}\n\n" .
+            "{$redirectLink}\n\n" .
             "Terima kasih.";
 
         return [

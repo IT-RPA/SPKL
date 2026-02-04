@@ -64,7 +64,10 @@ class ApprovalController extends Controller
                 // Cek apakah sudah selesai semua approval
                 if ($overtimeRequest->status === 'approved') {
                     // Kirim notifikasi FINAL ke pemohon (creator)
-                    $requesterUser = User::where('id', $overtimeRequest->requester_id)->with('jobLevel')->first();
+                    $requesterUser = User::where('id', $overtimeRequest->requester_id)
+                        ->with(['jobLevel', 'employee.jobLevel'])
+                        ->first();
+
 
                     if ($requesterUser && $requesterUser->phone) {
                         $requesterUser->notify(new OvertimeFinalApprovalNotification($overtimeRequest));
@@ -143,7 +146,10 @@ class ApprovalController extends Controller
             // ============================================
             try {
                 $overtimeRequest = $approval->overtimeRequest;
-                $requesterUser = User::where('id', $overtimeRequest->requester_id)->first();
+                $requesterUser = User::where('id', $overtimeRequest->requester_id)
+                ->with(['jobLevel', 'employee.jobLevel'])
+                ->first();
+
 
                 if ($requesterUser && $requesterUser->phone) {
                     // Kirim notifikasi rejection ke pemohon
