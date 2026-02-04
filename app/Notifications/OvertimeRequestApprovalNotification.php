@@ -38,7 +38,7 @@ class OvertimeRequestApprovalNotification extends Notification
         $message = "Halo {$notifiable->name},\n\n" .
             "Pemberitahuan: terdapat pengajuan lembur yang memerlukan approval dari Anda.\n\n" .
             "Silakan cek dan proses melalui sistem SPKL agar dapat dilanjutkan ke tahap berikutnya.\n\n" .
-            "{$appUrl}/login?redirect=/approvals/data?job_level={$notifiable->job_level->code}\n\n" .
+            "{$appUrl}/approvals/data?job_level={$notifiable->job_level->code}\n\n" .
             "Terima kasih.";
 
 

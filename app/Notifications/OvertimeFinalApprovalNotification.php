@@ -43,7 +43,7 @@ class OvertimeFinalApprovalNotification extends Notification
         $message = "Halo {$notifiable->name},\n\n" .
             "Pengajuan lembur Anda telah disetujui sepenuhnya.\n\n" .
             "Silakan lanjutkan proses sesuai prosedur.\n\n" .
-            "{$appUrl}/login?redirect=/approvals/data?job_level={$notifiable->job_level->code}\n\n" .
+            "{$appUrl}/approvals/data?job_level={$notifiable->job_level->code}\n\n" .
             "Terima kasih.";
 
         return [
