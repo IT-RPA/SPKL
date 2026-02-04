@@ -7,6 +7,9 @@ use App\Models\OvertimeApproval;
 use App\Models\Employee;
 use App\Models\JobLevel;
 use App\Models\OvertimeDetail;
+use App\Models\User;
+use App\Notifications\OvertimeFinalApprovalNotification;
+use App\Notifications\OvertimeRequestApprovalNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -61,10 +64,10 @@ class ApprovalController extends Controller
                 // Cek apakah sudah selesai semua approval
                 if ($overtimeRequest->status === 'approved') {
                     // Kirim notifikasi FINAL ke pemohon (creator)
-                    $requesterUser = \App\Models\User::where('id', $overtimeRequest->requester_id)->first();
+                    $requesterUser = User::where('id', $overtimeRequest->requester_id)->with('jobLevel')->first();
 
                     if ($requesterUser && $requesterUser->phone) {
-                        $requesterUser->notify(new \App\Notifications\OvertimeFinalApprovalNotification($overtimeRequest));
+                        $requesterUser->notify(new OvertimeFinalApprovalNotification($overtimeRequest));
                         \Log::info("Sent OvertimeFinalApprovalNotification to User ID {$requesterUser->id}");
                     }
                 } else {
@@ -77,10 +80,10 @@ class ApprovalController extends Controller
 
                     if ($nextApproval && $nextApproval->approverEmployee) {
                         // Cari User berdasarkan employee_id
-                        $nextUser = \App\Models\User::where('employee_id', $nextApproval->approverEmployee->employee_id)->first();
+                        $nextUser = User::where('employee_id', $nextApproval->approverEmployee->employee_id)->with('jobLevel')->first();
 
                         if ($nextUser && $nextUser->phone) {
-                            $nextUser->notify(new \App\Notifications\OvertimeRequestApprovalNotification($overtimeRequest));
+                            $nextUser->notify(new OvertimeRequestApprovalNotification($overtimeRequest));
                             \Log::info("Sent OvertimeRequestApprovalNotification to User ID {$nextUser->id}");
                         } else {
                             \Log::warning("Cannot send notification: User not found or no phone for Employee ID {$nextApproval->approverEmployee->employee_id}");
@@ -140,7 +143,7 @@ class ApprovalController extends Controller
             // ============================================
             try {
                 $overtimeRequest = $approval->overtimeRequest;
-                $requesterUser = \App\Models\User::where('id', $overtimeRequest->requester_id)->first();
+                $requesterUser = User::where('id', $overtimeRequest->requester_id)->first();
 
                 if ($requesterUser && $requesterUser->phone) {
                     // Kirim notifikasi rejection ke pemohon
