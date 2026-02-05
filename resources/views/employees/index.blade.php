@@ -11,43 +11,43 @@
             align-items: flex-start !important;
             gap: 15px;
         }
-        
+
         .card-header h3 {
             font-size: 1.25rem;
             margin: 0;
         }
-        
+
         .table-responsive {
             border: none;
             font-size: 0.875rem;
         }
-        
+
         .table th,
         .table td {
             padding: 0.5rem 0.25rem;
             white-space: nowrap;
         }
-        
+
         .btn-sm {
             padding: 0.25rem 0.5rem;
             font-size: 0.75rem;
         }
-        
+
         .badge {
             font-size: 0.65rem;
         }
-        
+
         .btn-group {
             display: flex;
             flex-direction: column;
             gap: 2px;
         }
-        
+
         .btn-group .btn {
             width: 100%;
             margin: 0;
         }
-        
+
         /* Hide less important columns on mobile */
         .table th:nth-child(1),
         .table td:nth-child(1),
@@ -57,38 +57,39 @@
         .table td:nth-child(6) {
             display: none;
         }
-        
+
         /* Modal responsive */
         .modal-dialog {
             margin: 0.5rem;
             max-width: calc(100% - 1rem);
         }
-        
+
         .modal-lg {
             max-width: calc(100% - 1rem);
         }
-        
+
         .modal-body {
             padding: 1rem;
         }
-        
+
         .modal-body .row .col-md-6 {
             margin-bottom: 1rem;
         }
     }
-    
+
     @media (max-width: 480px) {
+
         .table th:nth-child(5),
         .table td:nth-child(5) {
             display: none;
         }
-        
+
         .btn {
             font-size: 0.75rem;
             padding: 0.25rem 0.5rem;
         }
     }
-    
+
     /* Custom styling untuk Select2 agar sesuai dengan Bootstrap */
     .select2-container--default .select2-selection--single {
         height: 38px;
@@ -180,8 +181,8 @@
                                                 data-department_id="{{ $employee->department_id }}"
                                                 data-job_level_id="{{ $employee->job_level_id }}"
                                                 data-plant_id="{{ $employee->plant_id }}"
-                                                data-is_active="{{ $employee->is_active }}"
-                                                title="Edit">
+                                                data-type="{{ $employee->type ?? '' }}"
+                                                data-is_active="{{ $employee->is_active }}" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                             @endpermission
@@ -245,6 +246,18 @@
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email</label>
                                 <input type="email" class="form-control" id="email" name="email" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="type" class="form-label">Tipe Karyawan</label>
+                                <select class="form-control select2" id="type" name="type" required>
+                                    <option value="">Pilih Tipe</option>
+                                    <option value="karyawan">Karyawan</option>
+                                    <option value="pkl">PKL</option>
+                                    <option value="harian_lepas">Harian Lepas</option>
+                                </select>
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
@@ -323,43 +336,43 @@
                 align-items: flex-start !important;
                 gap: 15px;
             }
-            
+
             .card-header h3 {
                 font-size: 1.25rem;
                 margin: 0;
             }
-            
+
             .table-responsive {
                 border: none;
                 font-size: 0.875rem;
             }
-            
+
             .table th,
             .table td {
                 padding: 0.5rem 0.25rem;
                 white-space: nowrap;
             }
-            
+
             .btn-sm {
                 padding: 0.25rem 0.5rem;
                 font-size: 0.75rem;
             }
-            
+
             .badge {
                 font-size: 0.65rem;
             }
-            
+
             .btn-group {
                 display: flex;
                 flex-direction: column;
                 gap: 2px;
             }
-            
+
             .btn-group .btn {
                 width: 100%;
                 margin: 0;
             }
-            
+
             /* Hide less important columns on mobile */
             .table th:nth-child(1),
             .table td:nth-child(1),
@@ -369,38 +382,39 @@
             .table td:nth-child(6) {
                 display: none;
             }
-            
+
             /* Modal responsive */
             .modal-dialog {
                 margin: 0.5rem;
                 max-width: calc(100% - 1rem);
             }
-            
+
             .modal-lg {
                 max-width: calc(100% - 1rem);
             }
-            
+
             .modal-body {
                 padding: 1rem;
             }
-            
+
             .modal-body .row .col-md-6 {
                 margin-bottom: 1rem;
             }
         }
-        
+
         @media (max-width: 480px) {
+
             .table th:nth-child(5),
             .table td:nth-child(5) {
                 display: none;
             }
-            
+
             .btn {
                 font-size: 0.75rem;
                 padding: 0.25rem 0.5rem;
             }
         }
-        
+
         /* Custom styling untuk Select2 agar sesuai dengan Bootstrap */
         .select2-container--default .select2-selection--single {
             height: 38px;
@@ -524,6 +538,7 @@
             $('#department_id').val('').trigger('change');
             $('#job_level_id').val('').trigger('change');
             $('#plant_id').val('').trigger('change');
+            $('#type').val('').trigger('change');
         }
 
         // Button tambah karyawan - set flag untuk mode tambah
@@ -548,6 +563,7 @@
             const departmentId = $(this).data('department_id');
             const jobLevelId = $(this).data('job_level_id');
             const plantId = $(this).data('plant_id');
+            const type = $(this).data('type');
             const phone = $(this).data('phone');
             const isActive = $(this).data('is_active');
 
@@ -568,6 +584,7 @@
                 $('#department_id').val(departmentId).trigger('change');
                 $('#job_level_id').val(jobLevelId).trigger('change');
                 $('#plant_id').val(plantId).trigger('change');
+                $('#type').val(type).trigger('change');
             }, 100);
 
             // Tampilkan modal

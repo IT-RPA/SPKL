@@ -12,7 +12,6 @@ class EmployeeController extends Controller
 {
     public function __construct()
     {
-        // Terapkan middleware permission untuk setiap action
         $this->middleware('check.permission:view-employees')->only(['index', 'show']);
         $this->middleware('check.permission:create-employees')->only(['create', 'store']);
         $this->middleware('check.permission:edit-employees')->only(['edit', 'update']);
@@ -23,7 +22,6 @@ class EmployeeController extends Controller
     {
         $query = Employee::with(['department', 'jobLevel', 'plant']);
 
-        // Search functionality
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -55,11 +53,22 @@ class EmployeeController extends Controller
             'email' => 'required|email|unique:employees,email',
             'department_id' => 'required|exists:departments,id',
             'job_level_id' => 'required|exists:job_levels,id',
-            'plant_id' => 'nullable|exists:plants,id'
+            'plant_id' => 'nullable|exists:plants,id',
+            'type' => 'required|in:karyawan,pkl,harian_lepas', // <── NEW
         ]);
 
-        $data = $request->all();
-        $data['is_active'] = $request->has('is_active') ? 1 : 0;
+        $data = $request->only([
+            'employee_id',
+            'name',
+            'email',
+            'department_id',
+            'job_level_id',
+            'plant_id',
+            'type',
+            'phone'
+        ]);
+
+        $data['is_active'] = $request->has('is_active');
 
         Employee::create($data);
 
@@ -77,11 +86,22 @@ class EmployeeController extends Controller
             'email' => 'required|email|unique:employees,email,' . $employee->id,
             'department_id' => 'required|exists:departments,id',
             'plant_id' => 'nullable|exists:plants,id',
-            'job_level_id' => 'required|exists:job_levels,id'
+            'job_level_id' => 'required|exists:job_levels,id',
+            'type' => 'required|in:karyawan,pkl,harian_lepas', // <── NEW
         ]);
 
-        $data = $request->all();
-        $data['is_active'] = $request->has('is_active') ? 1 : 0;
+        $data = $request->only([
+            'employee_id',
+            'name',
+            'email',
+            'department_id',
+            'job_level_id',
+            'plant_id',
+            'type',
+            'phone'
+        ]);
+
+        $data['is_active'] = $request->has('is_active');
 
         $employee->update($data);
 
@@ -94,8 +114,6 @@ class EmployeeController extends Controller
     public function destroy(Employee $employee)
     {
         try {
-            // 3. Delete Employee & User Logic
-            // Hapus user terkait jika ada (Manual delete selain via Observer untuk memastikan)
             $user = \App\Models\User::where('employee_id', $employee->employee_id)->first();
             if ($user) {
                 $user->delete();
