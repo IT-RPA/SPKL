@@ -36,6 +36,10 @@ class ApprovalController extends Controller
     {
         $currentEmployee = Employee::where('email', Auth::user()->email)->first();
 
+        if ($currentEmployee->jobLevel->code === 'ADMIN') {
+            return redirect()->back()->with('error', 'Administrator hanya dapat melihat data.');
+        }
+
         if ($approval->approver_employee_id !== $currentEmployee->id) {
             return redirect()->back()->with('error', 'Anda tidak berwenang untuk approval ini');
         }
@@ -109,6 +113,10 @@ class ApprovalController extends Controller
 
         $currentEmployee = Employee::where('email', Auth::user()->email)->first();
 
+        if ($currentEmployee->jobLevel->code === 'ADMIN') {
+            return redirect()->back()->with('error', 'Administrator hanya dapat melihat data.');
+        }
+
         if ($approval->approver_employee_id !== $currentEmployee->id) {
             return redirect()->back()->with('error', 'Anda tidak berwenang untuk approval ini');
         }
@@ -147,8 +155,8 @@ class ApprovalController extends Controller
             try {
                 $overtimeRequest = $approval->overtimeRequest;
                 $requesterUser = User::where('id', $overtimeRequest->requester_id)
-                ->with(['jobLevel', 'employee.jobLevel'])
-                ->first();
+                    ->with(['jobLevel', 'employee.jobLevel'])
+                    ->first();
 
 
                 if ($requesterUser && $requesterUser->phone) {
@@ -231,6 +239,13 @@ class ApprovalController extends Controller
         $isCurrentUserApprover = ($approval->approver_employee_id === $currentEmployee->id);
         $canApproveNow = $isCurrentUserApprover && $this->canUserApproveNow($approval);
 
+        // Pengecekan HANYA untuk ADMIN agar tombol tidak muncul di modal
+        if ($currentEmployee && $currentEmployee->jobLevel->code === 'ADMIN') {
+            $canApproveNow = false;
+            $canEditTime = false;
+            $canInputPercentage = false;
+        }
+
         // Debug tambahan untuk percentage
         $hasQualitativeDetails = $request->details->where('overtime_type', 'qualitative')->count() > 0;
         $qualitativeReadyCount = $request->details->where('overtime_type', 'qualitative')
@@ -308,39 +323,54 @@ class ApprovalController extends Controller
             return collect();
         }
 
-        // Ambil approvals biasa
-        $approvals = OvertimeApproval::with([
-            'overtimeRequest.requesterEmployee.jobLevel',
-            'overtimeRequest.department',
-            'overtimeRequest.approvals.approverEmployee.jobLevel',
-            'overtimeRequest.details.employee',
-            'approverEmployee.jobLevel'
-        ])
-            ->where('approver_employee_id', $currentEmployee->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        if ($currentEmployee->jobLevel->code === 'ADMIN') {
+            // ADMIN sees ALL approvals
+            $approvals = OvertimeApproval::with([
+                'overtimeRequest.requesterEmployee.jobLevel',
+                'overtimeRequest.department',
+                'overtimeRequest.approvals.approverEmployee.jobLevel',
+                'overtimeRequest.details.employee',
+                'approverEmployee.jobLevel'
+            ])
+                ->orderBy('created_at', 'desc')
+                ->get();
 
-        // Ambil overtime yang perlu input persentase
-        $overtimesNeedingPercentage = OvertimeRequest::with([
-            'requesterEmployee.jobLevel',
-            'department',
-            'details.employee',
-            'approvals.approverEmployee.jobLevel'
-        ])
-            ->where('status', 'approved')
-            ->whereHas(
-                'details',
-                fn($q) =>
-                $q->where('overtime_type', 'qualitative')
-                    ->whereNull('percentage_realization')
-            )
-            ->whereHas(
-                'approvals',
-                fn($q) =>
-                $q->where('approver_employee_id', $currentEmployee->id)
-                    ->where('status', 'approved')
-            )
-            ->get();
+            $overtimesNeedingPercentage = collect();
+        } else {
+            // Normal users see only approvals assigned to them
+            $approvals = OvertimeApproval::with([
+                'overtimeRequest.requesterEmployee.jobLevel',
+                'overtimeRequest.department',
+                'overtimeRequest.approvals.approverEmployee.jobLevel',
+                'overtimeRequest.details.employee',
+                'approverEmployee.jobLevel'
+            ])
+                ->where('approver_employee_id', $currentEmployee->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // Ambil overtime yang perlu input persentase
+            $overtimesNeedingPercentage = OvertimeRequest::with([
+                'requesterEmployee.jobLevel',
+                'department',
+                'details.employee',
+                'approvals.approverEmployee.jobLevel'
+            ])
+                ->where('status', 'approved')
+                ->whereHas(
+                    'details',
+                    fn($q) =>
+                    $q->where('overtime_type', 'qualitative')
+                        ->whereNull('percentage_realization')
+                )
+                ->whereHas(
+                    'approvals',
+                    fn($q) =>
+                    $q->where('approver_employee_id', $currentEmployee->id)
+                        ->where('status', 'approved')
+                )
+                ->get();
+        }
 
         // ============================
         //  STEP 3: List approval ID yg harus disembunyikan

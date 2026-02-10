@@ -211,35 +211,42 @@ $query->where('approver_employee_id', $currentEmployee->id)
                         </td>
                         <td>
                             <div class="btn-group" role="group">
-
-                                @if(isset($approval->needs_percentage_input) && $approval->needs_percentage_input)
-                                <button class="btn btn-sm btn-warning"
-                                    onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
-                                    title="Input Persentase">
-                                    <i class="fas fa-percentage"></i> <span class="d-none d-lg-inline">Input %</span>
-                                </button>
+                                @if(isset($joblevel) && $joblevel->code === 'ADMIN')
+                                    <button class="btn btn-sm btn-outline-primary"
+                                        onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
+                                        title="Lihat Detail">
+                                        <i class="fas fa-eye"></i> <span class="d-none d-lg-inline">Detail</span>
+                                    </button>
                                 @else
-                                <button class="btn btn-sm btn-outline-primary"
-                                    onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
-                                    title="Lihat Detail">
-                                    <i class="fas fa-eye"></i> <span class="d-none d-lg-inline">Detail</span>
-                                </button>
-                                @endif
+                                    @if(isset($approval->needs_percentage_input) && $approval->needs_percentage_input)
+                                    <button class="btn btn-sm btn-warning"
+                                        onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
+                                        title="Input Persentase">
+                                        <i class="fas fa-percentage"></i> <span class="d-none d-lg-inline">Input %</span>
+                                    </button>
+                                    @else
+                                    <button class="btn btn-sm btn-outline-primary"
+                                        onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')"
+                                        title="Lihat Detail">
+                                        <i class="fas fa-eye"></i> <span class="d-none d-lg-inline">Detail</span>
+                                    </button>
+                                    @endif
 
-                                @if($approval->status == 'pending' && auth()->user()->can('edit-overtime'))
-                                <button class="btn btn-sm btn-outline-warning"
-                                    onclick="editOvertimeModal({{ $approval->overtimeRequest->id }})"
-                                    title="Edit Overtime">
-                                    <i class="fas fa-edit"></i> <span class="d-none d-lg-inline">Edit</span>
-                                </button>
-                                @endif
+                                    @if($approval->status == 'pending' && auth()->user()->can('edit-overtime'))
+                                    <button class="btn btn-sm btn-outline-warning"
+                                        onclick="editOvertimeModal({{ $approval->overtimeRequest->id }})"
+                                        title="Edit Overtime">
+                                        <i class="fas fa-edit"></i> <span class="d-none d-lg-inline">Edit</span>
+                                    </button>
+                                    @endif
 
-                                @if(auth()->user()->can('delete-overtime'))
-                                <button class="btn btn-sm btn-outline-danger"
-                                    onclick="confirmDelete({{ $approval->overtimeRequest->id }}, '{{ $approval->overtimeRequest->request_number }}')"
-                                    title="Hapus Overtime">
-                                    <i class="fas fa-trash"></i> <span class="d-none d-lg-inline">Delete</span>
-                                </button>
+                                    @if(auth()->user()->can('delete-overtime'))
+                                    <button class="btn btn-sm btn-outline-danger"
+                                        onclick="confirmDelete({{ $approval->overtimeRequest->id }}, '{{ $approval->overtimeRequest->request_number }}')"
+                                        title="Hapus Overtime">
+                                        <i class="fas fa-trash"></i> <span class="d-none d-lg-inline">Delete</span>
+                                    </button>
+                                    @endif
                                 @endif
                             </div>
 
@@ -266,7 +273,7 @@ $query->where('approver_employee_id', $currentEmployee->id)
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="9" class="text-center">Tidak ada data untuk disetujui</td>
+                        <td class="text-center" colspan="9">Tidak ada data untuk disetujui</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -418,6 +425,7 @@ $query->where('approver_employee_id', $currentEmployee->id)
     let currentOvertimeId = null;
     let deleteOvertimeId = null;
     let currentDetailId = null; // ✅ UNTUK REJECT PER-ORANG
+    const userJobLevel = '{{ $joblevel->code }}';
 
     $(document).ready(function() {
         $('#approvalsTable').DataTable({
@@ -466,7 +474,7 @@ $query->where('approver_employee_id', $currentEmployee->id)
                     data.status === 'pending' ||
                     (data.approval_status && data.approval_status === 'pending');
 
-                if (hasCurrentPendingApproval) {
+                if (hasCurrentPendingApproval && userJobLevel !== 'ADMIN') {
                     document.getElementById('approvalButtons').style.display = 'block';
                 } else {
                     document.getElementById('approvalButtons').style.display = 'none';
