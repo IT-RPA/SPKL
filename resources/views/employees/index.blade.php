@@ -147,6 +147,7 @@
                                     <th>ID Karyawan</th>
                                     <th>Nama</th>
                                     <th class="d-none d-md-table-cell">Email</th>
+                                    <th>Jenis Karyawan</th>
                                     <th class="d-none d-lg-table-cell">Departemen</th>
                                     <th class="d-none d-lg-table-cell">Level Jabatan</th>
                                     <th>Status</th>
@@ -162,6 +163,7 @@
                                     <td>{{ $employee->employee_id }}</td>
                                     <td>{{ $employee->name }}</td>
                                     <td class="d-none d-md-table-cell">{{ $employee->email }}</td>
+                                    <td>{{ $employee->type }}</td>
                                     <td class="d-none d-lg-table-cell">{{ $employee->department->name }}</td>
                                     <td class="d-none d-lg-table-cell">{{ $employee->jobLevel->name }}</td>
                                     <td>
@@ -178,10 +180,14 @@
                                                 data-id="{{ $employee->id }}"
                                                 data-employee_id="{{ $employee->employee_id }}"
                                                 data-name="{{ $employee->name }}" data-email="{{ $employee->email }}"
+                                                data-type="{{ $employee->type }}"
                                                 data-department_id="{{ $employee->department_id }}"
                                                 data-job_level_id="{{ $employee->job_level_id }}"
                                                 data-plant_id="{{ $employee->plant_id }}"
+<<<<<<< HEAD
                                                 data-type="{{ $employee->type ?? '' }}"
+=======
+>>>>>>> f74c63a75227d3c667042de2ff16515cd3294364
                                                 data-is_active="{{ $employee->is_active }}" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </button>
@@ -251,9 +257,14 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
+<<<<<<< HEAD
                                 <label for="type" class="form-label">Tipe Karyawan</label>
                                 <select class="form-control select2" id="type" name="type" required>
                                     <option value="">Pilih Tipe</option>
+=======
+                                <label for="type" class="form-label">Jenis Karyawan</label>
+                                <select name="type" id="type" class="form-control" required>
+>>>>>>> f74c63a75227d3c667042de2ff16515cd3294364
                                     <option value="karyawan">Karyawan</option>
                                     <option value="pkl">PKL</option>
                                     <option value="harian_lepas">Harian Lepas</option>
@@ -533,6 +544,7 @@
             $('.form-control').removeClass('is-invalid');
             $('.invalid-feedback').text('');
             $('#is_active').prop('checked', true);
+            $('#type').val('karyawan');
 
             // Reset Select2
             $('#department_id').val('').trigger('change');
@@ -576,6 +588,9 @@
             $('#employee_id').val(employeeId);
             $('#name').val(name);
             $('#email').val(email);
+            // Handle type
+            const type = $(this).data('type');
+            $('#type').val(type); // Set select value
             $('#is_active').prop('checked', Boolean(Number(isActive)));
             $('#employeeModalLabel').text('Edit Karyawan');
 
