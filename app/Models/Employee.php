@@ -16,6 +16,7 @@ class Employee extends Model
         'department_id',
         'job_level_id',
         'plant_id',
+        'type',
         'is_active',
         'phone',
     ];
