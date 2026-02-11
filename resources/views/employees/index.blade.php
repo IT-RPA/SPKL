@@ -580,8 +580,6 @@
             $('#employee_id').val(employeeId);
             $('#name').val(name);
             $('#email').val(email);
-            // Handle type
-            const type = $(this).data('type');
             $('#type').val(type); // Set select value
             $('#is_active').prop('checked', Boolean(Number(isActive)));
             $('#employeeModalLabel').text('Edit Karyawan');
