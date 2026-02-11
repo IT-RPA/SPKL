@@ -599,73 +599,73 @@
         });
         @endpermission
 
-        @if(Auth::user() - > hasPermission('create-employees') || Auth::user() - > hasPermission('edit-employees'))
-        // Form submission
-        $('#employeeForm').on('submit', function(e) {
-            e.preventDefault();
+        if ("{{Auth::user()->hasPermission('create-employees')}}" || "{{Auth::user()->hasPermission('edit-employees')}}") {
+            // Form submission
+            $('#employeeForm').on('submit', function(e) {
+                e.preventDefault();
 
-            const id = $('#employee_id_hidden').val();
-            const isEdit = id !== '';
-            const url = isEdit ? `/employees/${id}` : '/employees';
+                const id = $('#employee_id_hidden').val();
+                const isEdit = id !== '';
+                const url = isEdit ? `/employees/${id}` : '/employees';
 
-            const formData = new FormData(this);
-            if (isEdit) {
-                formData.append('_method', 'PUT');
-            }
-
-            // Reset error states
-            $('.form-control').removeClass('is-invalid');
-            $('.select2-container').removeClass('is-invalid');
-            $('.invalid-feedback').text('');
-
-            $.ajax({
-                url: url,
-                method: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    if (response.success) {
-                        $('#employeeModal').modal('hide');
-
-                        // Show success message
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil!',
-                            text: response.message,
-                            timer: 2000,
-                            showConfirmButton: false
-                        }).then(() => {
-                            location.reload();
-                        });
-                    }
-                },
-                error: function(xhr) {
-                    if (xhr.status === 422) {
-                        const errors = xhr.responseJSON.errors;
-
-                        Object.keys(errors).forEach(function(key) {
-                            const element = $(`#${key}`);
-                            element.addClass('is-invalid');
-
-                            // Tambahkan class is-invalid ke Select2 container juga
-                            if (element.hasClass('select2')) {
-                                element.next('.select2-container').addClass('is-invalid');
-                            }
-
-                            element.siblings('.invalid-feedback').text(errors[key][0]);
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error!',
-                            text: 'Terjadi kesalahan sistem. Silakan coba lagi.'
-                        });
-                    }
+                const formData = new FormData(this);
+                if (isEdit) {
+                    formData.append('_method', 'PUT');
                 }
+
+                // Reset error states
+                $('.form-control').removeClass('is-invalid');
+                $('.select2-container').removeClass('is-invalid');
+                $('.invalid-feedback').text('');
+
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.success) {
+                            $('#employeeModal').modal('hide');
+
+                            // Show success message
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: response.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 422) {
+                            const errors = xhr.responseJSON.errors;
+
+                            Object.keys(errors).forEach(function(key) {
+                                const element = $(`#${key}`);
+                                element.addClass('is-invalid');
+
+                                // Tambahkan class is-invalid ke Select2 container juga
+                                if (element.hasClass('select2')) {
+                                    element.next('.select2-container').addClass('is-invalid');
+                                }
+
+                                element.siblings('.invalid-feedback').text(errors[key][0]);
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: 'Terjadi kesalahan sistem. Silakan coba lagi.'
+                            });
+                        }
+                    }
+                });
             });
-        });
-        @endif
+        }
 
         @permission('delete-employees')
         // Delete button click
