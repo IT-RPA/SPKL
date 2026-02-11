@@ -152,7 +152,7 @@
                                     <th class="d-none d-lg-table-cell">Level Jabatan</th>
                                     <th>Status</th>
                                     @if(Auth::user()->hasPermission('edit-employees') || Auth::user()->hasPermission('delete-employees'))
-                                        <th class="aksi-col">Aksi</th>
+                                    <th class="aksi-col">Aksi</th>
                                     @endif
                                 </tr>
                             </thead>
@@ -184,10 +184,7 @@
                                                 data-department_id="{{ $employee->department_id }}"
                                                 data-job_level_id="{{ $employee->job_level_id }}"
                                                 data-plant_id="{{ $employee->plant_id }}"
-<<<<<<< HEAD
                                                 data-type="{{ $employee->type ?? '' }}"
-=======
->>>>>>> f74c63a75227d3c667042de2ff16515cd3294364
                                                 data-is_active="{{ $employee->is_active }}" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </button>
@@ -257,14 +254,9 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-<<<<<<< HEAD
                                 <label for="type" class="form-label">Tipe Karyawan</label>
                                 <select class="form-control select2" id="type" name="type" required>
                                     <option value="">Pilih Tipe</option>
-=======
-                                <label for="type" class="form-label">Jenis Karyawan</label>
-                                <select name="type" id="type" class="form-control" required>
->>>>>>> f74c63a75227d3c667042de2ff16515cd3294364
                                     <option value="karyawan">Karyawan</option>
                                     <option value="pkl">PKL</option>
                                     <option value="harian_lepas">Harian Lepas</option>
@@ -281,7 +273,7 @@
                                 <select class="form-control select2" id="department_id" name="department_id" required>
                                     <option value="">Pilih Departemen</option>
                                     @foreach($departments as $department)
-                                        <option value="{{ $department->id }}">{{ $department->name }}</option>
+                                    <option value="{{ $department->id }}">{{ $department->name }}</option>
                                     @endforeach
                                 </select>
                                 <div class="invalid-feedback"></div>
@@ -293,7 +285,7 @@
                                 <select class="form-control select2" id="job_level_id" name="job_level_id" required>
                                     <option value="">Pilih Level Jabatan</option>
                                     @foreach($jobLevels as $jobLevel)
-                                        <option value="{{ $jobLevel->id }}">{{ $jobLevel->name }}</option>
+                                    <option value="{{ $jobLevel->id }}">{{ $jobLevel->name }}</option>
                                     @endforeach
                                 </select>
                                 <div class="invalid-feedback"></div>
@@ -305,7 +297,7 @@
                                 <select class="form-control select2" id="plant_id" name="plant_id" required>
                                     <option value="">Pilih Plant</option>
                                     @foreach($plants as $plant)
-                                        <option value="{{ $plant->id }}">{{ $plant->name }}</option>
+                                    <option value="{{ $plant->id }}">{{ $plant->name }}</option>
                                     @endforeach
                                 </select>
                                 <div class="invalid-feedback"></div>
@@ -339,132 +331,132 @@
 @endsection
 
 @push('styles')
-    <style>
-        /* Mobile responsive styles for employees */
-        @media (max-width: 768px) {
-            .card-header {
-                flex-direction: column;
-                align-items: flex-start !important;
-                gap: 15px;
-            }
-
-            .card-header h3 {
-                font-size: 1.25rem;
-                margin: 0;
-            }
-
-            .table-responsive {
-                border: none;
-                font-size: 0.875rem;
-            }
-
-            .table th,
-            .table td {
-                padding: 0.5rem 0.25rem;
-                white-space: nowrap;
-            }
-
-            .btn-sm {
-                padding: 0.25rem 0.5rem;
-                font-size: 0.75rem;
-            }
-
-            .badge {
-                font-size: 0.65rem;
-            }
-
-            .btn-group {
-                display: flex;
-                flex-direction: column;
-                gap: 2px;
-            }
-
-            .btn-group .btn {
-                width: 100%;
-                margin: 0;
-            }
-
-            /* Hide less important columns on mobile */
-            .table th:nth-child(1),
-            .table td:nth-child(1),
-            .table th:nth-child(4),
-            .table td:nth-child(4),
-            .table th:nth-child(6),
-            .table td:nth-child(6) {
-                display: none;
-            }
-
-            /* Modal responsive */
-            .modal-dialog {
-                margin: 0.5rem;
-                max-width: calc(100% - 1rem);
-            }
-
-            .modal-lg {
-                max-width: calc(100% - 1rem);
-            }
-
-            .modal-body {
-                padding: 1rem;
-            }
-
-            .modal-body .row .col-md-6 {
-                margin-bottom: 1rem;
-            }
+<style>
+    /* Mobile responsive styles for employees */
+    @media (max-width: 768px) {
+        .card-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 15px;
         }
 
-        @media (max-width: 480px) {
-
-            .table th:nth-child(5),
-            .table td:nth-child(5) {
-                display: none;
-            }
-
-            .btn {
-                font-size: 0.75rem;
-                padding: 0.25rem 0.5rem;
-            }
+        .card-header h3 {
+            font-size: 1.25rem;
+            margin: 0;
         }
 
-        /* Custom styling untuk Select2 agar sesuai dengan Bootstrap */
-        .select2-container--default .select2-selection--single {
-            height: 38px;
-            border: 1px solid #ced4da;
-            border-radius: 0.25rem;
+        .table-responsive {
+            border: none;
+            font-size: 0.875rem;
         }
 
-        .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 36px;
-            padding-left: 12px;
-        }
-
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 36px;
-        }
-
-        /* Styling untuk error state */
-        .select2-container--default.is-invalid .select2-selection--single {
-            border-color: #dc3545;
-        }
-
-        /* Dropdown di dalam modal */
-        .select2-container {
-            width: 100% !important;
-        }
-
-        /* Fix Aksi Column Width */
-        table td.aksi-col,
-        table th.aksi-col {
-            width: 130px !important;
+        .table th,
+        .table td {
+            padding: 0.5rem 0.25rem;
             white-space: nowrap;
-            text-align: center;
         }
-    </style>
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .badge {
+            font-size: 0.65rem;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .btn-group .btn {
+            width: 100%;
+            margin: 0;
+        }
+
+        /* Hide less important columns on mobile */
+        .table th:nth-child(1),
+        .table td:nth-child(1),
+        .table th:nth-child(4),
+        .table td:nth-child(4),
+        .table th:nth-child(6),
+        .table td:nth-child(6) {
+            display: none;
+        }
+
+        /* Modal responsive */
+        .modal-dialog {
+            margin: 0.5rem;
+            max-width: calc(100% - 1rem);
+        }
+
+        .modal-lg {
+            max-width: calc(100% - 1rem);
+        }
+
+        .modal-body {
+            padding: 1rem;
+        }
+
+        .modal-body .row .col-md-6 {
+            margin-bottom: 1rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+
+        .table th:nth-child(5),
+        .table td:nth-child(5) {
+            display: none;
+        }
+
+        .btn {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+    }
+
+    /* Custom styling untuk Select2 agar sesuai dengan Bootstrap */
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 36px;
+        padding-left: 12px;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+
+    /* Styling untuk error state */
+    .select2-container--default.is-invalid .select2-selection--single {
+        border-color: #dc3545;
+    }
+
+    /* Dropdown di dalam modal */
+    .select2-container {
+        width: 100% !important;
+    }
+
+    /* Fix Aksi Column Width */
+    table td.aksi-col,
+    table th.aksi-col {
+        width: 130px !important;
+        white-space: nowrap;
+        text-align: center;
+    }
+</style>
 @endpush
 
 @push('scripts')
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         // Variable untuk tracking apakah ini mode edit atau tambah
         let isEditMode = false;
 
@@ -503,16 +495,16 @@
         function initSelect2() {
             $('.select2').select2({
                 dropdownParent: $('#employeeModal'),
-                placeholder: function () {
+                placeholder: function() {
                     return $(this).find('option:first').text();
                 },
                 allowClear: true,
                 width: '100%',
                 language: {
-                    noResults: function () {
+                    noResults: function() {
                         return "Tidak ada hasil yang ditemukan";
                     },
-                    searching: function () {
+                    searching: function() {
                         return "Mencari...";
                     }
                 }
@@ -521,7 +513,7 @@
 
         @permission('create-employees')
         // Reset modal hanya ketika bukan mode edit
-        $('#employeeModal').on('show.bs.modal', function () {
+        $('#employeeModal').on('show.bs.modal', function() {
             if (!isEditMode) {
                 resetForm();
             }
@@ -532,7 +524,7 @@
         });
 
         // Destroy Select2 saat modal ditutup untuk menghindari duplikasi
-        $('#employeeModal').on('hidden.bs.modal', function () {
+        $('#employeeModal').on('hidden.bs.modal', function() {
             $('.select2').select2('destroy');
         });
 
@@ -554,14 +546,14 @@
         }
 
         // Button tambah karyawan - set flag untuk mode tambah
-        $('button[data-bs-target="#employeeModal"]').on('click', function () {
+        $('button[data-bs-target="#employeeModal"]').on('click', function() {
             isEditMode = false;
         });
         @endpermission
 
         @permission('edit-employees')
         // Edit button click - set flag untuk mode edit
-        $(document).on('click', '.edit-btn', function (e) {
+        $(document).on('click', '.edit-btn', function(e) {
             e.preventDefault();
             e.stopPropagation();
 
@@ -595,7 +587,7 @@
             $('#employeeModalLabel').text('Edit Karyawan');
 
             // Set nilai Select2 - akan dijalankan setelah modal terbuka dan Select2 terinisialisasi
-            setTimeout(function () {
+            setTimeout(function() {
                 $('#department_id').val(departmentId).trigger('change');
                 $('#job_level_id').val(jobLevelId).trigger('change');
                 $('#plant_id').val(plantId).trigger('change');
@@ -607,77 +599,77 @@
         });
         @endpermission
 
-        @if(Auth::user()->hasPermission('create-employees') || Auth::user()->hasPermission('edit-employees'))
-            // Form submission
-            $('#employeeForm').on('submit', function (e) {
-                e.preventDefault();
+        @if(Auth::user() - > hasPermission('create-employees') || Auth::user() - > hasPermission('edit-employees'))
+        // Form submission
+        $('#employeeForm').on('submit', function(e) {
+            e.preventDefault();
 
-                const id = $('#employee_id_hidden').val();
-                const isEdit = id !== '';
-                const url = isEdit ? `/employees/${id}` : '/employees';
+            const id = $('#employee_id_hidden').val();
+            const isEdit = id !== '';
+            const url = isEdit ? `/employees/${id}` : '/employees';
 
-                const formData = new FormData(this);
-                if (isEdit) {
-                    formData.append('_method', 'PUT');
-                }
+            const formData = new FormData(this);
+            if (isEdit) {
+                formData.append('_method', 'PUT');
+            }
 
-                // Reset error states
-                $('.form-control').removeClass('is-invalid');
-                $('.select2-container').removeClass('is-invalid');
-                $('.invalid-feedback').text('');
+            // Reset error states
+            $('.form-control').removeClass('is-invalid');
+            $('.select2-container').removeClass('is-invalid');
+            $('.invalid-feedback').text('');
 
-                $.ajax({
-                    url: url,
-                    method: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function (response) {
-                        if (response.success) {
-                            $('#employeeModal').modal('hide');
+            $.ajax({
+                url: url,
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        $('#employeeModal').modal('hide');
 
-                            // Show success message
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Berhasil!',
-                                text: response.message,
-                                timer: 2000,
-                                showConfirmButton: false
-                            }).then(() => {
-                                location.reload();
-                            });
-                        }
-                    },
-                    error: function (xhr) {
-                        if (xhr.status === 422) {
-                            const errors = xhr.responseJSON.errors;
-
-                            Object.keys(errors).forEach(function (key) {
-                                const element = $(`#${key}`);
-                                element.addClass('is-invalid');
-
-                                // Tambahkan class is-invalid ke Select2 container juga
-                                if (element.hasClass('select2')) {
-                                    element.next('.select2-container').addClass('is-invalid');
-                                }
-
-                                element.siblings('.invalid-feedback').text(errors[key][0]);
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error!',
-                                text: 'Terjadi kesalahan sistem. Silakan coba lagi.'
-                            });
-                        }
+                        // Show success message
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil!',
+                            text: response.message,
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload();
+                        });
                     }
-                });
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        const errors = xhr.responseJSON.errors;
+
+                        Object.keys(errors).forEach(function(key) {
+                            const element = $(`#${key}`);
+                            element.addClass('is-invalid');
+
+                            // Tambahkan class is-invalid ke Select2 container juga
+                            if (element.hasClass('select2')) {
+                                element.next('.select2-container').addClass('is-invalid');
+                            }
+
+                            element.siblings('.invalid-feedback').text(errors[key][0]);
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: 'Terjadi kesalahan sistem. Silakan coba lagi.'
+                        });
+                    }
+                }
             });
+        });
         @endif
 
         @permission('delete-employees')
         // Delete button click
-        $(document).on('click', '.delete-btn', function (e) {
+        $(document).on('click', '.delete-btn', function(e) {
             e.preventDefault();
             e.stopPropagation();
 
@@ -702,7 +694,7 @@
                             _method: 'DELETE',
                             _token: $('meta[name="csrf-token"]').attr('content')
                         },
-                        success: function (response) {
+                        success: function(response) {
                             if (response.success) {
                                 Swal.fire({
                                     icon: 'success',
@@ -715,7 +707,7 @@
                                 });
                             }
                         },
-                        error: function (xhr) {
+                        error: function(xhr) {
                             const response = xhr.responseJSON;
                             Swal.fire({
                                 icon: 'error',
