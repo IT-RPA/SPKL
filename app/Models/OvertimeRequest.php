@@ -98,7 +98,7 @@ class OvertimeRequest extends Model
             }
             \Log::info("Requester Employee: {$requesterEmployee->name} (Level: {$requesterEmployee->jobLevel->name})");
 
-            $currentJobOrder   = $currentEmployee->jobLevel->level_order ?? 0;
+            $currentJobOrder = $currentEmployee->jobLevel->level_order ?? 0;
             $requesterJobOrder = $requesterEmployee->jobLevel->level_order ?? 0;
             \Log::info("Job Order - Current: {$currentJobOrder}, Requester: {$requesterJobOrder}");
 
@@ -111,18 +111,15 @@ class OvertimeRequest extends Model
                 return false;
             }
 
-            // Cek apakah user ini approver di request ini
-            $isApprover = $this->approvals()
-                ->where('approver_employee_id', $currentEmployee->id)
-                ->whereIn('status', ['approved', 'pending'])
-                ->exists();
+            // Validasi requester
+            $isRequester = ($this->requester_employee_id === $currentEmployee->id);
+            \Log::info("Is Requester: " . ($isRequester ? 'YES' : 'NO'));
 
-            \Log::info("Is Approver: " . ($isApprover ? 'YES' : 'NO'));
-
-            if (!$isApprover) {
-                \Log::info("FAILED: User is not an approver for this request");
+            if (!$isRequester) {
+                \Log::info("FAILED: User is not the requester");
                 return false;
             }
+
             // ✅ TAMBAHAN: Cek ada detail kualitatif yang siap diisi DAN tidak di-reject
             $readyDetails = $this->details
                 ->where('is_rejected', false) // ✅ TAMBAHAN
@@ -136,8 +133,8 @@ class OvertimeRequest extends Model
                 \Log::info("FAILED: No qualitative details ready for input (or all rejected)");
                 return false;
             }
-            // User boleh input kalau lebih tinggi dari requester atau dia memang approver
-            $canInput = ($currentJobOrder > $requesterJobOrder) || $isApprover;
+
+            $canInput = true;
 
             \Log::info("Final Result: " . ($canInput ? 'CAN INPUT' : 'CANNOT INPUT'));
             \Log::info("=== DEBUG canInputPercentage END ===");
@@ -174,7 +171,7 @@ class OvertimeRequest extends Model
             \Log::info("Last request found: {$lastRequest->request_number}");
 
             // Ambil 3 digit terakhir dan increment
-            $lastSequence = (int)substr($lastRequest->request_number, -3);
+            $lastSequence = (int) substr($lastRequest->request_number, -3);
             $sequence = $lastSequence + 1;
 
             \Log::info("Last sequence: {$lastSequence}, New sequence: {$sequence}");
@@ -392,7 +389,7 @@ class OvertimeRequest extends Model
 
             /*$currentJobOrder = $currentEmployee->jobLevel->step_order ?? 0;
             $requesterJobOrder = $requesterEmployee->jobLevel->step_order ?? 0;*/
-            $currentJobOrder   = $currentEmployee->jobLevel->level_order ?? 0;
+            $currentJobOrder = $currentEmployee->jobLevel->level_order ?? 0;
             $requesterJobOrder = $requesterEmployee->jobLevel->level_order ?? 0;
 
             \Log::info("canEditTime Debug - Current Employee: {$currentEmployee->name} (Order: {$currentJobOrder}), " .

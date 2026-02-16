@@ -346,7 +346,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ route('overtime.update-percentage', $overtime) }}">
+            <form id="updatePercentageForm" method="POST" action="{{ route('overtime.update-percentage', $overtime) }}">
                 @csrf
                 @method('PUT')
                 <div class="modal-body">
@@ -523,8 +523,7 @@
         Swal.fire({
             icon: 'success',
             title: 'Berhasil!',
-            text: '{{ session('
-            success ') }}',
+            text: '{{ session('success') }}',
             timer: 3000,
             showConfirmButton: false
         });
@@ -534,13 +533,74 @@
         Swal.fire({
             icon: 'error',
             title: 'Error!',
-            text: '{{ session('
-            error ') }}',
+            text: '{{ session('error') }}',
             confirmButtonText: 'OK'
         });
         @endif
 
-        // ✅ TAMBAHAN: Handle form submission dengan AJAX
+        // ✅ TAMBAHAN: Handle form submission dengan AJAX (Update Percentage)
+        const percentageForm = document.getElementById('updatePercentageForm');
+        if (percentageForm) {
+            percentageForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const formData = new FormData(this);
+
+                Swal.fire({
+                    title: 'Menyimpan...',
+                    text: 'Sedang mengupdate persentase realisasi',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                fetch(this.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        Swal.close();
+
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: data.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: data.message || 'Unknown error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.close();
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: 'Terjadi kesalahan jaringan',
+                            confirmButtonText: 'OK'
+                        });
+                    });
+            });
+        }
+
+        // ✅ TAMBAHAN: Handle form submission dengan AJAX (Update Time)
         const timeForm = document.getElementById('timeForm');
         if (timeForm) {
             timeForm.addEventListener('submit', function(e) {

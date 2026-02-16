@@ -363,12 +363,7 @@ class ApprovalController extends Controller
                     $q->where('overtime_type', 'qualitative')
                         ->whereNull('percentage_realization')
                 )
-                ->whereHas(
-                    'approvals',
-                    fn($q) =>
-                    $q->where('approver_employee_id', $currentEmployee->id)
-                        ->where('status', 'approved')
-                )
+                ->where('requester_employee_id', $currentEmployee->id)
                 ->get();
         }
 
@@ -400,18 +395,24 @@ class ApprovalController extends Controller
         $combinedData = $filteredApprovals->values();
 
         foreach ($overtimesNeedingPercentage as $ot) {
-            $userApproval = $ot->approvals
-                ->where('approver_employee_id', $currentEmployee->id)
-                ->first();
+            // Because the user is the requester (Foreman), they might NOT be an approver.
+            // But the view expects an Approval object ID to open the detail modal.
+            // We can pick ANY valid approval from the request (e.g. the first one) to serve as a proxy.
+            // Since the request status is 'approved', all approvals should be done, so any is fine.
+            $proxyApproval = $ot->approvals->first();
 
-            if ($userApproval) {
-                $pseudo = $userApproval->replicate();
-                $pseudo->id = $userApproval->id;  // ← INI WAJIB
+            if ($proxyApproval) {
+                $pseudo = $proxyApproval->replicate();
+                $pseudo->id = $proxyApproval->id;  // Use the real ID so the detail route works
                 $pseudo->needs_percentage_input = true;
                 $pseudo->percentage_status = 'needs_input';
 
                 // opsional: tandai ini pseudo
                 $pseudo->is_pseudo = true;
+
+                // If the proxy approval doesn't belong to the current user (which is likely),
+                // the view might show "Step: Approval X". This is acceptable as we are piggbacking.
+                // The badge "Perlu Input %" will be shown because of needs_percentage_input=true.
 
                 $combinedData->push($pseudo);
             }
