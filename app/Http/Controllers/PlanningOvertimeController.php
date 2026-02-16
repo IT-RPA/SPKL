@@ -70,8 +70,9 @@ class PlanningOvertimeController extends Controller
     {
         $currentUser = Auth::user();
 
-        // Guard tambahan: hanya Department Head dan Administrator yang boleh akses form create
-        if (!in_array($currentUser->level_jabatan, ['Department Head', 'Administrator'])) {
+        // Guard tambahan: hanya Department Head, Administrator, dan Foreman yang boleh akses form create
+        $userLevelCode = $currentUser->jobLevel ? $currentUser->jobLevel->code : null;
+        if (!in_array($currentUser->level_jabatan, ['Department Head', 'Administrator']) && $userLevelCode !== 'FORE') {
             abort(403, 'Anda tidak memiliki akses membuat Planning.');
         }
 
@@ -143,8 +144,9 @@ class PlanningOvertimeController extends Controller
                 ->with('error', 'Data karyawan tidak ditemukan.');
         }
 
-        // ✅ VALIDASI: Hanya Administrator dan Department Head yang dapat membuat planning
-        if (!in_array($currentUser->level_jabatan, ['Department Head', 'Administrator'])) {
+        // ✅ VALIDASI: Hanya Administrator, Department Head, dan Foreman yang dapat membuat planning
+        $userLevelCode = $currentUser->jobLevel ? $currentUser->jobLevel->code : null;
+        if (!in_array($currentUser->level_jabatan, ['Department Head', 'Administrator']) && $userLevelCode !== 'FORE') {
             abort(403, 'Anda tidak memiliki akses membuat Planning.');
         }
 
