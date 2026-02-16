@@ -121,12 +121,18 @@
                             <select class="form-select employee-select" name="details[0][employee_id]" required>
                                 <option value="">Pilih Karyawan</option>
                                 @foreach($employees as $employee)
-                                <option value="{{ $employee->id }}"
-                                    data-level="{{ $employee->jobLevel->name ?? 'N/A' }}"
-                                    data-level-order="{{ $employee->jobLevel->level_order ?? 999 }}">
-                                    {{ $employee->name }} - {{ $employee->employee_id }} - {{ $employee->plant->name }} ({{ $employee->jobLevel->name ?? 'N/A' }})
-                                </option>
-                                @endforeach
+                                    <option value="{{ $employee->id }}"
+                                        data-level="{{ $employee->jobLevel->name ?? 'N/A' }}"
+                                        data-level-order="{{ $employee->jobLevel->level_order ?? 999 }}">
+                                        
+                                        {{ $employee->name }} - 
+                                        {{ $employee->employee_id }} - 
+                                        {{ $employee->plant->name }} 
+                                        ({{ $employee->jobLevel->name ?? 'N/A' }}) 
+                                        ({{ strtoupper(str_replace('_',' ',$employee->type)) }})
+                                        
+                                    </option>
+                                    @endforeach
                             </select>
                         </div>
 
