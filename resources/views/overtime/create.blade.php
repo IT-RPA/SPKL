@@ -311,6 +311,11 @@
                 }
             }
         });
+
+        // ✅ DISABLE MOUSE WHEEL ON NUMBER INPUTS (Prevent auto-changing when scrolling)
+        $(document).on('wheel', 'input[type=number]', function (e) {
+            $(this).blur();
+        });
     });
 
     function addDetail() {
@@ -566,9 +571,16 @@
         const percentageInfo = detailRow.querySelector('.percentage-info');
         const qtyPlanInput = qtySection.querySelector('.qty-plan');
 
+        // Gunakan dataset untuk menyimpan tipe sebelumnya agar tidak reset saat klik tanpa ganti
+        const prevType = selectElement.dataset.prevType || '';
+        
+        if (overtimeType !== prevType) {
+            qtyPlanInput.value = '';
+            selectElement.dataset.prevType = overtimeType;
+        }
+
         qtyPlanInput.disabled = true;
         qtyPlanInput.required = false;
-        qtyPlanInput.value = '';
         percentageInfo.style.display = 'none';
 
         if (overtimeType === 'quantitative') {
