@@ -89,11 +89,10 @@ class ReportController extends Controller
                     }
                 });
 
-            $overtimeDetails = $overtimeDetailsQuery->get();
+            $overtimeDetails = $overtimeDetailsQuery->with('overtimeRequest')->get();
 
             $totalMinutes = 0;
             $totalRequests = 0;
-
             foreach ($overtimeDetails as $detail) {
                 $startTime = Carbon::parse($detail->start_time);
                 $endTime = Carbon::parse($detail->end_time);
@@ -204,6 +203,7 @@ class ReportController extends Controller
 
     public function exportExcel(Request $request)
     {
+        Carbon::setLocale('id');
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         $department_id = $request->get('department_id');
@@ -270,17 +270,24 @@ class ReportController extends Controller
                     }
                 });
 
-            $overtimeDetails = $overtimeDetailsQuery->get();
+            $overtimeDetails = $overtimeDetailsQuery->with('overtimeRequest')->get();
 
             $totalMinutes = 0;
             $totalRequests = 0;
+            $dates = [];
 
             foreach ($overtimeDetails as $detail) {
                 $startTime = Carbon::parse($detail->start_time);
                 $endTime = Carbon::parse($detail->end_time);
                 $totalMinutes += $endTime->diffInMinutes($startTime);
                 $totalRequests++;
+                if ($detail->overtimeRequest) {
+                    $dates[] = Carbon::parse($detail->overtimeRequest->date)->translatedFormat('d/M/Y');
+                }
             }
+
+            sort($dates);
+            $datesStr = implode("\n", $dates);
 
             return (object)[
                 'employee_id' => $employee->employee_id,
@@ -289,6 +296,7 @@ class ReportController extends Controller
                 'job_level' => $employee->jobLevel->name,
                 'total_hours' => round($totalMinutes / 60, 2),
                 'total_requests' => $totalRequests,
+                'dates_list' => $datesStr,
                 'formatted_time' => $this->formatMinutesToHours($totalMinutes)
             ];
         })->filter(function ($employee) {
@@ -347,7 +355,7 @@ class ReportController extends Controller
         $sheet->setCellValue('A5', 'Catatan: Detail lembur yang ditolak (rejected) tidak dihitung dalam laporan ini');
 
         // Set headers (row 7 sekarang)
-        $headers = ['No', 'ID Karyawan', 'Nama Karyawan', 'Department', 'Level Jabatan', 'Total Jam', 'Total Pengajuan'];
+        $headers = ['No', 'ID Karyawan', 'Nama Karyawan', 'Department', 'Level Jabatan', 'Total Jam', 'Total Pengajuan', 'Tanggal'];
         $col = 'A';
         foreach ($headers as $header) {
             $sheet->setCellValue($col . '7', $header);
@@ -365,6 +373,7 @@ class ReportController extends Controller
             $sheet->setCellValue('E' . $row, $employee->job_level);
             $sheet->setCellValue('F' . $row, $employee->formatted_time);
             $sheet->setCellValue('G' . $row, $employee->total_requests);
+            $sheet->setCellValue('H' . $row, $employee->dates_list);
             $row++;
         }
 
@@ -392,44 +401,52 @@ class ReportController extends Controller
 
     private function styleExcel($sheet, $lastRow)
     {
+        $lastCol = 'H';
+        
         // Title styling
-        $sheet->mergeCells('A1:G1');
+        $sheet->mergeCells('A1:' . $lastCol . '1');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Period styling
-        $sheet->mergeCells('A2:G2');
+        $sheet->mergeCells('A2:' . $lastCol . '2');
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // ✅ TAMBAHAN: Category styling
-        $sheet->mergeCells('A3:G3');
+        $sheet->mergeCells('A3:' . $lastCol . '3');
         $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(12);
         $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E3F2FD');
 
         // Status styling
-        $sheet->mergeCells('A4:G4');
+        $sheet->mergeCells('A4:' . $lastCol . '4');
         $sheet->getStyle('A4')->getFont()->setBold(true)->setSize(12);
         $sheet->getStyle('A4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Note styling
-        $sheet->mergeCells('A5:G5');
+        $sheet->mergeCells('A5:' . $lastCol . '5');
         $sheet->getStyle('A5')->getFont()->setItalic(true)->setSize(10);
         $sheet->getStyle('A5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF9C4');
 
         // Header styling (row 7 sekarang)
-        $sheet->getStyle('A7:G7')->getFont()->setBold(true);
-        $sheet->getStyle('A7:G7')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('D9EAD3');
-        $sheet->getStyle('A7:G7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A7:' . $lastCol . '7')->getFont()->setBold(true);
+        $sheet->getStyle('A7:' . $lastCol . '7')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('D9EAD3');
+        $sheet->getStyle('A7:' . $lastCol . '7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Data styling
-        $sheet->getStyle('A7:G' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('A7:' . $lastCol . '7')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('A8:' . $lastCol . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        
+        // Enable WrapText for Tanggal column to support vertical dates
+        $sheet->getStyle('H8:H' . $lastRow)->getAlignment()->setWrapText(true);
+        $sheet->getStyle('H8:H' . $lastRow)->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
 
-        // Auto size columns
+        // Auto size columns A to G, but fixed width for H to avoid extreme width
         foreach (range('A', 'G') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
+        $sheet->getColumnDimension('H')->setWidth(20);
     }
 }
