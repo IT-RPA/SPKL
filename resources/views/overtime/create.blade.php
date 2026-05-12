@@ -158,6 +158,24 @@
                             <label class="form-label">Jam Selesai</label>
                             <input type="time" class="form-control end-time-input" name="details[0][end_time]" required>
                         </div>
+                        
+                        <!-- TAMBAHAN: Potongan Istirahat -->
+                        <div class="col-md-6">
+                            <label class="form-label">Potongan Istirahat</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach($masterActivities as $activity)
+                                <div class="form-check form-check-inline mb-0 mt-1">
+                                    <input class="form-check-input break-checkbox" type="checkbox" 
+                                           name="details[0][breaks][]" 
+                                           value="{{ $activity->duration_minutes }}" 
+                                           id="break_{{ $activity->id }}_0">
+                                    <label class="form-check-label text-muted" style="font-size: 0.85rem;" for="break_{{ $activity->id }}_0">
+                                        {{ $activity->name }} ({{ $activity->duration_minutes }}m)
+                                    </label>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row mt-3">
@@ -336,6 +354,12 @@
                 element.id = element.id.replace(/0$/, detailIndex);
             }
         });
+        
+        newDetail.querySelectorAll('label[for]').forEach(label => {
+            if (label.htmlFor) {
+                label.htmlFor = label.htmlFor.replace(/0$/, detailIndex);
+            }
+        });
 
         const overtimeTypeSelect = newDetail.querySelector('.overtime-type-select');
         if (overtimeTypeSelect) {
@@ -347,7 +371,9 @@
         });
 
         newDetail.querySelectorAll('input:not([type="button"]), textarea').forEach(input => {
-            if (input.type !== 'time') {
+            if (input.type === 'checkbox') {
+                input.checked = false; // Uncheck checkbox
+            } else if (input.type !== 'time') {
                 input.value = '';
             }
         });

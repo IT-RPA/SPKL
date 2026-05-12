@@ -769,11 +769,15 @@
                                     </a></li>
                                 @endpermission
                                 @permission('view-plant')
-                                                        <li><a class="dropdown-item" href="{{ route('plants.index') }}">
-                                                                <i class="fas fa-building"></i> Plant
-                                                            </a></li>
-                                                        @endpermission
-                                                    </ul>
+                                <li><a class="dropdown-item" href="{{ route('plants.index') }}">
+                                        <i class="fas fa-industry"></i> Plant
+                                    </a></li>
+                                @endpermission
+                                
+                                <li><a class="dropdown-item" href="{{ route('master-activities.index') }}">
+                                        <i class="fas fa-clock"></i> Master Activity
+                                    </a></li>
+                            </ul>
                                                 </li>
                                                 @endif
 

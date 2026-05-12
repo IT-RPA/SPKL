@@ -15,6 +15,7 @@ use App\Http\Controllers\ProcessTypeController;
 use App\Http\Controllers\FlowJobController;
 use App\Http\Controllers\PlantController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\MasterActivityController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -45,6 +46,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/employees/by-job/{jobLevel}', [EmployeeController::class, 'getByJobLevel'])->name('employees.byJob');
     Route::resource('employees', EmployeeController::class);
     Route::resource('flow-jobs', FlowJobController::class);
+    Route::resource('master-activities', MasterActivityController::class);
 
     // ✅ PLANNING LEMBUR (BARU)
     Route::prefix('planning')->name('planning.')->group(function () {

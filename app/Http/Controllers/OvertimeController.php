@@ -74,8 +74,9 @@ class OvertimeController extends Controller
         $currentEmployeeData = $currentEmployee;
 
         $processTypes = ProcessType::where('is_active', true)->orderBy('code')->get();
+        $masterActivities = \App\Models\MasterActivity::where('is_active', true)->orderBy('name')->get();
 
-        return view('overtime.create', compact('employees', 'departments', 'currentEmployeeData', 'eligibleRequesters', 'processTypes'));
+        return view('overtime.create', compact('employees', 'departments', 'currentEmployeeData', 'eligibleRequesters', 'processTypes', 'masterActivities'));
     }
 
     // ✅ FUNGSI BARU: Check available planning untuk tanggal & department tertentu
@@ -249,6 +250,12 @@ class OvertimeController extends Controller
             ]);
 
             foreach ($request->details as $detail) {
+                // Calculate total break duration
+                $deductedMinutes = 0;
+                if (!empty($detail['breaks']) && is_array($detail['breaks'])) {
+                    $deductedMinutes = array_sum($detail['breaks']);
+                }
+
                 OvertimeDetail::create([
                     'overtime_request_id' => $overtimeRequest->id,
                     'employee_id' => $detail['employee_id'],
@@ -262,6 +269,7 @@ class OvertimeController extends Controller
                     'percentage_realization' => null,
                     'can_input_percentage' => false,
                     'notes' => $detail['notes'] ?? null,
+                    'deducted_minutes' => $deductedMinutes,
                 ]);
             }
 

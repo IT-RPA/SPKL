@@ -27,6 +27,7 @@ class OvertimeDetail extends Model
         'rejection_reason',
         'rejected_by',
         'rejected_at',
+        'deducted_minutes',
     ];
 
     protected $casts = [
@@ -61,7 +62,12 @@ class OvertimeDetail extends Model
     {
         $startTime = \Carbon\Carbon::parse($this->start_time);
         $endTime = \Carbon\Carbon::parse($this->end_time);
-        return $endTime->diffInMinutes($startTime);
+        $totalMinutes = $endTime->diffInMinutes($startTime);
+        
+        $deducted = $this->deducted_minutes ?? 0;
+        
+        // Ensure duration doesn't go below 0
+        return max(0, $totalMinutes - $deducted);
     }
 
     public function getFormattedDuration()
