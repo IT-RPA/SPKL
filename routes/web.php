@@ -15,7 +15,7 @@ use App\Http\Controllers\ProcessTypeController;
 use App\Http\Controllers\FlowJobController;
 use App\Http\Controllers\PlantController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\TestWhatsAppController;
+
 use Illuminate\Support\Facades\Route;
 
 // Authentication
@@ -24,8 +24,6 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::redirect('/', '/login');
 
-// Test WhatsApp Notification Route (No Auth Required - For Testing Only)
-Route::get('/test-wa', [TestWhatsAppController::class, 'testWhatsApp'])->name('test.wa');
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
