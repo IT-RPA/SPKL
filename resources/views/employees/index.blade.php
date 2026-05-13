@@ -119,9 +119,10 @@
     /* Fix Aksi Column Width */
     table td.aksi-col,
     table th.aksi-col {
-        width: 130px !important;
+        min-width: 110px;
         white-space: nowrap;
         text-align: center;
+        width: 1%;
     }
 </style>
 

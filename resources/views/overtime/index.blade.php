@@ -2,260 +2,216 @@
 
 @section('content')
 <style>
-    /* Mobile responsive styles for overtime */
-    @media (max-width: 768px) {
-        .page-header {
-            flex-direction: column;
-            align-items: flex-start !important;
-            gap: 15px;
-        }
-        
-        .page-header h2 {
-            font-size: 1.5rem;
-            margin: 0;
-        }
-        
-        .alert {
-            padding: 1rem;
-            font-size: 0.9rem;
-        }
-        
-        .alert .alert-heading {
-            font-size: 1rem;
-        }
-        
-        .table-responsive {
-            border: none;
-            font-size: 0.875rem;
-        }
-        
-        .table th,
-        .table td {
-            padding: 0.5rem 0.25rem;
-            white-space: nowrap;
-        }
-        
-        .btn-sm {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.75rem;
-        }
-        
-        .badge {
-            font-size: 0.65rem;
-        }
-        
-        .status-badge {
-            font-size: 0.65rem;
-            padding: 3px 6px;
-        }
-        
-        /* Hide less important columns on mobile */
-        .table th:nth-child(3),
-        .table td:nth-child(3),
-        .table th:nth-child(5),
-        .table td:nth-child(5) {
-            display: none;
-        }
-        
-        /* Stack category and planning info */
-        .category-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-        
-        .category-info small {
-            font-size: 0.7rem;
-        }
-    }
-    
-    @media (max-width: 480px) {
-        .table th:nth-child(4),
-        .table td:nth-child(4) {
-            display: none;
-        }
-        
-        .btn {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
-        }
-    }
-    
-    .page-header {
+    .erp-list-page { animation: erpFade .35s ease-out; }
+    @keyframes erpFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .erp-list-header {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 18px 20px;
+        box-shadow: var(--shadow-sm);
+    }
+    .erp-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+        box-shadow: var(--shadow-sm);
+    }
+    .erp-searchbox {
+        display:flex; align-items:center; gap:8px; color:var(--text-muted);
+        background:#f8fafc; border:1px solid var(--border); border-radius:12px; padding:9px 12px; min-width:280px;
+    }
+    .erp-alert-card {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-left: 4px solid #f97316;
+        border-radius: 16px;
+        padding: 14px 16px;
+        margin-bottom: 14px;
+        display:flex; gap:12px; align-items:flex-start;
+    }
+    .erp-alert-icon { width:38px; height:38px; border-radius:11px; display:grid; place-items:center; background:#ffedd5; color:#c2410c; flex:0 0 auto; }
+
+    .erp-table-card { background:#fff; border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); overflow:hidden; }
+    .erp-id-main { font-weight:900; color:#0f172a; letter-spacing:-.01em; }
+    .erp-subtext { display:block; color:var(--text-muted); font-size:.78rem; margin-top:2px; }
+    .erp-action-btn { width:36px; height:36px; padding:0; display:inline-grid; place-items:center; border-radius:10px; }
+    .desktop-table { display:block; }
+    .mobile-cards { display:none; }
+
+    .spk-mobile-card {
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:16px;
+        box-shadow:var(--shadow-sm);
+        padding:14px;
+        margin-bottom:12px;
+    }
+    .spk-mobile-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:12px; }
+    .spk-mobile-meta { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:12px; background:#f8fafc; border-radius:13px; margin-bottom:12px; }
+    .spk-meta-label { color:var(--text-muted); font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+    .spk-meta-value { font-weight:800; color:#334155; margin-top:2px; }
+
+    @media (max-width: 768px) {
+        .erp-list-header { flex-direction: column; align-items: stretch; padding:16px; }
+        .erp-list-header .btn { width:100%; justify-content:center; }
+        .erp-toolbar { display:none; }
+        .desktop-table { display:none; }
+        .mobile-cards { display:block; }
     }
 </style>
 
-<div class="page-header">
-    <h2>Daftar Pengajuan Lembur</h2>
-    
-    @if(isset($hasIncompleteRequest) && $hasIncompleteRequest)
-        <div class="position-relative">
-            <button 
-                class="btn btn-secondary" 
-                disabled 
-                data-bs-toggle="tooltip" 
-                data-bs-placement="left"
-                data-bs-title="Tidak dapat membuat pengajuan baru karena masih ada pengajuan yang perlu diselesaikan"
-                onclick="showIncompleteAlert()"
-            >
-                <i class="fas fa-plus"></i> <span class="d-none d-sm-inline">Buat Pengajuan Baru</span>
-            </button>
-        </div>
-    @else
-        <a href="{{ route('overtime.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> <span class="d-none d-sm-inline">Buat Pengajuan Baru</span>
-        </a>
-    @endif
-</div>
-
-@if(isset($hasIncompleteRequest) && $hasIncompleteRequest)
-<div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
-    <div class="d-flex align-items-center">
-        <i class="fas fa-exclamation-triangle me-3" style="font-size: 1.5rem;"></i>
+<div class="erp-list-page">
+    <div class="erp-list-header">
         <div>
-            <h6 class="alert-heading mb-1">Perhatian: Ada Pengajuan yang Belum Selesai!</h6>
-            <p class="mb-0">
-                Anda memiliki pengajuan lembur dengan status <strong>"Perlu Input Data"</strong> yang belum diselesaikan. 
-                Harap lengkapi input <strong>qty actual/percentage realisasi</strong> terlebih dahulu sebelum membuat pengajuan baru.
-            </p>
+            <h1 class="page-title">Pengajuan Lembur</h1>
+            <p class="page-subtitle">Kelola daftar SPK lembur dengan tampilan ERP yang rapi dan mudah dipantau.</p>
+        </div>
+        @if(isset($hasIncompleteRequest) && $hasIncompleteRequest)
+            <button class="btn btn-secondary" disabled onclick="showIncompleteAlert()">
+                <i class="fas fa-plus"></i> Pengajuan Baru
+            </button>
+        @else
+            <a href="{{ route('overtime.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Pengajuan Baru
+            </a>
+        @endif
+    </div>
+
+    @if(isset($hasIncompleteRequest) && $hasIncompleteRequest)
+    <div class="erp-alert-card">
+        <div class="erp-alert-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div>
+            <h6 class="fw-bold mb-1">Ada pengajuan yang belum selesai</h6>
+            <p class="mb-0 text-muted small">Selesaikan input data aktual/percentage realisasi terlebih dahulu sebelum membuat pengajuan baru.</p>
         </div>
     </div>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-@endif
+    @endif
 
-<div class="card">
-    <div class="card-body">
+    <div class="erp-toolbar">
+        <div class="erp-searchbox"><i class="fas fa-search"></i><span>Daftar SPK Lembur</span></div>
+        <div class="text-muted small fw-bold"><i class="fas fa-database me-1"></i>{{ $requests->total() }} records</div>
+    </div>
+
+    <div class="erp-table-card desktop-table">
         <div class="table-responsive">
-            <table class="table table-striped table-hover">
+            <table class="table align-middle">
                 <thead>
                     <tr>
                         <th>No. SPK</th>
                         <th>Tanggal</th>
-                        <th class="d-none d-md-table-cell">Departemen</th>
+                        <th>Departemen</th>
                         <th>Kategori</th>
-                        <th class="d-none d-md-table-cell">Tingkatan</th>
+                        <th>Tingkatan</th>
                         <th>Status</th>
-                        <th>Aksi</th>
+                        <th class="text-end">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($requests as $request)
-                    <tr @if($request->status == 'approved') class="table-warning" @endif>
-                        <td><strong>{{ $request->request_number }}</strong></td>
-                        <td>{{ $request->date->format('d/m/Y') }}</td>
-                        <td class="d-none d-md-table-cell">{{ $request->department->name }}</td>
+                    @php
+                        $statusText = '';
+                        $statusClass = '';
+                        switch($request->status) {
+                            case 'completed': $statusText = 'Completed'; $statusClass = 'status-green'; break;
+                            case 'approved': $statusText = 'Perlu Input Data'; $statusClass = 'status-act'; break;
+                            case 'rejected': $statusText = 'Rejected'; $statusClass = 'status-red'; break;
+                            case 'approved_sect': $statusText = 'Approved Section'; $statusClass = 'status-yellow'; break;
+                            case 'approved_subdept': $statusText = 'Approved Sub Dept'; $statusClass = 'status-yellow'; break;
+                            case 'approved_dept': $statusText = 'Approved Dept'; $statusClass = 'status-yellow'; break;
+                            case 'approved_subdiv': $statusText = 'Approved Sub Div'; $statusClass = 'status-yellow'; break;
+                            case 'approved_div': $statusText = 'Approved Div'; $statusClass = 'status-yellow'; break;
+                            case 'approved_hrd': $statusText = 'Approved HRD'; $statusClass = 'status-yellow'; break;
+                            default: $statusText = 'Pending'; $statusClass = 'status-yellow'; break;
+                        }
+                    @endphp
+                    <tr>
+                        <td><span class="erp-id-main">{{ $request->request_number }}</span>@if($request->planning)<span class="erp-subtext">{{ $request->planning->planning_number }}</span>@endif</td>
+                        <td>{{ $request->date->format('d M Y') }}</td>
+                        <td>{{ $request->department->name }}</td>
                         <td>
-                            <div class="category-info">
-                                @if($request->overtime_category === 'planned')
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-calendar-check"></i> Planned
-                                    </span>
-                                    @if($request->planning)
-                                        <small class="text-muted">{{ $request->planning->planning_number }}</small>
-                                    @endif
-                                @else
-                                    <span class="badge bg-secondary">
-                                        <i class="fas fa-bolt"></i> Unplanned
-                                    </span>
-                                @endif
-                            </div>
-                        </td>
-                        <td class="d-none d-md-table-cell">
-                            <span class="badge bg-info">{{ ucfirst(str_replace('_', ' ', $request->requester_level)) }}</span>
-                        </td>
-                        <td>
-                            @php
-                                $statusText = '';
-                                $statusClass = '';
-                                
-                                switch($request->status) {
-                                    case 'completed':
-                                        $statusText = 'Completed';
-                                        $statusClass = 'status-green';
-                                        break;
-                                    case 'approved':
-                                        $statusText = 'Perlu Input Data';
-                                        $statusClass = 'status-act';
-                                        break;
-                                    case 'rejected':
-                                        $statusText = 'Rejected';
-                                        $statusClass = 'status-red';
-                                        break;
-                                    case 'approved_sect':
-                                        $statusText = 'Approved Section';
-                                        $statusClass = 'status-yellow';
-                                        break;
-                                    case 'approved_subdept':
-                                        $statusText = 'Approved Sub Dept';
-                                        $statusClass = 'status-yellow';
-                                        break;
-                                    case 'approved_dept':
-                                        $statusText = 'Approved Dept';
-                                        $statusClass = 'status-yellow';
-                                        break;
-                                    case 'approved_subdiv':
-                                        $statusText = 'Approved Sub Div';
-                                        $statusClass = 'status-yellow';
-                                        break;
-                                    case 'approved_div':
-                                        $statusText = 'Approved Div';
-                                        $statusClass = 'status-yellow';
-                                        break;
-                                    case 'approved_hrd':
-                                        $statusText = 'Approved HRD';
-                                        $statusClass = 'status-yellow';
-                                        break;
-                                    default:
-                                        $statusText = 'Pending';
-                                        $statusClass = 'status-yellow';
-                                        break;
-                                }
-                            @endphp
-                            
-                            <span class="status-badge {{ $statusClass }}">
-                                {{ $statusText }}
-                                @if($request->status == 'approved')
-                                    <i class="fas fa-exclamation-triangle ms-1"></i>
-                                @endif
-                            </span>
-                            
-                            @if($request->status == 'approved')
-                                <small class="text-muted d-block mt-1 d-none d-sm-block">
-                                    <i class="fas fa-exclamation-triangle text-warning"></i>
-                                    Butuh input data
-                                </small>
+                            @if($request->overtime_category === 'planned')
+                                <span class="status-badge status-green">Planned</span>
+                            @else
+                                <span class="status-badge status-blue">Unplanned</span>
                             @endif
                         </td>
-                        <td>
-                            <a href="{{ route('overtime.show', $request) }}" 
-                               class="btn btn-sm @if($request->status == 'approved') btn-warning @else btn-outline-primary @endif">
-                                @if($request->status == 'approved')
-                                    <i class="fas fa-edit"></i> <span class="d-none d-lg-inline">Input Data</span>
-                                @else
-                                    <i class="fas fa-eye"></i> <span class="d-none d-lg-inline">Detail</span>
-                                @endif
+                        <td><span class="badge text-bg-light border">{{ ucfirst(str_replace('_', ' ', $request->requester_level)) }}</span></td>
+                        <td><span class="status-badge {{ $statusClass }}">{{ $statusText }}</span></td>
+                        <td class="text-end">
+                            <a href="{{ route('overtime.show', $request) }}" class="btn btn-sm {{ $request->status == 'approved' ? 'btn-primary' : 'btn-light border' }} erp-action-btn" title="{{ $request->status == 'approved' ? 'Input Data' : 'Detail' }}">
+                                <i class="fas {{ $request->status == 'approved' ? 'fa-edit' : 'fa-eye' }}"></i>
                             </a>
                         </td>
                     </tr>
                     @empty
-                    <tr>
-                        <td colspan="7" class="text-center">Tidak ada data</td>
-                    </tr>
+                    <tr><td colspan="7" class="text-center py-5 text-muted">Tidak ada data</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        
-        <div class="d-flex justify-content-center">
-            {{ $requests->links() }}
-        </div>
+    </div>
+
+    <div class="mobile-cards">
+        @forelse($requests as $request)
+            @php
+                $statusText = '';
+                $statusClass = '';
+                switch($request->status) {
+                    case 'completed': $statusText = 'Completed'; $statusClass = 'status-green'; break;
+                    case 'approved': $statusText = 'Perlu Input Data'; $statusClass = 'status-act'; break;
+                    case 'rejected': $statusText = 'Rejected'; $statusClass = 'status-red'; break;
+                    case 'approved_sect': $statusText = 'Approved Section'; $statusClass = 'status-yellow'; break;
+                    case 'approved_subdept': $statusText = 'Approved Sub Dept'; $statusClass = 'status-yellow'; break;
+                    case 'approved_dept': $statusText = 'Approved Dept'; $statusClass = 'status-yellow'; break;
+                    case 'approved_subdiv': $statusText = 'Approved Sub Div'; $statusClass = 'status-yellow'; break;
+                    case 'approved_div': $statusText = 'Approved Div'; $statusClass = 'status-yellow'; break;
+                    case 'approved_hrd': $statusText = 'Approved HRD'; $statusClass = 'status-yellow'; break;
+                    default: $statusText = 'Pending'; $statusClass = 'status-yellow'; break;
+                }
+            @endphp
+            <div class="spk-mobile-card">
+                <div class="spk-mobile-top">
+                    <div>
+                        <div class="erp-id-main">{{ $request->request_number }}</div>
+                        <span class="erp-subtext">{{ $request->date->format('d M Y') }}</span>
+                    </div>
+                    <span class="status-badge {{ $statusClass }}">{{ $statusText }}</span>
+                </div>
+                <div class="spk-mobile-meta">
+                    <div><div class="spk-meta-label">Departemen</div><div class="spk-meta-value">{{ $request->department->name }}</div></div>
+                    <div><div class="spk-meta-label">Kategori</div><div class="spk-meta-value">{{ ucfirst($request->overtime_category) }}</div></div>
+                    <div><div class="spk-meta-label">Tingkatan</div><div class="spk-meta-value">{{ ucfirst(str_replace('_', ' ', $request->requester_level)) }}</div></div>
+                    <div><div class="spk-meta-label">Planning</div><div class="spk-meta-value">{{ $request->planning->planning_number ?? '-' }}</div></div>
+                </div>
+                <a href="{{ route('overtime.show', $request) }}" class="btn {{ $request->status == 'approved' ? 'btn-primary' : 'btn-light border' }} w-100 justify-content-center">
+                    <i class="fas {{ $request->status == 'approved' ? 'fa-edit' : 'fa-eye' }}"></i>
+                    {{ $request->status == 'approved' ? 'Input Data' : 'Lihat Detail' }}
+                </a>
+            </div>
+        @empty
+            <div class="erp-table-card p-5 text-center text-muted">Tidak ada data</div>
+        @endforelse
+    </div>
+
+    <div class="mt-4 d-flex justify-content-center">
+        {{ $requests->links() }}
     </div>
 </div>
+
+
 @endsection
 
 @push('scripts')
