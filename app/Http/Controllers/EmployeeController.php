@@ -20,7 +20,7 @@ class EmployeeController extends Controller
 
     public function index(Request $request)
     {
-        $query = Employee::with(['department', 'jobLevel', 'plant']);
+        $query = Employee::with(['department', 'jobLevel', 'plant', 'plants']);
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
@@ -53,7 +53,8 @@ class EmployeeController extends Controller
             'email' => 'required|email|unique:employees,email',
             'department_id' => 'required|exists:departments,id',
             'job_level_id' => 'required|exists:job_levels,id',
-            'plant_id' => 'nullable|exists:plants,id',
+            'plant_id' => 'nullable|array',
+            'plant_id.*' => 'exists:plants,id',
             'type' => 'required|in:karyawan,pkl,harian_lepas', // <── NEW
         ]);
 
@@ -70,7 +71,17 @@ class EmployeeController extends Controller
 
         $data['is_active'] = $request->has('is_active');
 
-        Employee::create($data);
+        // Ambil elemen pertama dari plant_id (jika ada) untuk disimpan di field plant_id sebagai fallback/primary
+        $primaryPlantId = (!empty($request->plant_id) && is_array($request->plant_id)) ? $request->plant_id[0] : null;
+        
+        $data['plant_id'] = $primaryPlantId;
+
+        $employee = Employee::create($data);
+
+        // Sync multiple plants
+        if ($request->has('plant_id') && is_array($request->plant_id)) {
+            $employee->plants()->sync($request->plant_id);
+        }
 
         return response()->json([
             'success' => true,
@@ -85,7 +96,8 @@ class EmployeeController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:employees,email,' . $employee->id,
             'department_id' => 'required|exists:departments,id',
-            'plant_id' => 'nullable|exists:plants,id',
+            'plant_id' => 'nullable|array',
+            'plant_id.*' => 'exists:plants,id',
             'job_level_id' => 'required|exists:job_levels,id',
             'type' => 'required|in:karyawan,pkl,harian_lepas', // <── NEW
         ]);
@@ -103,7 +115,17 @@ class EmployeeController extends Controller
 
         $data['is_active'] = $request->has('is_active');
 
+        $primaryPlantId = (!empty($request->plant_id) && is_array($request->plant_id)) ? $request->plant_id[0] : null;
+        $data['plant_id'] = $primaryPlantId;
+
         $employee->update($data);
+
+        // Sync multiple plants
+        if ($request->has('plant_id') && is_array($request->plant_id)) {
+            $employee->plants()->sync($request->plant_id);
+        } else {
+            $employee->plants()->sync([]);
+        }
 
         return response()->json([
             'success' => true,

@@ -43,13 +43,13 @@ class OvertimeController extends Controller
 
         $currentUser = Auth::user();
 
-        $currentEmployee = Employee::with(['department', 'jobLevel'])
+        $currentEmployee = Employee::with(['department', 'jobLevel', 'plants'])
             ->where('email', $currentUser->email)
             ->where('is_active', true)
             ->first();
 
         if (!$currentEmployee) {
-            $currentEmployee = Employee::with(['department', 'jobLevel'])
+            $currentEmployee = Employee::with(['department', 'jobLevel', 'plants'])
                 ->where('name', 'LIKE', '%' . $currentUser->name . '%')
                 ->where('is_active', true)
                 ->first();
@@ -66,7 +66,7 @@ class OvertimeController extends Controller
 
         $employees = $this->getEligibleEmployeesForDetail($currentEmployee);
 
-        $eligibleRequesters = Employee::with(['department', 'jobLevel'])
+        $eligibleRequesters = Employee::with(['department', 'jobLevel', 'plants'])
             ->where('id', $currentEmployee->id)
             ->where('is_active', true)
             ->get();
@@ -133,10 +133,19 @@ class OvertimeController extends Controller
         \Log::info("Requester: {$currentEmployee->name}");
         \Log::info("Requester Level: {$currentEmployee->jobLevel->name} (Order: {$requesterLevelOrder})");
 
-        $eligibleEmployees = Employee::with(['department', 'jobLevel', 'plant'])
+        $requesterPlantIds = $currentEmployee->plants->pluck('id')->toArray();
+        if (empty($requesterPlantIds) && $currentEmployee->plant_id) {
+            $requesterPlantIds = [$currentEmployee->plant_id];
+        }
+
+        $eligibleEmployees = Employee::with(['department', 'jobLevel', 'plants', 'plant'])
             ->where('department_id', $currentEmployee->department_id)
             ->where('is_active', true)
-            ->where('plant_id', $currentEmployee->plant_id)
+            ->where(function ($query) use ($requesterPlantIds) {
+                $query->whereHas('plants', function ($q) use ($requesterPlantIds) {
+                    $q->whereIn('plants.id', $requesterPlantIds);
+                })->orWhereIn('plant_id', $requesterPlantIds);
+            })
             ->whereIn('type', ['karyawan', 'pkl', 'harian_lepas'])
             ->whereHas('jobLevel', function ($query) use ($requesterLevelOrder) {
                 $query->where('level_order', '>=', $requesterLevelOrder);
@@ -334,7 +343,7 @@ class OvertimeController extends Controller
     {
         $currentUser = Auth::user();
 
-        $currentEmployee = Employee::with(['department', 'jobLevel'])
+        $currentEmployee = Employee::with(['department', 'jobLevel', 'plants'])
             ->where('email', $currentUser->email)
             ->where('is_active', true)
             ->first();
@@ -442,6 +451,11 @@ class OvertimeController extends Controller
         \Log::info("=== CREATE APPROVAL RECORDS DEBUG ===");
         \Log::info("Request ID: {$request->id}, Category: {$overtimeCategory}");
 
+        $requesterPlantIds = $requesterEmployee->plants->pluck('id')->toArray();
+        if (empty($requesterPlantIds) && $requesterEmployee->plant_id) {
+            $requesterPlantIds = [$requesterEmployee->plant_id];
+        }
+
         // ✅ Filter flow jobs berdasarkan kategori overtime
         $flowJobs = FlowJob::with('jobLevel')
             ->where('department_id', $request->department_id)
@@ -450,8 +464,8 @@ class OvertimeController extends Controller
                 $query->where('applies_to', $overtimeCategory)
                     ->orWhere('applies_to', 'both');
             })
-            ->where(function ($query) use ($requesterEmployee) {
-                $query->where('plant_id', $requesterEmployee->plant_id)
+            ->where(function ($query) use ($requesterPlantIds) {
+                $query->whereIn('plant_id', $requesterPlantIds)
                     ->orWhereNull('plant_id');
             })
             ->orderBy('step_order')
@@ -594,7 +608,7 @@ class OvertimeController extends Controller
         }
 
         $currentUser = Auth::user();
-        $currentEmployee = Employee::with(['department', 'jobLevel'])
+        $currentEmployee = Employee::with(['department', 'jobLevel', 'plants'])
             ->where('email', $currentUser->email)
             ->where('is_active', true)
             ->first();

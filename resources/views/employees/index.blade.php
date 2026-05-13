@@ -188,7 +188,8 @@
                                                 data-type="{{ $employee->type }}"
                                                 data-department_id="{{ $employee->department_id }}"
                                                 data-job_level_id="{{ $employee->job_level_id }}"
-                                                data-plant_id="{{ $employee->plant_id }}"
+                                                data-plant_id="{{ json_encode($employee->plants->pluck('id')->toArray()) }}"
+                                                data-primary_plant_id="{{ $employee->plant_id }}"
                                                 data-type="{{ $employee->type ?? '' }}"
                                                 data-is_active="{{ $employee->is_active }}" title="Edit">
                                                 <i class="fas fa-edit"></i>
@@ -298,9 +299,8 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="plant_id" class="form-label">Pilih Plant</label>
-                                <select class="form-control select2" id="plant_id" name="plant_id" required>
-                                    <option value="">Pilih Plant</option>
+                                <label for="plant_id" class="form-label">Pilih Plant(s)</label>
+                                <select class="form-control select2" id="plant_id" name="plant_id[]" multiple="multiple" required>
                                     @foreach($plants as $plant)
                                     <option value="{{ $plant->id }}">{{ $plant->name }}</option>
                                     @endforeach
@@ -571,7 +571,25 @@
             const email = $(this).data('email');
             const departmentId = $(this).data('department_id');
             const jobLevelId = $(this).data('job_level_id');
-            const plantId = $(this).data('plant_id');
+            
+            let plantIdRaw = $(this).data('plant_id');
+            let primaryPlantId = $(this).data('primary_plant_id');
+            let plantIds = [];
+            
+            try {
+                if (typeof plantIdRaw === 'string') {
+                    plantIds = JSON.parse(plantIdRaw);
+                } else if (Array.isArray(plantIdRaw)) {
+                    plantIds = plantIdRaw;
+                } else if (plantIdRaw) {
+                    plantIds = [plantIdRaw];
+                }
+            } catch(e) {}
+            
+            if (plantIds.length === 0 && primaryPlantId) {
+                plantIds = [primaryPlantId];
+            }
+
             const type = $(this).data('type');
             const phone = $(this).data('phone');
             const isActive = $(this).data('is_active');
@@ -593,7 +611,7 @@
             setTimeout(function() {
                 $('#department_id').val(departmentId).trigger('change');
                 $('#job_level_id').val(jobLevelId).trigger('change');
-                $('#plant_id').val(plantId).trigger('change');
+                $('#plant_id').val(plantIds).trigger('change');
                 $('#type').val(type).trigger('change');
             }, 100);
 

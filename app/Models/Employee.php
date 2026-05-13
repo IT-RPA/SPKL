@@ -42,6 +42,12 @@ class Employee extends Model
         return $this->belongsTo(Plant::class);
     }
 
+    // ✅ NEW: Many-to-many relationship for multiple plants
+    public function plants()
+    {
+        return $this->belongsToMany(Plant::class, 'employee_plant');
+    }
+
     // ✅ NEW: Add relationship to overtime details
     public function overtimeDetails()
     {
