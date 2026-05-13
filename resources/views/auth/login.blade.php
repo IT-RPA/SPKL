@@ -730,8 +730,6 @@
                 <img src="{{ asset('images/buatlogin.png') }}" alt="SPKL Illustration">
             </div>
 
-            <h2 class="left-heading">Manage Overtime <span>Smarter & Faster</span></h2>
-            <p class="left-desc">Sistem Pengelolaan Surat Perintah Kerja Lembur yang terintegrasi. Kelola pengajuan, approval, dan laporan dalam satu platform.</p>
         </div>
     </div>
 

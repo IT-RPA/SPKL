@@ -64,11 +64,15 @@
             color: var(--text-main);
             min-height: 100vh;
             position: fixed;
+            top: 0;
+            left: 0;
             z-index: 1000;
             border-right: 1px solid var(--border);
             box-shadow: var(--shadow-sm);
             padding: 18px 14px;
             transition: var(--transition);
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .sidebar-header {
@@ -399,7 +403,19 @@
 
         @media (max-width: 991px) {
             body { background: #f6f8fc; }
-            .sidebar { display: none; }
+            .sidebar { 
+                display: block;
+                width: 320px;
+                max-width: 86vw;
+                left: -340px;
+                top: 0;
+                bottom: 0;
+                z-index: 1200;
+                border-radius: 0 24px 24px 0;
+                box-shadow: 24px 0 60px rgba(15, 23, 42, .22);
+                padding-bottom: calc(110px + env(safe-area-inset-bottom));
+            }
+            .sidebar.active { left: 0; }
             .top-navbar { top: 0; border-radius: 0 0 18px 18px; margin: -16px -16px 18px; border-left: 0; border-right: 0; }
             main { padding: 16px; padding-bottom: 96px; }
             .page-title { font-size: 1.35rem; }
@@ -684,9 +700,19 @@
                 $('body').toggleClass('overflow-hidden');
             }
 
+            function closeSidebar() {
+                sidebar.removeClass('active');
+                overlay.removeClass('active');
+                $('body').removeClass('overflow-hidden');
+            }
+
             openBtn.on('click', toggleSidebar);
+            $('#sidebarToggle').on('click', toggleSidebar);
             moreBtn.on('click', toggleSidebar);
-            overlay.on('click', toggleSidebar);
+            overlay.on('click', closeSidebar);
+            $('.sidebar a[href]:not([href="#"])').on('click', function() {
+                if (window.innerWidth <= 991) closeSidebar();
+            });
 
             // Active State Handling
             const currentUrl = window.location.href;
