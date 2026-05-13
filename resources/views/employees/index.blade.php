@@ -39,13 +39,17 @@
 
         .btn-group {
             display: flex;
-            flex-direction: column;
-            gap: 2px;
+            gap: 5px;
         }
 
         .btn-group .btn {
-            width: 100%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             margin: 0;
+            border-radius: 10px !important;
         }
 
         /* Hide less important columns on mobile */

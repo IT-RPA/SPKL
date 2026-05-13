@@ -185,7 +185,6 @@
             align-items: center;
             gap: 14px;
             max-width: 100%;
-            overflow: hidden;
         }
         .top-navbar h5 {
             font-size: 1rem;
@@ -230,8 +229,128 @@
         .dataTables_wrapper .row > * {
             min-width: 0;
         }
+
+        /* --- Global ERP Components --- */
+        .erp-list-page { animation: erpFade .35s ease-out; }
+        @keyframes erpFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .erp-list-header {
+            display: flex; align-items: center; justify-content: space-between; gap: 16px;
+            margin-bottom: 16px; background: #fff; border: 1px solid var(--border);
+            border-radius: 18px; padding: 18px 20px; box-shadow: var(--shadow-sm);
+        }
+        .erp-toolbar {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            background: #fff; border: 1px solid var(--border); border-radius: 16px;
+            padding: 12px 14px; margin-bottom: 14px; box-shadow: var(--shadow-sm);
+        }
+        .erp-alert-card {
+            background: #fff7ed; border: 1px solid #fed7aa; border-left: 4px solid #f97316;
+            border-radius: 16px; padding: 14px 16px; margin-bottom: 14px;
+            display:flex; gap:12px; align-items:flex-start;
+        }
+        .erp-alert-icon { width:38px; height:38px; border-radius:11px; display:grid; place-items:center; background:#ffedd5; color:#c2410c; flex:0 0 auto; }
+        
+        .erp-table-card { background:#fff; border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); overflow:hidden; }
+        .erp-id-main { font-weight:900; color:#0f172a; letter-spacing:-.01em; }
+        .erp-subtext { display:block; color:var(--text-muted); font-size:.78rem; margin-top:2px; }
+        .erp-action-btn { width:36px; height:36px; padding:0; display:inline-grid; place-items:center; border-radius:10px; }
+        .desktop-table { display:block; }
+        .mobile-cards { display:none; }
+
+        .spk-mobile-card {
+            background:#fff; border:1px solid var(--border); border-radius:16px;
+            box-shadow:var(--shadow-sm); padding:16px; margin-bottom:12px;
+        }
+        .spk-mobile-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:12px; }
+        .spk-mobile-meta { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:12px; background:#f8fafc; border-radius:13px; margin-bottom:12px; }
+        .spk-meta-label { color:var(--text-muted); font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+        .spk-meta-value { font-weight:800; color:#334155; margin-top:2px; }
+
+        @media (max-width: 768px) {
+            .erp-list-header { flex-direction: column; align-items: stretch; padding:16px; }
+            .erp-list-header .btn { width:100%; justify-content:center; }
+            .erp-toolbar { display:none; }
+            .desktop-table { display:none; }
+            .mobile-cards { display:block; }
+        }
+        /* Mobile Navigation Bottom Bar */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(255, 255, 255, 0.85);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.5);
+            z-index: 1000;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease-in-out;
+        }
+        body.modal-open .mobile-nav {
+            transform: translateY(100%);
+        }
+        @media (max-width: 991px) {
+            .mobile-nav { display: flex; justify-content: space-around; align-items: center; }
+            .wrapper.has-sidebar main { padding-bottom: calc(85px + env(safe-area-inset-bottom)); }
+        }
+        .mobile-nav-item {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #64748b; text-decoration: none; padding: 14px 8px; flex: 1; transition: var(--transition);
+            position: relative;
+        }
+        .mobile-nav-item::before {
+            content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 0; height: 3px; background: var(--primary); border-radius: 0 0 4px 4px; transition: var(--transition);
+        }
+        .mobile-nav-item i { font-size: 1.45rem; margin-bottom: 5px; transition: var(--transition); }
+        .mobile-nav-item span { font-size: 0.72rem; font-weight: 700; }
+        .mobile-nav-item.active { color: var(--primary); }
+        .mobile-nav-item.active::before { width: 32px; }
+        .mobile-nav-item.active i { transform: translateY(-4px); }
+        
+        /* Mobile Touch Targets */
+        @media (max-width: 991px) {
+            .btn, .nav-link, .dropdown-item { min-height: 48px; display: flex; align-items: center; }
+            .btn { justify-content: center; }
+            .erp-action-btn { width: 48px; height: 48px; font-size: 1.1rem; }
+            
+            #sidebar { 
+                z-index: 1050; 
+                width: 300px; 
+                left: -300px; 
+                box-shadow: 20px 0 50px rgba(0,0,0,0.2);
+                border-radius: 0 24px 24px 0;
+            }
+            #sidebar.active { left: 0; }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(15, 23, 42, 0.45);
+                -webkit-backdrop-filter: blur(6px);
+                backdrop-filter: blur(6px);
+                z-index: 1040;
+            }
+            .sidebar-overlay.active { display: block; }
+            
+            .sidebar .nav-link { padding: 16px 20px; font-size: 1rem; border-radius: 14px; margin-bottom: 4px; }
+            .sidebar .dropdown-item { padding: 16px 24px; font-size: 0.95rem; }
+            .sidebar .menu-header { margin-top: 18px; padding-left: 20px; font-size: 0.8rem; }
+            
+            .top-navbar { padding: 12px 16px; border-radius: 20px; margin-bottom: 18px; }
+            .top-navbar h5 { font-size: 1.05rem; }
+        }
+
         .page-title { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; margin: 0; }
         .page-subtitle { color: var(--text-muted); margin: 4px 0 0; }
+
+        /* Global Dropdown Styles */
+        .dropdown-item { padding: 10px 16px; transition: var(--transition); display: flex; align-items: center; }
+        .dropdown-item i { width: 20px; margin-right: 10px; color: #64748b; font-size: 1.1rem; }
+        .dropdown-item:hover i { color: inherit; }
+        .dropdown-menu { border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 8px; }
 
         .card {
             background: var(--surface);
@@ -437,6 +556,15 @@
                             @endif
                         </a>
                     </li>
+                    
+                    <div class="d-lg-none mt-4 p-3 border-top border-light">
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="btn btn-danger w-100 fw-bold rounded-3" style="height: 48px;">
+                                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                            </button>
+                        </form>
+                    </div>
                 </ul>
             </div>
         </nav>
@@ -447,8 +575,12 @@
             @auth
             <!-- Top Navbar -->
             <div class="top-navbar">
-                <div class="d-flex align-items-center">
-                    <h5 class="mb-0 fw-bold">SPK Lembur System</h5>
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-light d-lg-none p-0 border-0 bg-transparent" id="mobileMenuOpen" style="width: 40px; height: 40px; border-radius: 10px;">
+                        <i class="fas fa-bars-staggered fs-4"></i>
+                    </button>
+                    <h5 class="mb-0 fw-bold d-none d-sm-block">SPK Lembur System</h5>
+                    <h5 class="mb-0 fw-bold d-sm-none">SPKL</h5>
                 </div>
                 <div class="d-flex align-items-center">
                     <div class="dropdown">
@@ -503,22 +635,19 @@
     </div>
 
     <!-- Mobile Bottom Navigation -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <div class="mobile-nav">
         <a href="{{ route('dashboard') }}" class="mobile-nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-            <i class="fas fa-grid-2"></i>
+            <i class="fas fa-home"></i>
             <span>Home</span>
         </a>
         <a href="{{ route('overtime.index') }}" class="mobile-nav-item {{ request()->routeIs('overtime.*') ? 'active' : '' }}">
             <i class="fas fa-file-invoice"></i>
-            <span>Overtime</span>
-        </a>
-        <a href="{{ route('planning.index') }}" class="mobile-nav-item {{ request()->routeIs('planning.*') ? 'active' : '' }}">
-            <i class="fas fa-calendar-alt"></i>
-            <span>Planning</span>
+            <span>SPK</span>
         </a>
         <a href="{{ route('approvals.index', ['job_level' => Auth::user()->jobLevel->code ?? '']) }}" class="mobile-nav-item {{ request()->routeIs('approvals.*') ? 'active' : '' }}">
             <div class="position-relative">
-                <i class="fas fa-check-circle"></i>
+                <i class="fas fa-check-double"></i>
                 @php 
                     $totalNotif = (isset($pendingApprovals) ? $pendingApprovals->count() : 0) + (isset($pendingPercentageCount) ? $pendingPercentageCount : 0) + (isset($pendingMyApproval) ? $pendingMyApproval : 0); 
                 @endphp
@@ -527,6 +656,10 @@
                 @endif
             </div>
             <span>Tasks</span>
+        </a>
+        <a href="javascript:void(0)" class="mobile-nav-item" id="mobileMenuMore">
+            <i class="fas fa-bars"></i>
+            <span>Menu</span>
         </a>
     </div>
 
@@ -541,30 +674,28 @@
     <script>
         $(document).ready(function() {
             const sidebar = $('#sidebar');
-            const toggleBtn = $('#sidebarToggle');
+            const overlay = $('#sidebarOverlay');
+            const openBtn = $('#mobileMenuOpen');
+            const moreBtn = $('#mobileMenuMore');
 
-            // Toggle sidebar for mobile
-            toggleBtn.on('click', function() {
+            function toggleSidebar() {
                 sidebar.toggleClass('active');
-            });
+                overlay.toggleClass('active');
+                $('body').toggleClass('overflow-hidden');
+            }
+
+            openBtn.on('click', toggleSidebar);
+            moreBtn.on('click', toggleSidebar);
+            overlay.on('click', toggleSidebar);
 
             // Active State Handling
             const currentUrl = window.location.href;
             $('.sidebar .nav-link, .sidebar .dropdown-item').each(function() {
                 if (this.href === currentUrl) {
                     $(this).addClass('active');
-                    // If it's a dropdown item, make the parent nav-link active too
                     if ($(this).hasClass('dropdown-item')) {
                         $(this).closest('.dropdown').find('.nav-link').addClass('active');
-                    }
-                }
-            });
-
-            // Close sidebar when clicking outside on mobile
-            $(document).on('click', function(e) {
-                if (window.innerWidth <= 991) {
-                    if (!$(e.target).closest('#sidebar').length && !$(e.target).closest('#sidebarToggle').length) {
-                        sidebar.removeClass('active');
+                        $(this).closest('.collapse').addClass('show');
                     }
                 }
             });

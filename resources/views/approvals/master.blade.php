@@ -100,17 +100,14 @@
             }
         }
 
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-    </style>
+        /* Hide DataTables default elements slightly for cleaner look */
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate { margin: 15px; }
 
-    <div class="page-header">
-        <h2>Approval {{$joblevel->name}}</h2>
-    </div>
+        .modal-body-scrollable { max-height: calc(100vh - 200px); overflow-y: auto; padding-bottom: 30px; }
+    </style>
 
     {{-- TAMBAHAN: Alert untuk percentage yang perlu diinput --}}
     @php
@@ -132,17 +129,28 @@
         }
     @endphp
 
-    @if($pendingPercentageCount > 0)
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <i class="fas fa-percentage"></i>
-            <strong>Perhatian!</strong>
-            Ada {{ $pendingPercentageCount }} pengajuan lembur kualitatif yang memerlukan input persentase realisasi dari Anda.
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="erp-list-page">
+        <div class="erp-list-header">
+            <div>
+                <h1 class="page-title">Approval {{ $joblevel->name ?? 'Task' }}</h1>
+                <p class="page-subtitle">Daftar pengajuan SPK lembur yang membutuhkan persetujuan Anda.</p>
+            </div>
+            <div>
+                 <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill"><i class="fas fa-check-double me-1"></i> {{ count($approvals) }} Tasks</span>
+            </div>
         </div>
-    @endif
 
-    <div class="card">
-        <div class="card-body">
+        @if($pendingPercentageCount > 0)
+        <div class="erp-alert-card">
+            <div class="erp-alert-icon"><i class="fas fa-percentage"></i></div>
+            <div>
+                <h6 class="fw-bold mb-1">Perhatian!</h6>
+                <p class="mb-0 text-muted small">Ada {{ $pendingPercentageCount }} pengajuan lembur kualitatif yang memerlukan input persentase realisasi dari Anda.</p>
+            </div>
+        </div>
+        @endif
+
+        <div class="erp-table-card desktop-table">
             <div class="table-responsive">
                 <table id="approvalsTable" class="table table-striped">
                     <thead>
@@ -288,20 +296,62 @@
                 </table>
             </div>
         </div>
+
+        <!-- Mobile Cards View for Approvals -->
+        <div class="mobile-cards">
+            @forelse($approvals as $approval)
+            <div class="spk-mobile-card">
+                <div class="spk-mobile-top">
+                    <div>
+                        <div class="erp-id-main">{{ $approval->overtimeRequest->request_number }}</div>
+                        <span class="erp-subtext">{{ $approval->overtimeRequest->date->format('d/m/Y') }}</span>
+                    </div>
+                    @if(isset($approval->needs_percentage_input) && $approval->needs_percentage_input)
+                        <span class="badge bg-warning"><i class="fas fa-percentage"></i> Input %</span>
+                    @else
+                        <span class="badge bg-{{ $approval->status == 'approved' ? 'success' : ($approval->status == 'rejected' ? 'danger' : 'warning') }}">{{ ucfirst($approval->status) }}</span>
+                    @endif
+                </div>
+                <div class="spk-mobile-meta">
+                    <div><div class="spk-meta-label">Pengaju</div><div class="spk-meta-value">{{ $approval->overtimeRequest->requesterEmployee->name ?? $approval->overtimeRequest->requester->name }}</div></div>
+                    <div><div class="spk-meta-label">Departemen</div><div class="spk-meta-value">{{ $approval->overtimeRequest->department->name }}</div></div>
+                    <div><div class="spk-meta-label">Step Approval</div><div class="spk-meta-value">{{ $approval->step_name }}</div></div>
+                </div>
+                
+                @if(isset($joblevel) && $joblevel->code === 'ADMIN')
+                    <button class="btn btn-outline-primary w-100 mb-2" onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')">
+                        <i class="fas fa-eye"></i> Detail
+                    </button>
+                @else
+                    @if(isset($approval->needs_percentage_input) && $approval->needs_percentage_input)
+                        <button class="btn btn-warning w-100 mb-2" onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')">
+                            <i class="fas fa-percentage"></i> Input Persentase
+                        </button>
+                    @else
+                        <button class="btn btn-primary w-100 mb-2" onclick="showDetailModal({{ $approval->id }}, '{{ $approval->overtimeRequest->request_number }}')">
+                            <i class="fas fa-tasks"></i> Proses
+                        </button>
+                    @endif
+                @endif
+            </div>
+            @empty
+                <div class="erp-table-card p-5 text-center text-muted">Tidak ada data untuk disetujui</div>
+            @endforelse
+        </div>
     </div>
 
     <!-- Detail Modal -->
     <div class="modal fade" id="detailModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Detail Pengajuan Lembur</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="modalBody">
+                <div class="modal-body modal-body-scrollable" id="modalBody">
                     <!-- Content will be loaded here -->
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer" style="padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)); padding-top: 1.5rem;">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
                     <div id="approvalButtons" style="display: none;">
                         <button type="button" class="btn btn-danger me-2" onclick="showRejectModal()">
@@ -324,10 +374,10 @@
                     <h5 class="modal-title">Edit Pengajuan Lembur</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="editModalBody">
+                <div class="modal-body modal-body-scrollable" id="editModalBody">
                     <!-- Edit form will be loaded here -->
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                     <button type="button" class="btn btn-primary" onclick="saveEditChanges()">
                         <i class="fas fa-save"></i> Simpan Perubahan

@@ -89,12 +89,14 @@
     }
     @media (max-width: 768px) {
         .erp-page-head { align-items: flex-start; flex-direction: column; }
-        .erp-head-card { width: 100%; padding: 16px; }
+        .erp-head-card { width: 100%; padding: 16px; margin-bottom: 10px; }
+        .erp-date-pill { width: 100%; justify-content: center; }
         .erp-kpi-grid { grid-template-columns: 1fr; gap: 10px; }
         .erp-kpi-card { padding: 14px; }
         .erp-kpi-value { font-size: 1.55rem; }
-        .erp-actions { grid-template-columns: 1fr 1fr; }
-        .erp-action { padding: 12px; font-size: .85rem; }
+        .erp-actions { grid-template-columns: 1fr 1fr; gap: 10px; }
+        .erp-action { padding: 18px 14px; font-size: .85rem; flex-direction: column; text-align: center; height: auto; }
+        .erp-action i { width: 44px; height: 44px; margin-bottom: 5px; }
     }
 </style>
 
