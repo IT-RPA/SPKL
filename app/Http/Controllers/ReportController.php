@@ -94,9 +94,7 @@ class ReportController extends Controller
             $totalMinutes = 0;
             $totalRequests = 0;
             foreach ($overtimeDetails as $detail) {
-                $startTime = Carbon::parse($detail->start_time);
-                $endTime = Carbon::parse($detail->end_time);
-                $totalMinutes += $endTime->diffInMinutes($startTime);
+                $totalMinutes += $detail->getDurationInMinutes();
                 $totalRequests++;
             }
 
@@ -177,9 +175,7 @@ class ReportController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($detail) {
-                $startTime = Carbon::parse($detail->start_time);
-                $endTime = Carbon::parse($detail->end_time);
-                $duration = $endTime->diffInMinutes($startTime);
+                $duration = $detail->getDurationInMinutes();
 
                 return [
                     'spk_number' => $detail->overtimeRequest->request_number,
@@ -277,9 +273,7 @@ class ReportController extends Controller
             $dates = [];
 
             foreach ($overtimeDetails as $detail) {
-                $startTime = Carbon::parse($detail->start_time);
-                $endTime = Carbon::parse($detail->end_time);
-                $totalMinutes += $endTime->diffInMinutes($startTime);
+                $totalMinutes += $detail->getDurationInMinutes();
                 $totalRequests++;
                 if ($detail->overtimeRequest) {
                     $dates[] = Carbon::parse($detail->overtimeRequest->date)->translatedFormat('d/M/Y');

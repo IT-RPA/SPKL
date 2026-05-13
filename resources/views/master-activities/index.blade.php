@@ -20,7 +20,9 @@
                                 <tr>
                                     <th>No</th>
                                     <th>Nama Aktivitas</th>
-                                    <th>Durasi (Menit)</th>
+                                    <th>Jam Mulai</th>
+                                    <th>Jam Selesai</th>
+                                    <th>Durasi</th>
                                     <th>Status</th>
                                     <th>Aksi</th>
                                 </tr>
@@ -30,7 +32,9 @@
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $activity->name }}</td>
-                                    <td>{{ $activity->duration_minutes }} Menit</td>
+                                    <td>{{ $activity->start_time ? \Carbon\Carbon::parse($activity->start_time)->format('H:i') : '-' }}</td>
+                                    <td>{{ $activity->end_time ? \Carbon\Carbon::parse($activity->end_time)->format('H:i') : '-' }}</td>
+                                    <td>{{ $activity->calculated_duration_minutes }} Menit</td>
                                     <td>
                                         <span class="badge {{ $activity->is_active ? 'bg-success' : 'bg-danger' }}">
                                             {{ $activity->is_active ? 'Aktif' : 'Nonaktif' }}
@@ -41,7 +45,8 @@
                                             <button type="button" class="btn btn-sm btn-warning edit-btn" 
                                                 data-id="{{ $activity->id }}"
                                                 data-name="{{ $activity->name }}"
-                                                data-duration_minutes="{{ $activity->duration_minutes }}"
+                                                data-start_time="{{ $activity->start_time ? \Carbon\Carbon::parse($activity->start_time)->format('H:i') : '' }}"
+                                                data-end_time="{{ $activity->end_time ? \Carbon\Carbon::parse($activity->end_time)->format('H:i') : '' }}"
                                                 data-is_active="{{ $activity->is_active }}">
                                                 <i class="fas fa-edit"></i>
                                             </button>
@@ -82,10 +87,18 @@
                         <div class="invalid-feedback"></div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="duration_minutes" class="form-label">Durasi Potongan (Menit)</label>
-                        <input type="number" class="form-control" id="duration_minutes" name="duration_minutes" required min="0">
-                        <div class="invalid-feedback"></div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="start_time" class="form-label">Jam Mulai</label>
+                            <input type="time" class="form-control" id="start_time" name="start_time" required>
+                            <div class="invalid-feedback"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="end_time" class="form-label">Jam Selesai</label>
+                            <input type="time" class="form-control" id="end_time" name="end_time" required>
+                            <div class="invalid-feedback"></div>
+                        </div>
                     </div>
                     
                     <div class="mb-3">
@@ -161,7 +174,8 @@ $(document).ready(function() {
         
         const id = $(this).data('id');
         const name = $(this).data('name');
-        const duration = $(this).data('duration_minutes');
+        const startTime = $(this).data('start_time');
+        const endTime = $(this).data('end_time');
         const isActive = $(this).data('is_active');
 
         $('.form-control').removeClass('is-invalid');
@@ -169,7 +183,8 @@ $(document).ready(function() {
         
         $('#activity_id').val(id);
         $('#name').val(name);
-        $('#duration_minutes').val(duration);
+        $('#start_time').val(startTime);
+        $('#end_time').val(endTime);
         $('#is_active').prop('checked', Boolean(Number(isActive)));
         $('#activityModalLabel').text('Edit Aktivitas');
         

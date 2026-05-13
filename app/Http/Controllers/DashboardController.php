@@ -53,9 +53,7 @@ class DashboardController extends Controller
             ->where('is_rejected', false)
             ->get()
             ->sum(function($detail) {
-                $start = Carbon::parse($detail->start_time);
-                $end = Carbon::parse($detail->end_time);
-                return $end->diffInMinutes($start);
+                return $detail->getDurationInMinutes();
             });
         
         $totalHoursFormatted = $this->formatMinutesToHours($totalHoursThisMonth);
@@ -79,7 +77,7 @@ class DashboardController extends Controller
             })
             ->where('overtime_details.is_rejected', false)
             ->groupBy('overtime_requests.department_id', 'departments.name')
-            ->selectRaw('SUM(TIMESTAMPDIFF(MINUTE, overtime_details.start_time, overtime_details.end_time)) as total_minutes')
+            ->selectRaw('SUM(GREATEST(TIMESTAMPDIFF(MINUTE, overtime_details.start_time, overtime_details.end_time) - COALESCE(overtime_details.deducted_minutes, 0), 0)) as total_minutes')
             ->orderByDesc('total_minutes')
             ->limit(5)
             ->get()
@@ -210,7 +208,7 @@ class DashboardController extends Controller
         // Query untuk menghitung total jam per hari
         $dailyHours = OvertimeDetail::select(
                 DB::raw('DAY(overtime_requests.date) as day'),
-                DB::raw('SUM(TIMESTAMPDIFF(MINUTE, overtime_details.start_time, overtime_details.end_time)) as total_minutes')
+                DB::raw('SUM(GREATEST(TIMESTAMPDIFF(MINUTE, overtime_details.start_time, overtime_details.end_time) - COALESCE(overtime_details.deducted_minutes, 0), 0)) as total_minutes')
             )
             ->join('overtime_requests', 'overtime_details.overtime_request_id', '=', 'overtime_requests.id')
             ->where('overtime_details.is_rejected', false)
@@ -247,7 +245,7 @@ class DashboardController extends Controller
         // Query untuk menghitung total jam per bulan
         $monthlyHours = OvertimeDetail::select(
                 DB::raw('MONTH(overtime_requests.date) as month'),
-                DB::raw('SUM(TIMESTAMPDIFF(MINUTE, overtime_details.start_time, overtime_details.end_time)) as total_minutes')
+                DB::raw('SUM(GREATEST(TIMESTAMPDIFF(MINUTE, overtime_details.start_time, overtime_details.end_time) - COALESCE(overtime_details.deducted_minutes, 0), 0)) as total_minutes')
             )
             ->join('overtime_requests', 'overtime_details.overtime_request_id', '=', 'overtime_requests.id')
             ->where('overtime_details.is_rejected', false)

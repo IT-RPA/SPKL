@@ -62,7 +62,12 @@ class OvertimeDetail extends Model
     {
         $startTime = \Carbon\Carbon::parse($this->start_time);
         $endTime = \Carbon\Carbon::parse($this->end_time);
-        $totalMinutes = $endTime->diffInMinutes($startTime);
+
+        if ($endTime->lessThanOrEqualTo($startTime)) {
+            $endTime->addDay();
+        }
+
+        $totalMinutes = $startTime->diffInMinutes($endTime);
         
         $deducted = $this->deducted_minutes ?? 0;
         

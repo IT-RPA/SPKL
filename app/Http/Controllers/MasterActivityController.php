@@ -23,10 +23,12 @@ class MasterActivityController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'duration_minutes' => 'required|integer|min:0',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i',
             'is_active' => 'boolean'
         ]);
 
+        $validated['duration_minutes'] = $this->calculateDurationMinutes($validated['start_time'], $validated['end_time']);
         $validated['is_active'] = $request->has('is_active');
 
         MasterActivity::create($validated);
@@ -44,10 +46,12 @@ class MasterActivityController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'duration_minutes' => 'required|integer|min:0',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i',
             'is_active' => 'boolean'
         ]);
 
+        $validated['duration_minutes'] = $this->calculateDurationMinutes($validated['start_time'], $validated['end_time']);
         $validated['is_active'] = $request->has('is_active');
 
         $activity = MasterActivity::findOrFail($id);
@@ -71,5 +75,17 @@ class MasterActivityController extends Controller
             'success' => true,
             'message' => 'Aktivitas berhasil dihapus'
         ]);
+    }
+
+    private function calculateDurationMinutes(string $startTime, string $endTime): int
+    {
+        $start = \Carbon\Carbon::createFromFormat('H:i', $startTime);
+        $end = \Carbon\Carbon::createFromFormat('H:i', $endTime);
+
+        if ($end->lessThanOrEqualTo($start)) {
+            $end->addDay();
+        }
+
+        return $start->diffInMinutes($end);
     }
 }

@@ -159,21 +159,12 @@
                             <input type="time" class="form-control end-time-input" name="details[0][end_time]" required>
                         </div>
                         
-                        <!-- TAMBAHAN: Potongan Istirahat -->
+                        <!-- Potongan istirahat dihitung otomatis dari Master Activity -->
                         <div class="col-md-6">
                             <label class="form-label">Potongan Istirahat</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach($masterActivities as $activity)
-                                <div class="form-check form-check-inline mb-0 mt-1">
-                                    <input class="form-check-input break-checkbox" type="checkbox" 
-                                           name="details[0][breaks][]" 
-                                           value="{{ $activity->duration_minutes }}" 
-                                           id="break_{{ $activity->id }}_0">
-                                    <label class="form-check-label text-muted" style="font-size: 0.85rem;" for="break_{{ $activity->id }}_0">
-                                        {{ $activity->name }} ({{ $activity->duration_minutes }}m)
-                                    </label>
-                                </div>
-                                @endforeach
+                            <div class="alert alert-light border mb-0 py-2">
+                                <i class="fas fa-clock text-primary"></i>
+                                Otomatis mengikuti Master Activity yang overlap dengan jam lembur.
                             </div>
                         </div>
                     </div>

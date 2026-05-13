@@ -250,11 +250,7 @@ class OvertimeController extends Controller
             ]);
 
             foreach ($request->details as $detail) {
-                // Calculate total break duration
-                $deductedMinutes = 0;
-                if (!empty($detail['breaks']) && is_array($detail['breaks'])) {
-                    $deductedMinutes = array_sum($detail['breaks']);
-                }
+                $deductedMinutes = $this->calculateDeductedMinutes($detail['start_time'], $detail['end_time']);
 
                 OvertimeDetail::create([
                     'overtime_request_id' => $overtimeRequest->id,
@@ -565,6 +561,7 @@ class OvertimeController extends Controller
                     $detail->update([
                         'start_time' => $data['start_time'],
                         'end_time' => $data['end_time'],
+                        'deducted_minutes' => $this->calculateDeductedMinutes($data['start_time'], $data['end_time']),
                     ]);
 
                     $detail = $detail->fresh();
@@ -655,6 +652,7 @@ class OvertimeController extends Controller
                     'process_type_id' => $detail['process_type_id'],
                     'qty_plan' => $detail['qty_plan'] ?? null,
                     'notes' => $detail['notes'] ?? null,
+                    'deducted_minutes' => $this->calculateDeductedMinutes($detail['start_time'], $detail['end_time']),
                 ]);
             }
 
@@ -696,5 +694,42 @@ class OvertimeController extends Controller
         });
 
         return redirect()->route('overtime.index')->with('success', 'Pengajuan lembur berhasil dihapus');
+    }
+
+    private function calculateDeductedMinutes(string $overtimeStart, string $overtimeEnd): int
+    {
+        $start = \Carbon\Carbon::createFromFormat('H:i', substr($overtimeStart, 0, 5));
+        $end = \Carbon\Carbon::createFromFormat('H:i', substr($overtimeEnd, 0, 5));
+
+        if ($end->lessThanOrEqualTo($start)) {
+            $end->addDay();
+        }
+
+        return \App\Models\MasterActivity::where('is_active', true)
+            ->whereNotNull('start_time')
+            ->whereNotNull('end_time')
+            ->get()
+            ->sum(function ($activity) use ($start, $end) {
+                $activityStart = \Carbon\Carbon::createFromFormat('H:i', substr($activity->start_time, 0, 5));
+                $activityEnd = \Carbon\Carbon::createFromFormat('H:i', substr($activity->end_time, 0, 5));
+
+                if ($activityEnd->lessThanOrEqualTo($activityStart)) {
+                    $activityEnd->addDay();
+                }
+
+                if ($activityEnd->lessThanOrEqualTo($start)) {
+                    $activityStart->addDay();
+                    $activityEnd->addDay();
+                }
+
+                $overlapStart = $activityStart->greaterThan($start) ? $activityStart : $start;
+                $overlapEnd = $activityEnd->lessThan($end) ? $activityEnd : $end;
+
+                if ($overlapEnd->lessThanOrEqualTo($overlapStart)) {
+                    return 0;
+                }
+
+                return $overlapStart->diffInMinutes($overlapEnd);
+            });
     }
 }
