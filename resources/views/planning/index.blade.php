@@ -219,6 +219,7 @@
                 responsive: true,
                 pageLength: 10,
                 ordering: true,
+                order: [], // Preserve server-side order (newest first)
                 paging: false,
                 info: false,
                 searching: true,

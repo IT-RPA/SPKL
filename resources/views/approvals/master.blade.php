@@ -490,6 +490,7 @@
                     responsive: true,
                     pageLength: 10,
                     ordering: true,
+                    order: [], // Preserve server-side order (newest first)
                     language: {
                         "processing": "Sedang memproses...",
                         "lengthMenu": "Tampilkan _MENU_ entri",
