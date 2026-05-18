@@ -18,10 +18,29 @@ class ReportController extends Controller
 {
     public function index(Request $request)
     {
+        // Check permission
+        if (!auth()->user()->hasPermission('view-all-leaderboard') && !auth()->user()->hasPermission('view-leaderboard')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         // Get filter parameters
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         $department_id = $request->get('department_id');
+        
+        // Restriction logic
+        if (!auth()->user()->hasPermission('view-all-leaderboard')) {
+            $currentEmployee = Employee::where('email', auth()->user()->email)->first();
+            if ($currentEmployee) {
+                $department_id = $currentEmployee->department_id;
+            } else {
+                // If no employee record, show nothing or abort
+                $employees = collect();
+                $departments = collect();
+                return view('reports.overtime-leaderboard', compact('employees', 'departments', 'startDate', 'endDate', 'department_id'));
+            }
+        }
+
         $category_filter = $request->get('category_filter', 'all'); // ✅ TAMBAHAN: Default 'all'
         $status_filter = $request->get('status_filter', 'completed');
 
@@ -116,7 +135,12 @@ class ReportController extends Controller
         })->sortByDesc('total_hours')->values();
 
         // Get departments untuk filter
-        $departments = \App\Models\Department::orderBy('name')->get();
+        if (auth()->user()->hasPermission('view-all-leaderboard')) {
+            $departments = \App\Models\Department::orderBy('name')->get();
+        } else {
+            // If restricted, only show their own department in the list
+            $departments = \App\Models\Department::where('id', $department_id)->get();
+        }
 
         if ($request->ajax()) {
             return response()->json([
@@ -137,12 +161,25 @@ class ReportController extends Controller
 
     public function getEmployeeDetails(Request $request, $employeeId)
     {
+        // Check permission
+        if (!auth()->user()->hasPermission('view-all-leaderboard') && !auth()->user()->hasPermission('view-leaderboard')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         $category_filter = $request->get('category_filter', 'all'); // ✅ TAMBAHAN
         $status_filter = $request->get('status_filter', 'completed');
 
         $employee = Employee::with(['department', 'jobLevel'])->findOrFail($employeeId);
+        
+        // Restriction check
+        if (!auth()->user()->hasPermission('view-all-leaderboard')) {
+            $currentEmployee = Employee::where('email', auth()->user()->email)->first();
+            if (!$currentEmployee || $currentEmployee->department_id != $employee->department_id) {
+                abort(403, 'You can only view employees in your department.');
+            }
+        }
 
         $details = OvertimeDetail::with(['overtimeRequest' => function($q) {
                 $q->select('id', 'request_number', 'date', 'status', 'overtime_category'); // ✅ TAMBAHAN: Include overtime_category
@@ -199,10 +236,26 @@ class ReportController extends Controller
 
     public function exportExcel(Request $request)
     {
+        // Check permission
+        if (!auth()->user()->hasPermission('view-all-leaderboard') && !auth()->user()->hasPermission('view-leaderboard')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         Carbon::setLocale('id');
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         $department_id = $request->get('department_id');
+        
+        // Restriction logic
+        if (!auth()->user()->hasPermission('view-all-leaderboard')) {
+            $currentEmployee = Employee::where('email', auth()->user()->email)->first();
+            if ($currentEmployee) {
+                $department_id = $currentEmployee->department_id;
+            } else {
+                abort(403, 'Unauthorized access.');
+            }
+        }
+
         $category_filter = $request->get('category_filter', 'all'); // ✅ TAMBAHAN
         $status_filter = $request->get('status_filter', 'completed');
 
